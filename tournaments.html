@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournaments - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        [data-theme="emerald"] {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        [data-theme="cyan"] {
+            --theme-primary: #06b6d4;
+            --theme-secondary: #0891b2;
+            --theme-light: #22d3ee;
+        }
+        
+        [data-theme="yellow"] {
+            --theme-primary: #f4f916;
+            --theme-secondary: #eab308;
+            --theme-light: #fef08a;
+        }
+        
+        [data-theme="orange"] {
+            --theme-primary: #f97316;
+            --theme-secondary: #ea580c;
+            --theme-light: #fb923c;
+        }
+        
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        
+        .theme-switcher-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .theme-switcher-btn:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+        
+        .theme-switcher-btn.active {
+            border-color: white;
+            box-shadow: 0 0 15px currentColor;
+        }
+        
+        .theme-switcher-btn.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        /* ============================================
+           Tab tiles
+           ============================================ */
+        .tournament-tab {
+            display: block;
+            width: 100%;
+            padding: 24px 16px;
+            text-align: center;
+            font-weight: 900;
+            font-size: 1.125rem;
+            text-transform: uppercase;
+            color: #E5E7EB;
+            background: #0F172A;
+            border: 4px solid #374151;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+        }
+
+        .tournament-tab .tab-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tournament-tab .tab-label svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+        .tournament-tab .tab-sub {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #9CA3AF;
+        }
+
+        .tournament-tab:hover { border-color: var(--theme-primary); }
+
+        .tournament-tab.active {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+            color: #0F172A;
+            box-shadow: 6px 6px 0 var(--theme-primary);
+        }
+
+        .tournament-tab.active .tab-sub { color: #0F172A; }
+
+        .tournament-tab:focus { outline: none; }
+        .tournament-tab:focus-visible { outline: 3px solid #E5E7EB; outline-offset: 3px; }
+        .tournament-tab:active { transform: scale(0.98); }
+
+        /* Mobile touch feedback */
+        @media (hover: none) {
+            .tournament-tab {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+            .tournament-tab:not(.active):hover { border-color: #374151; }
+        }
+
+        .brutal-shadow {
+            box-shadow: 6px 6px 0px var(--theme-primary);
+        }
+
+        .brutal-shadow:hover {
+            box-shadow: 8px 8px 0px var(--theme-primary);
+            transform: translate(-2px, -2px);
+        }
+
+        /* ============================================
+           Status tags and date tile (shared with the other tournament page)
+           ============================================ */
+        .t-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            align-self: flex-start;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 900;
+            line-height: 1.1;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+        .t-tag svg { width: 12px; height: 12px; flex-shrink: 0; }
+        .t-tag-theme { background: var(--theme-primary); color: #0F172A; }
+        .t-tag-grey { background: #1F2937; color: #E5E7EB; }
+        .t-tag-grey svg { color: var(--theme-primary); }
+
+        .t-poster-img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #0B1324;
+        }
+
+        .t-datetile {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: #0B1324;
+            text-align: center;
+            overflow: hidden;
+        }
+        .t-dt-weekday {
+            color: var(--theme-primary);
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 0.26em;
+            padding-left: 0.26em;
+            text-transform: uppercase;
+        }
+        .t-dt-day {
+            font-size: 76px;
+            font-weight: 900;
+            line-height: 0.95;
+            color: var(--theme-primary);
+        }
+        @supports (-webkit-text-stroke: 2px black) {
+            .t-dt-day {
+                color: transparent;
+                -webkit-text-fill-color: transparent;
+                -webkit-text-stroke: 2px var(--theme-primary);
+            }
+        }
+        .t-dt-month {
+            color: #E5E7EB;
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .t-datetile-lg { gap: 10px; }
+        .t-datetile-lg .t-dt-weekday { font-size: 20px; }
+        .t-datetile-lg .t-dt-day { font-size: 180px; }
+        .t-datetile-lg .t-dt-month { font-size: 22px; }
+        @supports (-webkit-text-stroke: 2px black) {
+            .t-datetile-lg .t-dt-day { -webkit-text-stroke-width: 4px; }
+        }
+        @media (max-width: 767px) {
+            .t-dt-day { font-size: 60px; }
+            .t-dt-weekday { font-size: 11px; }
+            .t-dt-month { font-size: 11px; }
+            .t-datetile-lg .t-dt-day { font-size: 140px; }
+            .t-datetile-lg .t-dt-weekday { font-size: 16px; }
+            .t-datetile-lg .t-dt-month { font-size: 18px; }
+        }
+
+        /* ============================================
+           Tournament cards
+           ============================================ */
+        .t-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border: 4px solid #374151;
+            border-radius: 0;
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+            transition: border-color 0.2s ease;
+        }
+        .t-card:hover { border-color: var(--theme-primary); }
+
+        .t-card-top {
+            display: flex;
+            gap: 18px;
+            padding: 18px;
+            flex: 1 1 auto;
+        }
+
+        .t-card-poster {
+            display: block;
+            flex: 0 0 138px;
+            width: 138px;
+            height: 194px;
+            border: 3px solid #374151;
+            background: #0B1324;
+            overflow: hidden;
+        }
+        .t-card-poster:focus-visible { outline: 3px solid var(--theme-primary); outline-offset: 2px; }
+
+        .t-card-main {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .t-card-name {
+            margin-top: 10px;
+            color: #FFFFFF;
+            font-size: 19px;
+            font-weight: 900;
+            line-height: 1.15;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .t-card-name a { color: inherit; }
+        .t-card-name a:hover { color: var(--theme-primary); }
+
+        .t-card-actions {
+            margin-top: auto;
+            padding-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .t-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 900;
+            line-height: 1.1;
+            text-transform: uppercase;
+            text-align: center;
+            border: 4px solid var(--theme-primary);
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+        .t-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .t-btn-solid { background: var(--theme-primary); color: #0F172A; }
+        .t-btn-solid:hover { opacity: 0.9; }
+        .t-btn-outline { background: transparent; color: var(--theme-primary); }
+        .t-btn-outline:hover { background: var(--theme-primary); color: #0F172A; }
+
+        .t-card-info {
+            border-top: 2px solid #374151;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .t-info-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+        .t-info-row > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+        .t-info-muted { color: #9CA3AF; }
+
+        .t-info-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 30px;
+            width: 30px;
+            height: 30px;
+            background: var(--theme-primary);
+            color: #0F172A;
+        }
+        .t-info-icon svg { width: 16px; height: 16px; }
+
+        @media (max-width: 767px) {
+            .t-card-top { gap: 14px; }
+            .t-card-poster { flex-basis: 112px; width: 112px; height: 158px; }
+            .t-card-name { font-size: 17px; }
+            .t-card-actions { gap: 8px; }
+            .t-btn { font-size: 12px; padding: 8px 10px; border-width: 3px; }
+            .t-btn svg { width: 14px; height: 14px; }
+        }
+
+        .calendar-day {
+            aspect-ratio: 1 / 1;
+            min-height: 70px;
+            max-height: 100px;
+            height: auto;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 4px;
+            cursor: pointer;
+        }
+        
+        #calendarDays {
+            width: 100%;
+        }
+        
+        #calendarDays > div {
+            width: 100%;
+        }
+        
+        .calendar-day:hover:not(.other-month) {
+            background-color: #1e293b;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        
+        .calendar-day.has-tournament {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid var(--theme-primary);
+            cursor: pointer;
+            animation: pulse-border 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-border {
+            0%, 100% { border-color: var(--theme-primary); }
+            50% { border-color: var(--theme-secondary); }
+        }
+        
+        .calendar-day.has-tournament:hover {
+            box-shadow: 0 0 20px var(--theme-primary), inset 0 0 10px color-mix(in srgb, var(--theme-primary) 40%, transparent);
+            transform: scale(1.08);
+        }
+        
+        .calendar-day.other-month {
+            opacity: 0.3;
+            cursor: default;
+        }
+        
+        .calendar-day.other-month:hover {
+            transform: none;
+            background-color: transparent;
+        }
+        
+        .calendar-day-number {
+            font-size: 1rem;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        
+        .calendar-day.today {
+            background-color: rgba(16, 185, 129, 0.15);
+            border: 2px solid var(--theme-primary);
+            font-weight: 900;
+        }
+        
+        .calendar-day.today .calendar-day-number {
+            color: var(--theme-primary);
+        }
+        
+        .tournament-dots-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            justify-content: center;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        
+        .tournament-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--theme-primary);
+            border-radius: 50%;
+            display: inline-block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #1e293b;
+            border: 4px solid;
+            border-color: var(--theme-primary);
+            min-width: 200px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 12px 20px;
+            color: #9ca3af;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border-bottom: 2px solid #374151;
+        }
+
+        .dropdown-menu a:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #0f172a;
+            color: var(--theme-primary);
+            padding-left: 30px;
+        }
+
+        .dropdown-toggle {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .dropdown-toggle::after {
+            content: '▼';
+            font-size: 0.6rem;
+            margin-left: 5px;
+            transition: transform 0.3s;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .dropdown:hover .dropdown-toggle::after {
+            transform: rotate(180deg);
+        }
+
+        .mobile-dropdown-menu {
+            display: none;
+            background-color: #0f172a;
+            padding-left: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .mobile-dropdown-menu.active {
+            display: block;
+        }
+
+        .mobile-dropdown-menu a {
+            display: block;
+            padding: 10px 20px;
+            color: #9ca3af;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            border-left: 3px solid #374151;
+            margin: 5px 0;
+            transition: all 0.2s;
+        }
+
+        .mobile-dropdown-menu a:hover {
+            border-left-color: var(--theme-primary);
+            color: var(--theme-primary);
+            padding-left: 25px;
+        }
+
+        @media (min-width: 1024px) {
+            /* Desktop optimizations - compact calendar */
+            .calendar-day {
+                min-height: 75px;
+                max-height: 95px;
+            }
+            
+            .calendar-day-number {
+                font-size: 0.95rem;
+            }
+            
+            .tournament-dot {
+                width: 6px;
+                height: 6px;
+            }
+            
+            #calendarMonthYear {
+                font-size: 1.5rem !important;
+            }
+            
+            /* Smaller calendar grid padding */
+            .bg-slate-900.border-4.overflow-hidden {
+                max-width: 900px;
+                margin: 0 auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            /* Calendar optimizations */
+            .calendar-day {
+                min-height: 60px;
+                font-size: 0.75rem;
+                padding: 4px 2px;
+            }
+            
+            .calendar-day-number {
+                font-size: 0.875rem;
+            }
+            
+            .tournament-dot {
+                width: 5px;
+                height: 5px;
+                margin: 0 1px;
+            }
+            
+            /* Calendar header */
+            #calendarMonthYear {
+                font-size: 1.25rem !important;
+            }
+            
+            /* Calendar navigation buttons */
+            .bg-slate-900.border-4 button {
+                padding: 8px 12px !important;
+                font-size: 0.75rem !important;
+            }
+            
+            /* Day headers */
+            .grid.grid-cols-7.bg-slate-800 > div {
+                padding: 8px 4px;
+                font-size: 0.65rem;
+            }
+            
+            /* Selected day tournaments */
+            #selectedDayTournamentsList {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Tab buttons */
+            .tournament-tab {
+                padding: 12px 8px !important;
+                font-size: 0.75rem !important;
+            }
+            
+            .tournament-tab > div {
+                font-size: 0.75rem !important;
+            }
+            
+            .tournament-tab .mt-2 {
+                font-size: 0.65rem !important;
+            }
+            
+            /* Page header */
+            h1 {
+                font-size: 2rem !important;
+            }
+            
+            /* Pagination */
+            #paginationContainer {
+                flex-wrap: wrap;
+                gap: 8px !important;
+            }
+            
+            #paginationContainer button,
+            #paginationContainer span {
+                font-size: 0.75rem !important;
+                padding: 8px 12px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* Extra small screens - phones */
+            .calendar-day {
+                min-height: 50px;
+                padding: 2px 1px;
+            }
+            
+            .calendar-day-number {
+                font-size: 0.75rem;
+            }
+            
+            .tournament-dot {
+                width: 4px;
+                height: 4px;
+                margin: 0;
+            }
+            
+            #calendarMonthYear {
+                font-size: 1rem !important;
+            }
+            
+            .bg-slate-900.border-4 button {
+                padding: 6px 10px !important;
+                font-size: 0.65rem !important;
+            }
+            
+            /* Hide full text on tabs, show only icons on Calendar tab */
+            
+            /* Day headers - 2 letter abbreviation */
+            .grid.grid-cols-7.bg-slate-800 > div {
+                padding: 6px 2px;
+                font-size: 0.6rem;
+            }
+            
+            /* Page header */
+            h1 {
+                font-size: 1.75rem !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            /* Very small phones */
+            .calendar-day {
+                min-height: 45px;
+                font-size: 0.65rem;
+            }
+            
+            .calendar-day-number {
+                font-size: 0.7rem;
+            }
+            
+            .tournament-dot {
+                width: 3px;
+                height: 3px;
+            }
+            
+            #calendarMonthYear {
+                font-size: 0.875rem !important;
+            }
+            
+            .grid.grid-cols-7.bg-slate-800 > div {
+                font-size: 0.55rem;
+                padding: 4px 1px;
+            }
+            
+            .bg-slate-900.border-4 {
+                padding: 12px !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+                    <div class="relative">
+                        <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                        <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                             style="box-shadow: 0 0 12px var(--theme-primary);">
+                            <img src="/assets/images/logo/KBF-Logo.jpeg"
+                                 alt="KBF-UK Logo"
+                                 class="w-full h-full object-contain">
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+                        <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                    </div>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                    <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
+                    <a href="/tournaments" class="text-white font-black px-5 py-2 border-b-4 theme-primary-border uppercase text-sm tracking-wider">Tournaments</a>
+                    <a href="/gallery" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                    
+                    <div class="dropdown">
+                        <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
+                            More
+                        </a>
+                        <div class="dropdown-menu">
+                            <a href="/news">News</a>
+                            <a href="/register">Register</a>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                        <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                        <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                        <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                        <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                    </div>
+                    
+                    <div class="ml-4">
+                        <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
+                            Login
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="theme-primary-text p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+                <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Rankings</a>
+                <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+                <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+                
+                <div>
+                    <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                        More
+                        <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                    </button>
+                    <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                        <a href="/news">News</a>
+                        <a href="/register">Register</a>
+                    </div>
+                </div>
+                
+                <div class="px-3 py-4 border-t-2 border-gray-700">
+                    <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                        <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                        <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                        <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                    </div>
+                </div>
+                
+                <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-4 theme-primary-border py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-5xl font-black uppercase mb-3">
+                <span class="theme-primary-text">All</span> Tournaments
+            </h1>
+            <div class="h-2 w-32 theme-primary-bg mb-4"></div>
+            <p class="text-xl text-gray-300 font-bold uppercase">Upcoming & Past Badminton Tournaments</p>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        <div class="grid grid-cols-3 gap-3 sm:gap-6 mb-12" role="tablist" aria-label="Tournament views">
+            <button type="button" onclick="switchTab('upcoming')" ontouchstart="this.click()"
+                    class="tournament-tab active" data-tab="upcoming" role="tab">
+                <div class="tab-label">Upcoming</div>
+                <div class="mt-2 tab-sub" id="upcomingCount">0 tournaments</div>
+            </button>
+            <button type="button" onclick="switchTab('past')" ontouchstart="this.click()"
+                    class="tournament-tab" data-tab="past" role="tab">
+                <div class="tab-label">Past</div>
+                <div class="mt-2 tab-sub" id="pastCount">0 tournaments</div>
+            </button>
+            <button type="button" onclick="switchTab('calendar')" ontouchstart="this.click()"
+                    class="tournament-tab" data-tab="calendar" role="tab">
+                <div class="tab-label">
+                    <svg class="hidden sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Calendar</span>
+                </div>
+                <div class="mt-2 tab-sub">Month view</div>
+            </button>
+        </div>
+
+        <div id="loading" class="text-center py-16">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-emerald-500 mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-lg">Loading Tournaments...</p>
+        </div>
+
+        <div id="tournamentsGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </div>
+        
+        <div id="calendarView" class="hidden">
+            <div class="max-w-4xl mx-auto">
+            <div class="bg-slate-900 border-4 border-gray-700 p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <button onclick="previousMonth()" class="px-4 py-2 bg-slate-800 border-2 border-gray-700 font-bold uppercase text-sm hover:border-emerald-500 transition">
+                        ← Prev
+                    </button>
+                    <h2 id="calendarMonthYear" class="text-2xl font-black uppercase theme-primary-text">
+                    </h2>
+                    <button onclick="nextMonth()" class="px-4 py-2 bg-slate-800 border-2 border-gray-700 font-bold uppercase text-sm hover:border-emerald-500 transition">
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border-4 border-gray-700 overflow-hidden">
+                <div class="grid grid-cols-7 bg-slate-800 border-b-4 border-gray-700">
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text border-r-2 border-gray-700">Sun</div>
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text border-r-2 border-gray-700">Mon</div>
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text border-r-2 border-gray-700">Tue</div>
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text border-r-2 border-gray-700">Wed</div>
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text border-r-2 border-gray-700">Thu</div>
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text border-r-2 border-gray-700">Fri</div>
+                    <div class="text-center py-2 font-black uppercase text-xs theme-primary-text">Sat</div>
+                </div>
+                
+                <div id="calendarDays" class="grid grid-cols-7">
+                </div>
+            </div>
+
+            <div id="selectedDayTournaments" class="hidden mt-6">
+                <h3 class="text-2xl font-black uppercase mb-4">
+                    <span class="theme-primary-text">Tournaments on </span>
+                    <span id="selectedDateText"></span>
+                </h3>
+                <div id="selectedDayTournamentsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="paginationContainer" class="hidden mt-12 flex justify-center items-center gap-4">
+            <button onclick="previousPage()" id="prevBtn"
+                    class="px-6 py-3 bg-slate-800 border-4 border-gray-700 font-black uppercase text-sm hover:border-emerald-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                ← Previous
+            </button>
+            <span id="pageInfo" class="text-gray-400 font-bold uppercase text-sm"></span>
+            <button onclick="nextPage()" id="nextBtn"
+                    class="px-6 py-3 bg-slate-800 border-4 border-gray-700 font-black uppercase text-sm hover:border-emerald-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                Next →
+            </button>
+        </div>
+
+        <div id="noTournaments" class="hidden text-center py-20">
+            <div class="inline-flex items-center justify-center w-32 h-32 theme-primary-bg border-4 border-gray-700 mb-6">
+                <svg class="w-16 h-16 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                </svg>
+            </div>
+            <h3 class="text-3xl font-black text-white mb-3 uppercase">No Tournaments Found</h3>
+            <p class="text-gray-400 font-bold uppercase text-lg">Check back soon for upcoming events!</p>
+        </div>
+    </div>
+
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <script>
+    let currentTab = 'upcoming';
+    let allTournaments = { upcoming: [], past: [] };
+    let totalTournaments = { upcoming: 0, past: 0 };
+    let currentPage = { upcoming: 1, past: 1 };
+    const tournamentsPerPage = 10;
+    let currentCalendarDate = new Date();
+    let calendarTournaments = [];
+
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
+        });
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) mobileMenu.classList.add('hidden');
+    }
+
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    // ============================================
+    // SHARED TOURNAMENT DISPLAY HELPERS
+    // (same block on tournaments.html and tournament-details.html)
+    // ============================================
+    const TOURNAMENT_ICONS = {
+        calendar: '<path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+        pin: '<path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>',
+        building: '<path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>',
+        external: '<path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>',
+        arrow: '<path d="M13 7l5 5m0 0l-5 5m5-5H6"/>',
+        chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+        trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        fee: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+        tick: '<path d="M20 6 9 17l-5-5"/>',
+        phone: '<path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>'
+    };
+
+    function svgIcon(name, className) {
+        return `<svg class="${className || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOURNAMENT_ICONS[name] || ''}</svg>`;
+    }
+
+    // Escapes text for both element content and attribute values
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    // 'YYYY-MM-DD' from an API date value, or '' when missing/invalid
+    function toYmd(value) {
+        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : '';
+    }
+
+    // Local-time Date for a 'YYYY-MM-DD' string (never shifted by time zone)
+    function parseYmd(ymd) {
+        const parts = ymd.split('-').map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function todayYmd() {
+        const now = new Date();
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    }
+
+    function daysBetween(fromYmd, toYmdValue) {
+        return Math.round((parseYmd(toYmdValue) - parseYmd(fromYmd)) / 86400000);
+    }
+
+    // "Sat, 28 Nov 2026"
+    function formatShortDate(ymd) {
+        if (!ymd) return '';
+        const d = parseYmd(ymd);
+        return `${WEEKDAYS_SHORT[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    // "Saturday, 28 November 2026"
+    function formatLongDate(ymd) {
+        if (!ymd) return '';
+        const d = parseYmd(ymd);
+        return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    // "10:30" from "10:30:00", or ''
+    function formatTime(value) {
+        const m = /^(\d{2}):(\d{2})/.exec(typeof value === 'string' ? value : '');
+        return m ? `${m[1]}:${m[2]}` : '';
+    }
+
+    // Only http(s) registration links are ever used
+    function safeHttpUrl(value) {
+        if (typeof value !== 'string') return '';
+        const url = value.trim();
+        return /^https?:\/\/[^\s<>"'`]+$/i.test(url) ? url : '';
+    }
+
+    // Only images uploaded to this site are shown as posters
+    function safeImagePath(value) {
+        if (typeof value !== 'string') return '';
+        if (!/^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(value) || value.indexOf('..') !== -1) return '';
+        return value;
+    }
+
+    // Everything the cards and the details page need to decide tags and buttons
+    function getTournamentState(t, hasResults) {
+        const today = todayYmd();
+        const date = toYmd(t.TournamentDate);
+        const isPast = date !== '' && date < today;
+        const regUrl = safeHttpUrl(t.RegistrationUrl);
+        const closeDate = toYmd(t.RegistrationCloseDate);
+        const closePassed = closeDate !== '' && today > closeDate;
+        const canRegister = regUrl !== '' && !isPast && !closePassed;
+
+        let tag;
+        if (isPast) {
+            tag = hasResults
+                ? { label: 'Results available', tone: 'theme', icon: 'trophy' }
+                : { label: 'Completed', tone: 'grey', icon: 'tick' };
+        } else if (closePassed) {
+            tag = { label: 'Registration closed', tone: 'grey', icon: 'clock' };
+        } else if (canRegister && closeDate !== '' && daysBetween(today, closeDate) <= 7) {
+            const n = daysBetween(today, closeDate);
+            tag = { label: n === 0 ? 'Closes today' : `Closes in ${n} ${n === 1 ? 'day' : 'days'}`, tone: 'theme', icon: 'clock' };
+        } else if (canRegister) {
+            tag = { label: 'Registration open', tone: 'theme', icon: 'tick' };
+        } else {
+            tag = { label: 'Upcoming', tone: 'grey', icon: 'calendar' };
+        }
+
+        return { date, isPast, regUrl, canRegister, hasResults: !!hasResults, tag };
+    }
+
+    function statusTagHtml(tag) {
+        return `<span class="t-tag ${tag.tone === 'theme' ? 't-tag-theme' : 't-tag-grey'}">${svgIcon(tag.icon)}<span>${escapeHtml(tag.label)}</span></span>`;
+    }
+
+    // Date tile shown in place of a poster
+    function dateTileHtml(ymd, large) {
+        if (!ymd) {
+            return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}"><span class="t-dt-weekday">Date</span><span class="t-dt-day">--</span><span class="t-dt-month">To be confirmed</span></div>`;
+        }
+        const d = parseYmd(ymd);
+        return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}">
+                    <span class="t-dt-weekday">${WEEKDAYS_SHORT[d.getDay()]}</span>
+                    <span class="t-dt-day">${d.getDate()}</span>
+                    <span class="t-dt-month">${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}</span>
+                </div>`;
+    }
+
+    // Poster image (whole, scaled to fit) or the date tile
+    function posterOrTileHtml(t, large) {
+        const poster = safeImagePath(t.PosterUrl);
+        const date = toYmd(t.TournamentDate);
+        if (!poster) return dateTileHtml(date, large);
+        return `<img src="${escapeHtml(poster)}" alt="Poster for ${escapeHtml(t.Name)}" class="t-poster-img" loading="lazy"
+                     data-date="${escapeHtml(date)}" data-large="${large ? '1' : '0'}">`;
+    }
+
+    // A poster that fails to load falls back to the date tile
+    document.addEventListener('error', function (e) {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG' || !img.classList.contains('t-poster-img')) return;
+        const holder = img.parentNode;
+        if (!holder) return;
+        const date = toYmd(img.getAttribute('data-date') || '');
+        holder.innerHTML = dateTileHtml(date, img.getAttribute('data-large') === '1');
+        if (typeof onPosterUnavailable === 'function') onPosterUnavailable();
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        changeTheme(savedTheme);
+        loadTournaments();
+    });
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    function countLabel(n) {
+        return `${n} ${n === 1 ? 'tournament' : 'tournaments'}`;
+    }
+
+    // direction 1 = soonest first, -1 = newest first (date, then start time)
+    function sortTournaments(list, direction) {
+        return (list || []).slice().sort((a, b) => {
+            const ka = toYmd(a.TournamentDate) + ' ' + (formatTime(a.StartTime) || '99:99');
+            const kb = toYmd(b.TournamentDate) + ' ' + (formatTime(b.StartTime) || '99:99');
+            return ka < kb ? -direction : ka > kb ? direction : 0;
+        });
+    }
+
+    async function loadTournaments() {
+        try {
+            let response = await fetch('/api/tournaments.php?status=upcoming', { credentials: 'include' });
+            let data = await response.json();
+            if (data.success) {
+                // Soonest first
+                allTournaments.upcoming = sortTournaments(data.tournaments, 1);
+                totalTournaments.upcoming = data.tournaments.length;
+                document.getElementById('upcomingCount').textContent = countLabel(data.tournaments.length);
+            }
+            response = await fetch('/api/tournaments.php?status=past', { credentials: 'include' });
+            data = await response.json();
+            if (data.success) {
+                // Newest first
+                allTournaments.past = sortTournaments(data.tournaments, -1);
+                totalTournaments.past = data.tournaments.length;
+                document.getElementById('pastCount').textContent = countLabel(data.tournaments.length);
+            }
+            calendarTournaments = [...allTournaments.upcoming, ...allTournaments.past];
+            displayTournaments();
+        } catch (error) {
+            console.error('Error loading tournaments:', error);
+            document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Tournaments</p>';
+        }
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        if (tab !== 'calendar') currentPage[tab] = 1;
+        
+        // Update tab styles immediately with requestAnimationFrame
+        requestAnimationFrame(() => {
+            document.querySelectorAll('.tournament-tab').forEach(tabBtn => {
+                const isActive = tabBtn.dataset.tab === tab;
+                tabBtn.classList.toggle('active', isActive);
+                tabBtn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+        });
+        
+        displayTournaments();
+    }
+
+    function displayTournaments() {
+        const grid = document.getElementById('tournamentsGrid');
+        const calendarView = document.getElementById('calendarView');
+        const loading = document.getElementById('loading');
+        const noTournaments = document.getElementById('noTournaments');
+        const paginationContainer = document.getElementById('paginationContainer');
+        
+        // Show brief loading state for better UX
+        loading.classList.remove('hidden');
+        grid.classList.add('hidden');
+        calendarView.classList.add('hidden');
+        noTournaments.classList.add('hidden');
+        paginationContainer.classList.add('hidden');
+        
+        // Use setTimeout to allow UI to update
+        setTimeout(() => {
+            loading.classList.add('hidden');
+
+            if (currentTab === 'calendar') {
+                calendarView.classList.remove('hidden');
+                renderCalendar();
+            } else {
+                const allTournamentsForTab = allTournaments[currentTab];
+                const page = currentPage[currentTab];
+                
+                if (allTournamentsForTab.length === 0) {
+                    noTournaments.classList.remove('hidden');
+                    return;
+                }
+                
+                const startIndex = (page - 1) * tournamentsPerPage;
+                const endIndex = startIndex + tournamentsPerPage;
+                const tournaments = allTournamentsForTab.slice(startIndex, endIndex);
+                const totalPages = Math.ceil(allTournamentsForTab.length / tournamentsPerPage);
+                
+                grid.classList.remove('hidden');
+                grid.innerHTML = tournaments.map(tournament => createTournamentCard(tournament)).join('');
+                
+                if (totalPages > 1) {
+                    paginationContainer.classList.remove('hidden');
+                    updatePaginationControls(page, totalPages);
+                }
+            }
+        }, 100);
+    }
+
+    function createTournamentCard(tournament) {
+        const state = getTournamentState(tournament, Number(tournament.MatchCount) > 0);
+        const id = parseInt(tournament.TournamentId, 10);
+        const detailsUrl = `/tournament-details?id=${id}`;
+        const time = formatTime(tournament.StartTime);
+
+        let actions;
+        if (state.canRegister) {
+            actions = `
+                <a href="${escapeHtml(state.regUrl)}" target="_blank" rel="noopener" class="t-btn t-btn-solid">
+                    <span>Register</span>${svgIcon('external')}
+                </a>
+                <a href="${detailsUrl}" class="t-btn t-btn-outline">Details</a>`;
+        } else {
+            const label = state.isPast && state.hasResults ? 'View results' : 'View details';
+            actions = `<a href="${detailsUrl}" class="t-btn t-btn-outline"><span>${label}</span>${svgIcon('arrow')}</a>`;
+        }
+
+        const dateText = escapeHtml(formatShortDate(state.date)) + (time ? ` <span class="t-info-muted">&middot; ${escapeHtml(time)}</span>` : '');
+        const venueText = escapeHtml(tournament.Venue) +
+            (tournament.Location ? ` <span class="t-info-muted">${escapeHtml(tournament.Location)}</span>` : '');
+
+        return `
+            <article class="t-card">
+                <div class="t-card-top">
+                    <a href="${detailsUrl}" class="t-card-poster" aria-label="${escapeHtml(tournament.Name)} details">
+                        ${posterOrTileHtml(tournament, false)}
+                    </a>
+                    <div class="t-card-main">
+                        ${statusTagHtml(state.tag)}
+                        <h3 class="t-card-name"><a href="${detailsUrl}">${escapeHtml(tournament.Name)}</a></h3>
+                        <div class="t-card-actions">${actions}</div>
+                    </div>
+                </div>
+                <div class="t-card-info">
+                    <div class="t-info-row">
+                        <span class="t-info-icon">${svgIcon('calendar')}</span>
+                        <span>${dateText}</span>
+                    </div>
+                    <div class="t-info-row">
+                        <span class="t-info-icon">${svgIcon('pin')}</span>
+                        <span>${venueText}</span>
+                    </div>
+                    <div class="t-info-row">
+                        <span class="t-info-icon">${svgIcon('building')}</span>
+                        <span>${escapeHtml(tournament.ClubName)}</span>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
+    function renderCalendar() {
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+        const today = new Date();
+        const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+        const todayDate = today.getDate();
+        
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+        const calendarDays = document.getElementById('calendarDays');
+        calendarDays.innerHTML = '';
+        let dayCount = 1;
+        let nextMonthDay = 1;
+        
+        for (let i = 0; i < 42; i++) {
+            const dayCell = document.createElement('div');
+            dayCell.className = 'calendar-day border-2 border-gray-700 p-2';
+            
+            if (i < firstDay) {
+                const day = daysInPrevMonth - firstDay + i + 1;
+                dayCell.classList.add('other-month');
+                dayCell.innerHTML = `<div class="calendar-day-number font-bold text-gray-600">${day}</div>`;
+            } else if (dayCount <= daysInMonth) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCount).padStart(2, '0')}`;
+                const dayTournaments = calendarTournaments.filter(t => t.TournamentDate === dateStr);
+                
+                // Check if this is today
+                if (isCurrentMonth && dayCount === todayDate) {
+                    dayCell.classList.add('today');
+                }
+                
+                const dotsHTML = dayTournaments.length > 0 
+                    ? `<div class="tournament-dots-container mt-1">${dayTournaments.slice(0, 3).map(() => '<span class="tournament-dot"></span>').join('')}${dayTournaments.length > 3 ? '<span class="text-xs theme-primary-text font-bold">+</span>' : ''}</div>`
+                    : '';
+                
+                dayCell.innerHTML = `
+                    <div class="calendar-day-number font-bold text-white">${dayCount}</div>
+                    ${dotsHTML}
+                `;
+                
+                if (dayTournaments.length > 0) {
+                    dayCell.classList.add('has-tournament');
+                    dayCell.onclick = () => showDayTournaments(dateStr, dayTournaments);
+                } else {
+                    // Add click handler for empty days to hide tournament list
+                    dayCell.onclick = () => hideDayTournaments();
+                }
+                dayCount++;
+            } else {
+                dayCell.classList.add('other-month');
+                dayCell.innerHTML = `<div class="calendar-day-number font-bold text-gray-600">${nextMonthDay}</div>`;
+                nextMonthDay++;
+            }
+            calendarDays.appendChild(dayCell);
+            if (dayCount > daysInMonth && i >= 34) break;
+        }
+    }
+
+    function showDayTournaments(dateStr, tournaments) {
+        const container = document.getElementById('selectedDayTournaments');
+        const dateText = document.getElementById('selectedDateText');
+        const list = document.getElementById('selectedDayTournamentsList');
+        const date = new Date(dateStr + 'T00:00:00');
+        dateText.textContent = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        list.innerHTML = tournaments.map(tournament => createTournamentCard(tournament)).join('');
+        container.classList.remove('hidden');
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideDayTournaments() {
+        const container = document.getElementById('selectedDayTournaments');
+        container.classList.add('hidden');
+    }
+
+    function previousMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        renderCalendar();
+        hideDayTournaments();
+    }
+
+    function nextMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        renderCalendar();
+        hideDayTournaments();
+    }
+
+    function updatePaginationControls(page, totalPages) {
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        pageInfo.textContent = `Page ${page} of ${totalPages}`;
+        prevBtn.disabled = page === 1;
+        nextBtn.disabled = page === totalPages;
+    }
+
+    function previousPage() {
+        if (currentPage[currentTab] > 1) {
+            currentPage[currentTab]--;
+            displayTournaments();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function nextPage() {
+        const totalPages = Math.ceil(allTournaments[currentTab].length / tournamentsPerPage);
+        if (currentPage[currentTab] < totalPages) {
+            currentPage[currentTab]++;
+            displayTournaments();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+    </script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Centre - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+
+        .ring-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 9999px; border: 3px solid var(--theme-primary); color: var(--theme-primary); flex-shrink: 0; }
+        .tile { background: #0f172a; border: 4px solid #374151; }
+        .panel { background: #0f172a; border: 4px solid #374151; }
+        .btn-outline { display: inline-flex; align-items: center; justify-content: center; padding: .4rem .75rem; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; font-size: .7rem; text-transform: uppercase; white-space: nowrap; }
+        .btn-outline:hover { background: var(--theme-primary); color: #0F172A; }
+        .btn-outline:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .warn-icon { color: #f59e0b; flex-shrink: 0; }
+
+        /* Usage bar: sent in the theme colour, the reserve striped grey at the end */
+        .usage-track { position: relative; height: 20px; background: #334155; border: 2px solid #374151; overflow: hidden; }
+        .usage-reserve { position: absolute; top: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(135deg, #64748b 0, #64748b 6px, #475569 6px, #475569 12px); }
+        .usage-sent { position: absolute; top: 0; left: 0; bottom: 0; background: var(--theme-primary); z-index: 1; transition: width .4s ease; }
+
+        .job-square { display: inline-block; width: 12px; height: 12px; flex-shrink: 0; margin-top: .3rem; }
+        .job-ok { background: var(--theme-primary); }
+        .job-bad { background: #ef4444; }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Control</span> centre</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Everything about KBF-UK in one place</p>
+        </div>
+
+        <!-- Control centre layout -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0">
+
+        <div id="pageLoading" class="py-16 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+        <p id="pageMessage" class="hidden mb-4 p-3 border-2 border-red-500 bg-red-500/20 text-red-400 font-bold text-xs" role="alert"></p>
+
+        <div id="pageContent" class="hidden space-y-6 sm:space-y-8">
+            <!-- ============================ -->
+            <!-- FIGURE TILES -->
+            <!-- ============================ -->
+            <div id="tiles" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] gap-6 items-start">
+                <div class="space-y-6 min-w-0">
+                    <!-- Needs attention -->
+                    <section class="panel p-4 sm:p-6" aria-labelledby="attentionHeading">
+                        <h2 id="attentionHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase mb-4">Needs attention</h2>
+                        <ul id="attentionList" class="space-y-3"></ul>
+                        <div id="attentionEmpty" class="hidden flex items-center gap-3 p-3 bg-slate-800 border-2 border-gray-700">
+                            <svg class="w-6 h-6 theme-primary-text flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            <p class="text-sm font-bold text-gray-200">Nothing needs your attention.</p>
+                        </div>
+                    </section>
+
+                    <!-- Email allowance -->
+                    <section id="emailPanel" class="hidden panel p-4 sm:p-6 space-y-3" aria-labelledby="emailHeading">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h2 id="emailHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Email allowance, last 24 hours</h2>
+                            <a href="/admin/email-limits" class="btn-outline">Email and limits</a>
+                        </div>
+                        <div class="usage-track" role="img" id="usageBar" aria-label="">
+                            <div class="usage-reserve" id="usageReserve" style="width:0%"></div>
+                            <div class="usage-sent" id="usageSent" style="width:0%"></div>
+                        </div>
+                        <p id="emailCounts" class="text-sm font-bold text-gray-200"></p>
+                        <p class="text-xs text-gray-400 font-semibold">Striped: kept back for approvals and password resets</p>
+                        <p id="emailPaused" class="hidden text-xs font-bold text-amber-400"></p>
+                        <div id="broadcastBox" class="hidden p-3 bg-slate-800 border-2 border-gray-700">
+                            <p class="text-xs font-black uppercase text-gray-400 mb-1">Broadcast still sending</p>
+                            <p id="broadcastText" class="text-sm font-bold text-white break-words"></p>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Scheduled jobs -->
+                <section id="jobsPanel" class="hidden panel p-4 sm:p-6" aria-labelledby="jobsHeading">
+                    <h2 id="jobsHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase mb-4">Scheduled jobs</h2>
+                    <ul id="jobsList" class="space-y-4"></ul>
+                </section>
+            </div>
+
+            <p id="updatedAt" class="text-xs text-gray-500 font-semibold" aria-live="polite"></p>
+        </div>
+
+        </main>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): any control.* permission
+    // ============================================
+    KBFShell.startControl({ section: 'overview' }).then(function (user) {
+        window.kbfUser = user;
+        load();
+        startRefresh();
+    });
+
+    const API = '/api/control-overview.php';
+    const ICONS = {
+        members: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        waiting: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+        events: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+        email: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+        warning: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+    };
+
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+    }
+
+    function svg(path, cls) {
+        const ns = 'http://www.w3.org/2000/svg';
+        const s = document.createElementNS(ns, 'svg');
+        s.setAttribute('class', cls || 'w-5 h-5');
+        s.setAttribute('fill', 'none');
+        s.setAttribute('stroke', 'currentColor');
+        s.setAttribute('viewBox', '0 0 24 24');
+        s.setAttribute('aria-hidden', 'true');
+        const p = document.createElementNS(ns, 'path');
+        p.setAttribute('stroke-linecap', 'round');
+        p.setAttribute('stroke-linejoin', 'round');
+        p.setAttribute('stroke-width', '2');
+        p.setAttribute('d', path);
+        s.appendChild(p);
+        return s;
+    }
+
+    function n(v) { return Number(v || 0).toLocaleString('en-GB'); }
+
+    // ============================================
+    // UK TIME: "Today 14:02", "Yesterday 09:30", "18 Nov 14:02"
+    // ============================================
+    const UK = 'Europe/London';
+    function ukParts(date) {
+        const parts = {};
+        new Intl.DateTimeFormat('en-GB', { timeZone: UK, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+            .formatToParts(date).forEach(p => { parts[p.type] = p.value; });
+        return parts;
+    }
+
+    function ukDayKey(date) {
+        const p = ukParts(date);
+        return p.year + '-' + p.month + '-' + p.day;
+    }
+
+    function ukTime(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        const p = ukParts(d);
+        const hm = (p.hour === '24' ? '00' : p.hour) + ':' + p.minute;
+        const today = ukDayKey(new Date());
+        const yesterday = ukDayKey(new Date(Date.now() - 86400000));
+        const key = ukDayKey(d);
+        if (key === today) return 'Today ' + hm;
+        if (key === yesterday) return 'Yesterday ' + hm;
+        return new Intl.DateTimeFormat('en-GB', { timeZone: UK, day: 'numeric', month: 'short' }).format(d) + ' ' + hm;
+    }
+
+    // "2026-12-12" -> "12 Dec 2026"
+    function ukDate(ymd) {
+        if (!ymd) return '';
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd);
+        if (!m) return ymd;
+        const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
+        return new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+    }
+
+    // ============================================
+    // LOAD
+    // ============================================
+    async function load() {
+        try {
+            const res = await authenticatedFetch(API);
+            const data = await res.json();
+            if (!data.success) {
+                document.getElementById('pageLoading').classList.add('hidden');
+                const p = document.getElementById('pageMessage');
+                p.textContent = data.message || 'The overview could not be loaded.';
+                p.classList.remove('hidden');
+                return;
+            }
+            document.getElementById('pageMessage').classList.add('hidden');
+            renderTiles(data);
+            renderAttention(data.attention || []);
+            renderEmail(data.emailAllowance || null);
+            renderJobs(data.jobs || null);
+            document.getElementById('updatedAt').textContent = 'Updated ' + ukTime(new Date().toISOString()) + '. Refreshes every minute.';
+            document.getElementById('pageLoading').classList.add('hidden');
+            document.getElementById('pageContent').classList.remove('hidden');
+        } catch (e) {
+            console.error('Overview error:', e);
+            const p = document.getElementById('pageMessage');
+            p.textContent = 'The overview could not be loaded.';
+            p.classList.remove('hidden');
+            document.getElementById('pageLoading').classList.add('hidden');
+        }
+    }
+
+    // Every 60 seconds while the tab is visible, and straight away when it comes back
+    function startRefresh() {
+        setInterval(() => { if (document.visibilityState === 'visible') load(); }, 60000);
+        let hiddenAt = 0;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+            if (hiddenAt && Date.now() - hiddenAt > 60000) load();
+        });
+    }
+
+    // ============================================
+    // TILES
+    // ============================================
+    function tile(icon, label, big, sub, href) {
+        const box = el(href ? 'a' : 'div', 'tile p-4 sm:p-5 flex items-start gap-4' + (href ? ' hover:border-gray-500 transition' : ''));
+        if (href) box.href = href;
+        const ring = el('span', 'ring-icon');
+        ring.appendChild(svg(ICONS[icon]));
+        box.appendChild(ring);
+        const text = el('div', 'min-w-0');
+        text.appendChild(el('p', 'text-xs font-black uppercase text-gray-400', label));
+        text.appendChild(el('p', 'text-2xl font-black text-white leading-tight mt-1', big));
+        text.appendChild(el('p', 'text-xs font-semibold text-gray-400 mt-1', sub));
+        box.appendChild(text);
+        return box;
+    }
+
+    function renderTiles(data) {
+        const wrap = document.getElementById('tiles');
+        wrap.innerHTML = '';
+
+        const m = data.members || { players: 0, staff: 0 };
+        wrap.appendChild(tile('members', 'Members', n(m.players), n(m.players) + ' players, ' + n(m.staff) + ' staff'));
+
+        if (data.waiting) {
+            const w = data.waiting;
+            const total = (w.registrations || 0) + (w.tournaments || 0) + (w.results || 0);
+            const sub = w.oldestDays != null
+                ? 'Oldest ' + w.oldestDays + ' day' + (w.oldestDays === 1 ? '' : 's') + ' ago'
+                : (total ? 'Tournaments and results' : 'Nothing waiting');
+            wrap.appendChild(tile('waiting', 'Waiting approval', n(total), sub, '/admin/approvals'));
+        }
+
+        const u = data.upcoming || { count: 0, nextDate: null };
+        wrap.appendChild(tile('events', 'Upcoming events', n(u.count), u.nextDate ? 'Next: ' + ukDate(u.nextDate) : 'None planned'));
+
+        if (data.emails) {
+            const e = data.emails;
+            wrap.appendChild(tile('email', 'Emails, 24 hours', n(e.sent) + '/' + n(e.limit), n(e.reserve) + ' kept back', '/admin/email-limits'));
+        }
+    }
+
+    // ============================================
+    // NEEDS ATTENTION
+    // ============================================
+    function renderAttention(items) {
+        const list = document.getElementById('attentionList');
+        list.innerHTML = '';
+        items.forEach(item => {
+            const li = el('li', 'flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-slate-800 border-2 border-gray-700');
+            const left = el('div', 'flex items-start gap-3 flex-1 min-w-0');
+            left.appendChild(svg(ICONS.warning, 'w-6 h-6 warn-icon'));
+            const text = el('div', 'min-w-0');
+            text.appendChild(el('p', 'text-sm font-black text-white', item.title));
+            text.appendChild(el('p', 'text-xs font-semibold text-gray-300 mt-0.5 break-words', item.text));
+            left.appendChild(text);
+            li.appendChild(left);
+            if (item.link && /^\/admin\/[a-z0-9-]+$/.test(item.link)) {
+                const a = el('a', 'btn-outline self-start sm:self-auto', item.button || 'Open');
+                a.href = item.link;
+                li.appendChild(a);
+            }
+            list.appendChild(li);
+        });
+        document.getElementById('attentionEmpty').classList.toggle('hidden', items.length > 0);
+    }
+
+    // ============================================
+    // EMAIL ALLOWANCE
+    // ============================================
+    function renderEmail(e) {
+        const panel = document.getElementById('emailPanel');
+        if (!e) { panel.classList.add('hidden'); return; }
+        panel.classList.remove('hidden');
+        const limit = Math.max(1, Number(e.limit) || 1);
+        const sent = Number(e.sent) || 0;
+        const reserve = Number(e.reserve) || 0;
+        document.getElementById('usageSent').style.width = Math.min(100, sent / limit * 100) + '%';
+        document.getElementById('usageReserve').style.width = Math.min(100, reserve / limit * 100) + '%';
+        document.getElementById('usageBar').setAttribute('aria-label',
+            sent + ' of ' + limit + ' emails used in the last 24 hours; ' + reserve + ' kept back for approvals and password resets.');
+        document.getElementById('emailCounts').textContent = n(sent) + ' sent • ' + n(e.failed) + ' failed';
+
+        const paused = document.getElementById('emailPaused');
+        paused.classList.toggle('hidden', !e.pausedUntil);
+        if (e.pausedUntil) paused.textContent = 'Sending is paused until ' + ukTime(e.pausedUntil) + '.';
+
+        const box = document.getElementById('broadcastBox');
+        box.classList.toggle('hidden', !e.broadcast);
+        if (e.broadcast) {
+            document.getElementById('broadcastText').textContent =
+                e.broadcast.subject + ': ' + n(e.broadcast.sent) + ' of ' + n(e.broadcast.total) + ' sent';
+        }
+    }
+
+    // ============================================
+    // SCHEDULED JOBS
+    // ============================================
+    function renderJobs(jobs) {
+        const panel = document.getElementById('jobsPanel');
+        if (!jobs) { panel.classList.add('hidden'); return; }
+        panel.classList.remove('hidden');
+        const list = document.getElementById('jobsList');
+        list.innerHTML = '';
+        jobs.forEach(j => {
+            const li = el('li', 'flex items-start gap-3');
+            const ok = j.status === 'ok';
+            const square = el('span', 'job-square ' + (ok ? 'job-ok' : 'job-bad'));
+            square.setAttribute('aria-hidden', 'true');
+            li.appendChild(square);
+            const text = el('div', 'min-w-0');
+            const statusWord = ok ? 'Working' : (j.status === 'error' ? 'Error' : 'Overdue');
+            const title = el('p', 'text-sm font-black text-white', j.label);
+            title.appendChild(el('span', 'sr-only', ' (' + statusWord + ')'));
+            text.appendChild(title);
+            text.appendChild(el('p', 'text-xs font-semibold text-gray-400', j.description));
+            let when;
+            if (j.name === 'term-reset' && j.nextReset) {
+                when = 'Next reset ' + ukDate(j.nextReset) + (j.lastRun ? ' • Last ran ' + ukTime(j.lastRun) : '');
+            } else {
+                when = j.lastRun ? 'Last ran ' + ukTime(j.lastRun) : 'Has not run yet';
+            }
+            text.appendChild(el('p', 'text-xs font-bold mt-1 ' + (ok ? 'text-gray-200' : 'text-red-400'), when + (ok ? '' : ' • ' + statusWord)));
+            if (j.summary) text.appendChild(el('p', 'text-xs font-semibold text-gray-500 mt-0.5 break-words', j.summary));
+            li.appendChild(text);
+            list.appendChild(li);
+        });
+    }
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

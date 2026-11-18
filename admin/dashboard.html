@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Greeting band */
+        .db-band { background: #0f172a; border: 4px solid #374151; border-left: 8px solid var(--theme-primary); }
+        .db-main-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--theme-primary); color: #0F172A; font-weight: 900; text-transform: uppercase; font-size: 0.875rem; letter-spacing: 0.05em; padding: 0.875rem 1.5rem; border: 2px solid var(--theme-primary); transition: opacity 0.2s; white-space: nowrap; }
+        .db-main-btn:hover { opacity: 0.9; }
+        .db-main-btn svg { width: 18px; height: 18px; }
+
+        /* Figure tiles */
+        .db-tile { background: #0f172a; border: 4px solid #374151; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+        .db-ring { width: 44px; height: 44px; border-radius: 9999px; border: 2px solid var(--theme-primary); color: var(--theme-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .db-ring svg { width: 20px; height: 20px; }
+        .db-tile-number { font-size: 1.875rem; line-height: 1; font-weight: 900; color: #fff; }
+        .db-tile-label { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #D1D5DB; }
+        .db-tile-note { font-size: 0.75rem; font-weight: 600; color: #9CA3AF; }
+
+        /* Panels */
+        .db-panel { background: #0f172a; border: 4px solid #374151; }
+        .db-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.875rem 1.25rem; background: #1e293b; border-bottom: 4px solid #374151; }
+        .db-panel-title { font-size: 1rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); }
+        .db-panel-link { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); white-space: nowrap; }
+        .db-panel-link:hover { opacity: 0.8; }
+        .db-panel-body { padding: 1.25rem; }
+        @media (max-width: 640px) {
+            .db-band, .db-tile, .db-panel { border-width: 2px; }
+            .db-band { border-left-width: 6px; }
+            .db-panel-head { border-bottom-width: 2px; padding: 0.75rem 1rem; }
+            .db-panel-body { padding: 1rem; }
+            .db-tile-number { font-size: 1.5rem; }
+        }
+
+        /* To-do */
+        .db-bar { display: flex; height: 14px; width: 100%; background: #1f2937; overflow: hidden; }
+        .db-bar span { display: block; height: 100%; }
+        .db-seg-week { background: var(--theme-primary); }
+        .db-seg-month { background: #F59E0B; }
+        .db-seg-old { background: #EF4444; }
+        .db-key { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: middle; }
+        .db-row { display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem 0; border-top: 2px solid #1f2937; }
+        .db-row:first-child { border-top: 0; }
+        .db-count { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: 1.125rem; }
+        .db-count.is-zero { background: #374151; color: #9CA3AF; }
+        .db-outline { display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: 0.75rem; padding: 0.5rem 0.875rem; white-space: nowrap; transition: background-color 0.2s, color 0.2s; }
+        .db-outline:hover { background: var(--theme-primary); color: #0F172A; }
+        .db-clear { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: #6B7280; white-space: nowrap; }
+
+        /* Switches */
+        .db-switch { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; padding: 0.375rem 0.75rem; border: 2px solid #374151; color: #9CA3AF; }
+        .db-switch.is-on { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+
+        /* People and tournaments */
+        .db-avatar { width: 44px; height: 44px; border-radius: 9999px; border: 2px solid var(--theme-primary); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: #D1D5DB; font-weight: 900; font-size: 0.875rem; }
+        .db-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .db-link-row { display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem; border: 2px solid transparent; transition: border-color 0.2s, background-color 0.2s; }
+        .db-link-row:hover { border-color: var(--theme-primary); background: #1e293b; }
+        .db-datetile { width: 52px; flex-shrink: 0; text-align: center; border: 2px solid var(--theme-primary); }
+        .db-datetile-day { display: block; font-size: 1.25rem; line-height: 1.6rem; font-weight: 900; color: #fff; }
+        .db-datetile-month { display: block; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; background: var(--theme-primary); color: #0F172A; padding: 1px 0; }
+        .db-tag { display: inline-block; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; padding: 0.2rem 0.5rem; white-space: nowrap; }
+        .db-tag-due { background: #EF4444; color: #FFFFFF; }
+        .db-tag-wait { background: #F59E0B; color: #0F172A; }
+        .db-tag-ok { background: var(--theme-primary); color: #0F172A; }
+        .db-tag-done { background: #374151; color: #D1D5DB; }
+
+        /* Small figures and bars */
+        .db-mini { background: #1e293b; border: 2px solid #374151; padding: 0.75rem; }
+        .db-mini-number { font-size: 1.5rem; line-height: 1; font-weight: 900; color: #fff; }
+        .db-mini-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #9CA3AF; margin-top: 0.375rem; }
+        .db-meter { height: 10px; background: #1f2937; }
+        .db-meter span { display: block; height: 100%; background: var(--theme-primary); }
+
+        /* Steps and permissions */
+        .db-step-num { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: 0.8rem; }
+        .db-tick { width: 16px; height: 16px; flex-shrink: 0; color: var(--theme-primary); margin-top: 2px; }
+
+        /* Quick actions */
+        .db-action { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; background: #0f172a; border: 4px solid #374151; transition: border-color 0.2s, transform 0.2s; min-width: 0; }
+        .db-action:hover { border-color: var(--theme-primary); transform: translateY(-2px); }
+        .db-action-icon { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--theme-primary); color: #0F172A; }
+        .db-action-icon svg { width: 20px; height: 20px; }
+        .db-action-label { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: #fff; line-height: 1.2; }
+        @media (max-width: 640px) {
+            .db-action { border-width: 2px; flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <!-- 1. Greeting -->
+        <section id="greeting" class="db-band p-5 sm:p-6 lg:p-8 mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="min-w-0">
+                <p id="todayDate" class="theme-primary-text font-black uppercase text-xs sm:text-sm tracking-wider mb-2"></p>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase text-white break-words"><span id="greetWords">Hello</span>, <span id="greetName" class="theme-primary-text"></span></h1>
+                <p id="greetSentence" class="text-gray-300 font-semibold text-sm sm:text-base mt-2">Loading your dashboard...</p>
+            </div>
+            <div id="greetAction" class="flex-shrink-0"></div>
+        </section>
+
+        <div id="dashError" class="hidden mb-5 p-4 border-2 sm:border-4 border-gray-700 bg-slate-900 text-gray-300 font-bold text-sm"></div>
+
+        <!-- 2. Figures -->
+        <section id="tiles" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-5 sm:mb-6" aria-label="Figures"></section>
+
+        <!-- 3. Panels. Phones: to-do and lists, quick actions, then the rest. -->
+        <div class="flex flex-col gap-5 sm:gap-6 lg:grid lg:grid-cols-3 lg:items-start">
+            <div id="leftCol" class="order-1 lg:order-1 lg:col-span-2 flex flex-col gap-5 sm:gap-6 min-w-0"></div>
+            <section id="quickActions" class="order-2 lg:order-3 lg:col-span-3 hidden" aria-label="Quick actions">
+                <h2 class="text-base sm:text-lg font-black uppercase theme-primary-text mb-3">Quick actions</h2>
+                <div id="quickGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4"></div>
+            </section>
+            <div id="rightCol" class="order-3 lg:order-2 lg:col-span-1 flex flex-col gap-5 sm:gap-6 min-w-0"></div>
+        </div>
+    </main>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell): any signed-in staff
+    // ============================================
+    KBFShell.start({ anyOf: [], active: 'dashboard' }).then(function (user) {
+        window.kbfUser = user;
+        initDashboard(user);
+    });
+
+    // ============================================
+    // ICONS (constant markup only, never data)
+    // ============================================
+    const ICONS = {
+        users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+        calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+        trending: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+        check: '<path d="M20 6 9 17l-5-5"/>',
+        checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+        upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+        news: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
+        userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+        calendarPlus: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/>',
+        megaphone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+        search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+        shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+        arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+        clipboard: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>'
+    };
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        if (className) svg.setAttribute('class', className);
+        svg.innerHTML = ICONS[name] || '';
+        return svg;
+    }
+
+    // Every value reaches the page through textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+    }
+
+    function link(href, className, text) {
+        const a = el('a', className, text);
+        a.href = href;
+        return a;
+    }
+
+    function num(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function plural(n, one, many) {
+        return n + ' ' + (n === 1 ? one : (many || one + 's'));
+    }
+
+    // Site paths only, for photos
+    function safePhoto(path) {
+        return typeof path === 'string' && /^\/uploads\/[A-Za-z0-9_\/\-]+\.(jpg|jpeg|png|webp)$/i.test(path) ? path : '';
+    }
+
+    function initials(name) {
+        const words = String(name || '').split(/\s+/).filter(Boolean);
+        if (!words.length) return '';
+        return (words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '')).toUpperCase();
+    }
+
+    // ============================================
+    // DATES (API dates are "YYYY-MM-DD"; today is UK time)
+    // ============================================
+    const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function ymd(value) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''));
+        if (!m) return null;
+        const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+        return { y: y, m: mo, d: d, dow: new Date(Date.UTC(y, mo - 1, d)).getUTCDay() };
+    }
+
+    function ukNow() {
+        const parts = {};
+        new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long',
+            year: 'numeric', hour: 'numeric', hourCycle: 'h23'
+        }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+        return parts;
+    }
+
+    // "12 Oct", with the year when it is not this year
+    function shortDate(value) {
+        const p = ymd(value);
+        if (!p) return '';
+        const thisYear = Number(ukNow().year);
+        return p.d + ' ' + MONTH_SHORT[p.m - 1] + (p.y !== thisYear ? ' ' + p.y : '');
+    }
+
+    // "Sat 22 Nov"
+    function dayDate(value) {
+        const p = ymd(value);
+        return p ? DAY_SHORT[p.dow] + ' ' + shortDate(value) : '';
+    }
+
+    // "31 Dec 2026"
+    function longDate(value) {
+        const p = ymd(value);
+        return p ? p.d + ' ' + MONTH_SHORT[p.m - 1] + ' ' + p.y : '';
+    }
+
+    function dateTile(value) {
+        const p = ymd(value);
+        const tile = el('div', 'db-datetile');
+        tile.appendChild(el('span', 'db-datetile-day', p ? p.d : '-'));
+        tile.appendChild(el('span', 'db-datetile-month', p ? MONTH_SHORT[p.m - 1] : ''));
+        return tile;
+    }
+
+    // ============================================
+    // STATE AND LOADING
+    // ============================================
+    const REFRESH_MS = 2 * 60 * 1000;
+    let currentUser = null;
+    let lastData = null;
+    let lastLoaded = 0;
+    let loading = false;
+    let regOrder = 'oldest';
+
+    function initDashboard(user) {
+        currentUser = user;
+        renderGreetingHeader(null);
+        loadDashboard();
+
+        // Refresh every 2 minutes while the page is open and the tab is visible
+        setInterval(function () {
+            if (document.visibilityState === 'visible') loadDashboard();
+        }, REFRESH_MS);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && Date.now() - lastLoaded >= REFRESH_MS) loadDashboard();
+        });
+    }
+
+    async function loadDashboard() {
+        if (loading) return;
+        loading = true;
+        const errorBox = document.getElementById('dashError');
+        try {
+            const response = await fetch('/api/dashboard.php', { credentials: 'include' });
+            const data = await response.json();
+            if (!data || !data.success) throw new Error((data && data.message) || 'Could not load the dashboard.');
+            lastData = data;
+            lastLoaded = Date.now();
+            errorBox.classList.add('hidden');
+            render(data);
+        } catch (error) {
+            console.error('Dashboard load error:', error);
+            errorBox.textContent = 'The dashboard could not be loaded. It will try again in a couple of minutes.';
+            errorBox.classList.remove('hidden');
+            if (!lastData) document.getElementById('greetSentence').textContent = '';
+        } finally {
+            loading = false;
+        }
+    }
+
+    function has(key) { return !!(currentUser && currentUser.has(key)); }
+    function hasAny(keys) { return !!(currentUser && currentUser.hasAny(keys)); }
+
+    function render(data) {
+        renderGreetingHeader(data);
+        renderGreetingMessage(data);
+        renderTiles(data);
+        renderLeft(data);
+        renderQuickActions();
+        renderRight(data);
+    }
+
+    // ============================================
+    // 1. GREETING
+    // ============================================
+    function renderGreetingHeader(data) {
+        const now = ukNow();
+        document.getElementById('todayDate').textContent =
+            (now.weekday + ' ' + now.day + ' ' + now.month + ' ' + now.year).toUpperCase();
+        const hour = Number(now.hour);
+        document.getElementById('greetWords').textContent =
+            hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
+        let first = data && data.me && data.me.firstName ? data.me.firstName : '';
+        if (!first && currentUser && currentUser.name) first = String(currentUser.name).split(' ')[0];
+        document.getElementById('greetName').textContent = String(first || 'there').toUpperCase();
+    }
+
+    function renderGreetingMessage(data) {
+        const sentence = document.getElementById('greetSentence');
+        const action = document.getElementById('greetAction');
+        action.textContent = '';
+
+        let text = 'Nothing needs your attention today.';
+        let button = null;
+
+        const regs = data.registrations;
+        const appr = data.approvals;
+        const mine = data.myTournaments;
+
+        if (regs && num(regs.waiting) > 0) {
+            const n = num(regs.waiting);
+            const m = num(regs.overMonth);
+            text = (n === 1 ? '1 registration is waiting' : n + ' registrations are waiting')
+                + (m > 0 ? ', and ' + m + ' of them for more than a month.' : '.');
+            button = ['Review registrations', '/admin/approvals'];
+        } else if (appr && (num(appr.tournaments) > 0 || num(appr.results) > 0)) {
+            const parts = [];
+            if (num(appr.tournaments) > 0) parts.push(plural(num(appr.tournaments), 'tournament'));
+            if (num(appr.results) > 0) parts.push(num(appr.results) + ' results');
+            const total = num(appr.tournaments) + num(appr.results);
+            text = parts.join(' and ') + (total === 1 ? ' is' : ' are') + ' waiting for approval.';
+            button = ['Review approvals', '/admin/approvals'];
+        } else if (mine && (num(mine.comingUp) > 0 || num(mine.resultsDue) > 0)) {
+            const n = num(mine.comingUp);
+            const m = num(mine.resultsDue);
+            if (n > 0 && m > 0) {
+                text = 'You have ' + plural(n, 'tournament') + ' coming up, and results to submit for ' + m + '.';
+            } else if (n > 0) {
+                text = 'You have ' + plural(n, 'tournament') + ' coming up.';
+            } else {
+                text = 'You have results to submit for ' + plural(m, 'tournament') + '.';
+            }
+            button = ['Create tournament', '/clubadmin/create-tournament'];
+        }
+
+        sentence.textContent = text;
+        if (button) {
+            const a = link(button[1], 'db-main-btn w-full sm:w-auto', button[0]);
+            a.appendChild(icon('arrow'));
+            action.appendChild(a);
+        }
+    }
+
+    // ============================================
+    // 2. FIGURE TILES (first rule that fits, four at most)
+    // ============================================
+    function tile(iconName, number, label, note) {
+        const box = el('div', 'db-tile');
+        const top = el('div', 'flex items-center justify-between gap-2');
+        const ring = el('div', 'db-ring');
+        ring.appendChild(icon(iconName));
+        top.appendChild(ring);
+        top.appendChild(el('span', 'db-tile-number', number));
+        box.appendChild(top);
+        box.appendChild(el('p', 'db-tile-label', label));
+        if (note) box.appendChild(el('p', 'db-tile-note', note));
+        return box;
+    }
+
+    function upcomingTile(data) {
+        const up = data.upcoming || {};
+        const next = up.next && up.next[0] ? up.next[0].date : null;
+        return tile('calendar', num(up.count), 'Upcoming events', next ? 'Next: ' + dayDate(next) : 'Nothing booked yet');
+    }
+
+    function waitingTile(data) {
+        const regs = data.registrations;
+        const appr = data.approvals;
+        const total = (regs ? num(regs.waiting) : 0) + (appr ? num(appr.tournaments) + num(appr.results) : 0);
+        const note = regs && regs.oldestDate ? 'Oldest since ' + shortDate(regs.oldestDate) : (total ? 'Tournaments and results' : 'Nothing waiting');
+        return tile('clock', total, 'Waiting approval', note);
+    }
+
+    function renderTiles(data) {
+        const box = document.getElementById('tiles');
+        box.textContent = '';
+        const tiles = [];
+        const players = data.players || {};
+
+        if (hasAny(['tournaments.approve', 'tournaments.manage_all', 'players.change_grades'])) {
+            tiles.push(tile('users', num(players.active), 'Players', '+' + num(players.thisMonth) + ' this month'));
+            tiles.push(waitingTile(data));
+            tiles.push(upcomingTile(data));
+            if (data.eligible) {
+                tiles.push(tile('trending', num(data.eligible.count), 'Eligible to promote', 'Season ends ' + longDate(data.eligible.seasonEnds)));
+            }
+        } else if (has('players.approve_registrations')) {
+            tiles.push(waitingTile(data));
+            tiles.push(tile('checkCircle', data.mine ? num(data.mine.approved) : 0, 'You approved', 'In the last 30 days'));
+            tiles.push(tile('users', num(players.active), 'Players', 'Across all grades'));
+            tiles.push(upcomingTile(data));
+        } else if (data.myTournaments) {
+            const mt = data.myTournaments;
+            tiles.push(tile('calendar', num(mt.comingUp), 'Coming up', mt.nextDate ? 'Next: ' + shortDate(mt.nextDate) : 'Nothing booked yet'));
+            tiles.push(tile('clock', num(mt.waitingApproval), 'Waiting approval', 'Submitted to KBF'));
+            tiles.push(tile('upload', num(mt.resultsDue), 'Results to submit', 'After the event'));
+            tiles.push(tile('news', num(mt.posts), 'My posts', 'News and photos'));
+        } else {
+            tiles.push(tile('users', num(players.active), 'Players', 'Across all grades'));
+            tiles.push(upcomingTile(data));
+        }
+
+        tiles.slice(0, 4).forEach(function (t) { box.appendChild(t); });
+        box.classList.toggle('hidden', tiles.length === 0);
+    }
+
+    // ============================================
+    // PANEL HELPERS
+    // ============================================
+    function panel(title, linkHref, linkText) {
+        const section = el('section', 'db-panel');
+        const head = el('div', 'db-panel-head');
+        head.appendChild(el('h2', 'db-panel-title', title));
+        if (linkHref) head.appendChild(link(linkHref, 'db-panel-link', linkText));
+        section.appendChild(head);
+        const body = el('div', 'db-panel-body');
+        section.appendChild(body);
+        return { section: section, head: head, body: body };
+    }
+
+    function emptyLine(text) {
+        return el('p', 'text-gray-400 font-bold text-sm py-2', text);
+    }
+
+    // ============================================
+    // 3. LEFT COLUMN
+    // ============================================
+    function renderLeft(data) {
+        const col = document.getElementById('leftCol');
+        col.textContent = '';
+        const todo = buildTodo(data);
+        if (todo) col.appendChild(todo);
+        if (data.registrations) col.appendChild(buildRegistrations(data.registrations));
+        if (data.myTournaments) col.appendChild(buildMyTournaments(data.myTournaments));
+        col.classList.toggle('hidden', col.children.length === 0);
+    }
+
+    function todoRow(label, count, buttonText, href) {
+        const row = el('div', 'db-row');
+        const square = el('div', 'db-count' + (count === 0 ? ' is-zero' : ''), count);
+        row.appendChild(square);
+        row.appendChild(el('p', 'flex-1 min-w-0 text-sm sm:text-base font-bold text-white', label));
+        if (count > 0) {
+            row.appendChild(link(href, 'db-outline', buttonText));
+        } else {
+            row.appendChild(el('span', 'db-clear', 'All clear'));
+        }
+        return row;
+    }
+
+    function waitingBar(regs) {
+        const wrap = el('div', 'mb-4');
+        const total = num(regs.underWeek) + num(regs.weekToMonth) + num(regs.overMonth);
+        const bar = el('div', 'db-bar');
+        bar.setAttribute('role', 'img');
+        bar.setAttribute('aria-label', 'Registrations waiting: ' + num(regs.underWeek) + ' under a week, '
+            + num(regs.weekToMonth) + ' for 1 to 4 weeks, ' + num(regs.overMonth) + ' over a month');
+        [['db-seg-week', regs.underWeek], ['db-seg-month', regs.weekToMonth], ['db-seg-old', regs.overMonth]].forEach(function (seg) {
+            const n = num(seg[1]);
+            if (!n || !total) return;
+            const part = el('span', seg[0]);
+            part.style.width = (n / total * 100) + '%';
+            bar.appendChild(part);
+        });
+        wrap.appendChild(bar);
+
+        const legend = el('div', 'flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs font-semibold text-gray-400');
+        [['db-seg-week', 'Under a week', regs.underWeek], ['db-seg-month', '1 to 4 weeks', regs.weekToMonth], ['db-seg-old', 'Over a month', regs.overMonth]].forEach(function (k) {
+            const item = el('span');
+            item.appendChild(el('span', 'db-key ' + k[0]));
+            item.appendChild(document.createTextNode(k[1] + ' (' + num(k[2]) + ')'));
+            legend.appendChild(item);
+        });
+        wrap.appendChild(legend);
+        return wrap;
+    }
+
+    function buildTodo(data) {
+        const rows = [];
+        if (data.registrations) rows.push(todoRow('Player registrations', num(data.registrations.waiting), 'Review', '/admin/approvals'));
+        if (data.approvals) {
+            rows.push(todoRow('Tournaments to approve', num(data.approvals.tournaments), 'Review', '/admin/approvals'));
+            rows.push(todoRow('Results to approve', num(data.approvals.results), 'Review', '/admin/approvals'));
+        }
+        if (data.eligible) rows.push(todoRow('Players eligible for promotion', num(data.eligible.count), 'Review', '/admin/rankings'));
+        if (data.myTournaments) rows.push(todoRow('Results to submit', num(data.myTournaments.resultsDue), 'Submit results', '/clubadmin/tournaments'));
+        if (!rows.length) return null;
+
+        const p = panel('Your to-do');
+        if (data.registrations && num(data.registrations.waiting) > 0) p.body.appendChild(waitingBar(data.registrations));
+        const list = el('div');
+        rows.forEach(function (r) { list.appendChild(r); });
+        p.body.appendChild(list);
+        return p.section;
+    }
+
+    function buildRegistrations(regs) {
+        const p = panel('Registrations waiting', '/admin/approvals', 'All ' + num(regs.waiting));
+
+        const switches = el('div', 'flex gap-2 mb-3');
+        [['oldest', 'Oldest first'], ['newest', 'Newest first']].forEach(function (s) {
+            const b = el('button', 'db-switch' + (regOrder === s[0] ? ' is-on' : ''), s[1]);
+            b.type = 'button';
+            b.setAttribute('aria-pressed', regOrder === s[0] ? 'true' : 'false');
+            b.addEventListener('click', function () {
+                if (regOrder === s[0]) return;
+                regOrder = s[0];
+                if (lastData) renderLeft(lastData);
+            });
+            switches.appendChild(b);
+        });
+        p.body.appendChild(switches);
+
+        const items = (regOrder === 'newest' ? regs.newest : regs.oldest) || [];
+        if (!items.length) {
+            p.body.appendChild(emptyLine('No registrations are waiting.'));
+            return p.section;
+        }
+
+        const list = el('div', 'flex flex-col gap-1');
+        items.forEach(function (r) {
+            const row = link('/admin/approvals?registration=' + encodeURIComponent(num(r.id)), 'db-link-row');
+            const avatar = el('div', 'db-avatar');
+            const photo = safePhoto(r.photo);
+            if (photo) {
+                const img = el('img');
+                img.src = photo;
+                img.alt = '';
+                img.loading = 'lazy';
+                avatar.appendChild(img);
+            } else {
+                avatar.textContent = initials(r.name);
+            }
+            row.appendChild(avatar);
+
+            const info = el('div', 'flex-1 min-w-0');
+            info.appendChild(el('p', 'text-sm sm:text-base font-black text-white uppercase truncate', r.name));
+            const meta = [r.city, r.grade ? 'Chose ' + r.grade : ''].filter(Boolean).join(' · ');
+            info.appendChild(el('p', 'text-xs font-semibold text-gray-400 truncate', meta));
+            row.appendChild(info);
+
+            row.appendChild(el('span', 'text-xs sm:text-sm font-black text-gray-300 whitespace-nowrap', plural(num(r.days), 'day')));
+            list.appendChild(row);
+        });
+        p.body.appendChild(list);
+        return p.section;
+    }
+
+    const STATUS_TAGS = {
+        'Results due': 'db-tag-due',
+        'Waiting approval': 'db-tag-wait',
+        'Results waiting approval': 'db-tag-wait',
+        'Approved': 'db-tag-ok',
+        'Completed': 'db-tag-done'
+    };
+
+    function nextAction(t) {
+        const id = encodeURIComponent(num(t.id));
+        if (t.status === 'Results due') return ['Submit results', '/clubadmin/submit-results?id=' + id];
+        if (t.status === 'Waiting approval' || t.status === 'Approved') return ['Edit details', '/clubadmin/create-tournament?edit=' + id];
+        return ['View results', '/tournament-details?id=' + id];
+    }
+
+    function buildMyTournaments(mt) {
+        const p = panel('My tournaments', '/clubadmin/tournaments', 'See all');
+        const items = mt.items || [];
+        if (!items.length) {
+            const empty = el('div', 'text-center py-4');
+            empty.appendChild(el('p', 'text-gray-400 font-bold text-sm mb-4', 'You have not created any tournaments yet.'));
+            const a = link('/clubadmin/create-tournament', 'db-main-btn', 'Create tournament');
+            a.appendChild(icon('arrow'));
+            empty.appendChild(a);
+            p.body.appendChild(empty);
+            return p.section;
+        }
+
+        const list = el('div', 'flex flex-col');
+        items.forEach(function (t) {
+            const row = el('div', 'db-row flex-wrap sm:flex-nowrap');
+            row.appendChild(dateTile(t.date));
+
+            const info = el('div', 'flex-1 min-w-0');
+            info.appendChild(el('p', 'text-sm sm:text-base font-black text-white uppercase break-words', t.name));
+            const where = [t.venue, t.town].filter(Boolean).join(', ');
+            if (where) info.appendChild(el('p', 'text-xs font-semibold text-gray-400 break-words', where));
+            const tag = el('span', 'db-tag mt-1 ' + (STATUS_TAGS[t.status] || 'db-tag-done'), t.status);
+            info.appendChild(tag);
+            row.appendChild(info);
+
+            const action = nextAction(t);
+            row.appendChild(link(action[1], 'db-outline ml-auto', action[0]));
+            list.appendChild(row);
+        });
+        p.body.appendChild(list);
+        return p.section;
+    }
+
+    // ============================================
+    // 4. QUICK ACTIONS (in order, each with its permission, at most 5)
+    // ============================================
+    function renderQuickActions() {
+        const actions = [];
+        if (has('players.approve_registrations')) actions.push(['Review registrations', '/admin/approvals', 'clipboard']);
+        if (has('players.approve_registrations') && has('players.edit_details')) actions.push(['Add player', '/admin/people?add=player', 'userPlus']);
+        if (has('tournaments.organise_own')) actions.push(['Create tournament', '/clubadmin/create-tournament', 'calendarPlus']);
+        else if (has('tournaments.manage_all')) actions.push(['Create tournament', '/admin/tournaments', 'calendarPlus']);
+        if (has('tournaments.organise_own')) actions.push(['Submit results', '/clubadmin/tournaments', 'upload']);
+        if (has('content.all_news_gallery')) actions.push(['Post news', '/admin/announcements', 'news']);
+        else if (has('content.own_news_gallery')) actions.push(['Post news', '/clubadmin/create-post', 'news']);
+        if (has('content.broadcasts')) actions.push(['Send broadcast', '/admin/broadcasts', 'megaphone']);
+        if (hasAny(['players.view_export', 'players.edit_details'])) actions.push(['Find a player', '/admin/people', 'search']);
+        if (has('players.view_export')) actions.push(['Export the player list', '/admin/people', 'download']);
+        if (currentUser && currentUser.isSuperAdmin) actions.push(['Add staff', '/admin/people?tab=staff&add=staff', 'shield']);
+
+        const section = document.getElementById('quickActions');
+        const grid = document.getElementById('quickGrid');
+        grid.textContent = '';
+        actions.slice(0, 5).forEach(function (a) {
+            const tileLink = link(a[1], 'db-action');
+            const square = el('span', 'db-action-icon');
+            square.appendChild(icon(a[2]));
+            tileLink.appendChild(square);
+            tileLink.appendChild(el('span', 'db-action-label', a[0]));
+            grid.appendChild(tileLink);
+        });
+        section.classList.toggle('hidden', grid.children.length === 0);
+    }
+
+    // ============================================
+    // 5. RIGHT COLUMN
+    // ============================================
+    function renderRight(data) {
+        const col = document.getElementById('rightCol');
+        col.textContent = '';
+        col.appendChild(buildComingUp(data.upcoming || {}));
+        if (data.team) col.appendChild(buildTeam(data.team));
+        if (data.mine) col.appendChild(buildMine(data.mine));
+        if (has('tournaments.organise_own') && !has('tournaments.manage_all')) col.appendChild(buildHowItWorks());
+        if (!(data.me && data.me.isSuperAdmin)) col.appendChild(buildCanDo(data.me || {}));
+    }
+
+    function buildComingUp(up) {
+        const allHref = hasAny(['tournaments.approve', 'tournaments.manage_all']) ? '/admin/tournaments' : '/tournaments';
+        const p = panel('Coming up', allHref, 'All ' + num(up.count));
+        const items = up.next || [];
+        if (!items.length) {
+            p.body.appendChild(emptyLine('No tournaments are booked yet.'));
+        } else {
+            const list = el('div', 'flex flex-col');
+            items.forEach(function (t) {
+                const row = el('div', 'db-row');
+                row.appendChild(dateTile(t.date));
+                const info = el('div', 'flex-1 min-w-0');
+                info.appendChild(el('p', 'text-sm font-black text-white uppercase break-words', t.name));
+                if (t.town) info.appendChild(el('p', 'text-xs font-semibold text-gray-400 break-words', t.town));
+                row.appendChild(info);
+                list.appendChild(row);
+            });
+            p.body.appendChild(list);
+        }
+        if (has('tournaments.approve')) {
+            p.body.appendChild(el('p', 'text-xs font-semibold text-gray-500 mt-3', 'Results for a tournament appear in your to-do once its organiser submits them.'));
+        }
+        return p.section;
+    }
+
+    function mini(number, label) {
+        const box = el('div', 'db-mini');
+        box.appendChild(el('p', 'db-mini-number', number));
+        box.appendChild(el('p', 'db-mini-label', label));
+        return box;
+    }
+
+    function buildTeam(team) {
+        const p = panel('Last 30 days');
+        const grid = el('div', 'grid grid-cols-2 gap-2 mb-5');
+        grid.appendChild(mini(num(team.playersApproved), 'Players approved'));
+        grid.appendChild(mini(num(team.playersRejected), 'Players rejected'));
+        grid.appendChild(mini(num(team.tournamentsApproved), 'Tournaments approved'));
+        grid.appendChild(mini(num(team.resultsApproved), 'Results approved'));
+        p.body.appendChild(grid);
+
+        p.body.appendChild(el('h3', 'text-xs font-black uppercase text-gray-300 mb-3', 'Who approved the most'));
+        const people = team.top || [];
+        if (!people.length) {
+            p.body.appendChild(emptyLine('No decisions in the last 30 days.'));
+            return p.section;
+        }
+        const highest = Math.max.apply(null, people.map(function (x) { return num(x.count); })) || 1;
+        const list = el('div', 'flex flex-col gap-3');
+        people.forEach(function (person) {
+            const item = el('div');
+            const line = el('div', 'flex justify-between gap-2 text-xs font-bold mb-1');
+            line.appendChild(el('span', 'text-gray-200 truncate', person.name));
+            line.appendChild(el('span', 'theme-primary-text', num(person.count)));
+            item.appendChild(line);
+            const meter = el('div', 'db-meter');
+            const fill = el('span');
+            fill.style.width = (num(person.count) / highest * 100) + '%';
+            meter.appendChild(fill);
+            item.appendChild(meter);
+            list.appendChild(item);
+        });
+        p.body.appendChild(list);
+        return p.section;
+    }
+
+    function buildMine(mine) {
+        const p = panel('Your last 30 days');
+        const grid = el('div', 'grid grid-cols-2 gap-2');
+        grid.appendChild(mini(num(mine.approved), 'You approved'));
+        grid.appendChild(mini(num(mine.teamDecisions), 'Team decisions on registrations'));
+        p.body.appendChild(grid);
+        return p.section;
+    }
+
+    function buildHowItWorks() {
+        const p = panel('How it works');
+        const steps = [
+            ['Create the tournament', 'Add the date, venue, poster and registration link.'],
+            ['KBF approves it', 'It then appears on the website and in the home page ticker.'],
+            ['Run the event', 'Change the poster or registration link at any time.'],
+            ['Submit the results', 'Players receive their points once KBF approves them.']
+        ];
+        const list = el('ol', 'flex flex-col gap-4');
+        steps.forEach(function (s, i) {
+            const li = el('li', 'flex items-start gap-3');
+            li.appendChild(el('span', 'db-step-num', i + 1));
+            const text = el('div', 'min-w-0');
+            text.appendChild(el('p', 'text-sm font-black text-white', s[0]));
+            text.appendChild(el('p', 'text-xs font-semibold text-gray-400 mt-0.5', s[1]));
+            li.appendChild(text);
+            list.appendChild(li);
+        });
+        p.body.appendChild(list);
+        return p.section;
+    }
+
+    function buildCanDo(me) {
+        const p = panel('What your account can do');
+        const labels = me.permissions || [];
+        if (labels.length) {
+            const list = el('ul', 'flex flex-col gap-2 mb-4');
+            labels.forEach(function (label) {
+                const li = el('li', 'flex items-start gap-2 text-sm font-bold text-gray-200');
+                li.appendChild(icon('check', 'db-tick'));
+                li.appendChild(el('span', '', label));
+                list.appendChild(li);
+            });
+            p.body.appendChild(list);
+        }
+        p.body.appendChild(el('p', 'text-xs font-semibold text-gray-400', 'Need something else? Ask a Super Admin.'));
+        return p.section;
+    }
+</script>
+<script src="/js/session-manager.js"></script>
+</body>
+</html>

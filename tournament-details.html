@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Details - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-switcher-btn { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 15px currentColor; }
+        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 20px; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        /* Match results */
+        .tr-tab { display: inline-flex; align-items: center; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .tr-tab:hover { color: #fff; }
+        .tr-tab[aria-selected="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
+        .tr-tab:focus-visible, .tr-name a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .tr-round { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; color: #fff; font-weight: 900; font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
+        .tr-round::after { content: ''; flex: 1; height: 2px; background: #374151; }
+        .tr-card { background: #0f172a; border: 4px solid #374151; padding: 1rem; display: flex; flex-direction: column; gap: .75rem; min-width: 0; }
+        .tr-card.is-win { border-color: var(--theme-primary); padding: 1.25rem; box-shadow: 0 0 28px color-mix(in srgb, var(--theme-primary) 30%, transparent); }
+        .tr-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+        .tr-tag { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .55rem; border: 2px solid; font-size: .68rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .tr-tag-win { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .tr-tag-light { background: #e5e7eb; border-color: #e5e7eb; color: #0F172A; }
+        .tr-tag-grey { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .tr-pts { font-size: .72rem; font-weight: 900; color: #9ca3af; text-transform: uppercase; white-space: nowrap; }
+        .tr-card.is-win .tr-pts { color: var(--theme-primary); }
+        .tr-player { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem .65rem; background: #1e293b; border: 2px solid #374151; min-width: 0; }
+        .tr-name { font-weight: 800; font-size: .875rem; color: #fff; min-width: 0; overflow-wrap: anywhere; }
+        .tr-card.is-win .tr-name { font-size: 1rem; }
+        .tr-name a { color: #fff; text-decoration: none; }
+        .tr-name a:hover { color: var(--theme-primary); text-decoration: underline; }
+        .tr-muted { color: #9ca3af; font-weight: 700; }
+        .tr-guest { display: inline-block; padding: 2px 6px; background: #1F2937; color: #E5E7EB; font-size: 10px; font-weight: 900; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
+        .tr-grade { display: inline-flex; align-items: center; justify-content: center; min-width: 1.75rem; height: 1.75rem; padding: 0 .3rem; border: 2px solid #6b7280; color: #e5e7eb; font-weight: 900; font-size: .7rem; flex-shrink: 0; }
+
+        /* ============================================
+           Status tags and date tile (shared with the other tournament page)
+           ============================================ */
+        .t-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            align-self: flex-start;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 900;
+            line-height: 1.1;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+        .t-tag svg { width: 12px; height: 12px; flex-shrink: 0; }
+        .t-tag-theme { background: var(--theme-primary); color: #0F172A; }
+        .t-tag-grey { background: #1F2937; color: #E5E7EB; }
+        .t-tag-grey svg { color: var(--theme-primary); }
+
+        .t-poster-img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #0B1324;
+        }
+
+        .t-datetile {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: #0B1324;
+            text-align: center;
+            overflow: hidden;
+        }
+        .t-dt-weekday {
+            color: var(--theme-primary);
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 0.26em;
+            padding-left: 0.26em;
+            text-transform: uppercase;
+        }
+        .t-dt-day {
+            font-size: 76px;
+            font-weight: 900;
+            line-height: 0.95;
+            color: var(--theme-primary);
+        }
+        @supports (-webkit-text-stroke: 2px black) {
+            .t-dt-day {
+                color: transparent;
+                -webkit-text-fill-color: transparent;
+                -webkit-text-stroke: 2px var(--theme-primary);
+            }
+        }
+        .t-dt-month {
+            color: #E5E7EB;
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .t-datetile-lg { gap: 10px; }
+        .t-datetile-lg .t-dt-weekday { font-size: 20px; }
+        .t-datetile-lg .t-dt-day { font-size: 180px; }
+        .t-datetile-lg .t-dt-month { font-size: 22px; }
+        @supports (-webkit-text-stroke: 2px black) {
+            .t-datetile-lg .t-dt-day { -webkit-text-stroke-width: 4px; }
+        }
+        @media (max-width: 767px) {
+            .t-dt-day { font-size: 60px; }
+            .t-dt-weekday { font-size: 11px; }
+            .t-dt-month { font-size: 11px; }
+            .t-datetile-lg .t-dt-day { font-size: 140px; }
+            .t-datetile-lg .t-dt-weekday { font-size: 16px; }
+            .t-datetile-lg .t-dt-month { font-size: 18px; }
+        }
+
+        /* ============================================
+           Tournament details layout
+           ============================================ */
+        .td-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 24px;
+            color: #9CA3AF;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            transition: color 0.2s ease;
+        }
+        .td-back svg { width: 18px; height: 18px; }
+        .td-back:hover { color: var(--theme-primary); }
+
+        .td-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 28px;
+        }
+        @media (min-width: 1024px) {
+            .td-layout {
+                grid-template-columns: 428px minmax(0, 1fr);
+                gap: 48px;
+                align-items: start;
+            }
+        }
+
+        .td-poster-panel {
+            border: 4px solid #374151;
+            background: #0B1324;
+        }
+        .td-poster-frame {
+            height: 420px;
+            background: #0B1324;
+            overflow: hidden;
+        }
+        @media (min-width: 1024px) {
+            .td-poster-frame { height: 580px; }
+        }
+        .td-fullsize {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-top: 2px solid #374151;
+            color: var(--theme-primary);
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .td-fullsize svg { width: 16px; height: 16px; }
+        .td-fullsize:hover { text-decoration: underline; }
+
+        .td-title {
+            margin: 14px 0 28px;
+            color: #FFFFFF;
+            font-size: 52px;
+            font-weight: 900;
+            line-height: 1.02;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+        }
+        @media (max-width: 767px) {
+            .td-title { font-size: 32px; margin-bottom: 22px; }
+        }
+
+        .td-info-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 20px 28px;
+            padding: 24px 0;
+            border-top: 2px solid #374151;
+            border-bottom: 2px solid #374151;
+        }
+        @media (min-width: 768px) {
+            .td-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        .td-row { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
+        .td-row-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 36px;
+            width: 36px;
+            height: 36px;
+            background: var(--theme-primary);
+            color: #0F172A;
+        }
+        .td-row-icon svg { width: 18px; height: 18px; }
+        .td-row-body { min-width: 0; }
+        .td-row-label {
+            margin-bottom: 2px;
+            color: #9CA3AF;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .td-row-value { color: #FFFFFF; font-size: 16px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+        .td-row-sub { margin-top: 2px; color: #9CA3AF; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+        .td-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+            color: var(--theme-primary);
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .td-link svg { width: 14px; height: 14px; }
+        .td-link:hover { text-decoration: underline; }
+        .td-phone { color: var(--theme-primary); }
+        .td-phone:hover { text-decoration: underline; }
+
+        .td-block { margin-top: 28px; }
+        .td-section-label {
+            margin-bottom: 12px;
+            color: var(--theme-primary);
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .td-chip {
+            display: inline-block;
+            padding: 6px 12px;
+            border: 3px solid #475569;
+            color: #E5E7EB;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .td-actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 32px; }
+        .td-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 26px;
+            border: 4px solid var(--theme-primary);
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+        .td-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .td-btn-solid { background: var(--theme-primary); color: #0F172A; box-shadow: 8px 8px 0 var(--theme-primary); }
+        .td-btn-solid:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 var(--theme-primary); }
+        .td-btn-outline { background: transparent; color: var(--theme-primary); }
+        .td-btn-outline:hover { background: var(--theme-primary); color: #0F172A; }
+        @media (max-width: 639px) {
+            .td-btn { width: 100%; padding: 14px 18px; font-size: 14px; }
+            .td-btn-solid { box-shadow: 5px 5px 0 var(--theme-primary); }
+        }
+
+        .td-about {
+            color: #D1D5DB;
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.7;
+            white-space: pre-line;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                        <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                             style="box-shadow: 0 0 12px var(--theme-primary);">
+                            <img src="/assets/images/logo/KBF-Logo.jpeg"
+                                 alt="KBF-UK Logo"
+                                 class="w-full h-full object-contain">
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+                        <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="/" class="text-gray-400 hover:text-emerald-400 font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                    <a href="/rankings.html" class="text-gray-400 hover:text-emerald-400 font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
+                    <a href="/tournaments.html" class="text-gray-400 hover:text-emerald-400 font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
+                    <a href="/news.html" class="text-gray-400 hover:text-emerald-400 font-bold px-5 py-2 uppercase text-sm tracking-wider transition">News</a>
+                    <a href="/gallery.html" class="text-gray-400 hover:text-emerald-400 font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                    <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                        <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald"></button>
+                        <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan"></button>
+                        <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow"></button>
+                        <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange"></button>
+                    </div>
+                    <div class="ml-4"><a href="/login.html" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">Login</a></div>
+                </div>
+                <div class="md:hidden flex items-center"><button id="mobile-menu-btn" class="theme-primary-text p-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+                <a href="/rankings.html" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
+                <a href="/tournaments.html" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+                <a href="/news.html" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">News</a>
+                <a href="/gallery.html" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+                <div class="px-3 py-4 border-t-2 border-gray-700">
+                    <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald"></button>
+                        <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan"></button>
+                        <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow"></button>
+                        <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange"></button>
+                    </div>
+                </div>
+                <a href="/login.html" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="loading" class="max-w-7xl mx-auto px-4 py-20 text-center">
+        <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-emerald-500 mb-4"></div>
+        <p class="text-gray-400 font-bold uppercase text-lg">Loading Tournament Details...</p>
+    </div>
+
+    <div id="tournamentContent" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <a href="/tournaments" class="td-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            All tournaments
+        </a>
+
+        <div class="td-layout mb-12">
+            <div id="posterPanel" class="td-poster-panel"></div>
+
+            <div class="min-w-0">
+                <div id="statusTag"></div>
+                <h1 id="tournamentName" class="td-title">--</h1>
+
+                <div id="infoRows" class="td-info-grid"></div>
+
+                <div id="categoriesBlock" class="td-block hidden">
+                    <h2 class="td-section-label">Categories</h2>
+                    <div id="categoryChips" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <div id="actionButtons" class="td-actions hidden"></div>
+
+                <div id="aboutBlock" class="td-block hidden">
+                    <h2 class="td-section-label">About this tournament</h2>
+                    <p id="aboutText" class="td-about"></p>
+                </div>
+            </div>
+        </div>
+
+        <section id="matchesSection" class="hidden" aria-labelledby="resultsHeading">
+            <div class="mb-6">
+                <h2 id="resultsHeading" class="text-2xl sm:text-3xl font-black uppercase text-white">Match results</h2>
+                <div class="h-2 w-24 sm:w-32 theme-primary-bg mt-3"></div>
+            </div>
+            <div id="resultsTabs" class="hidden flex gap-3 overflow-x-auto pb-2 pt-1 pl-1 mb-6" role="tablist" aria-label="Categories"></div>
+            <p id="resultsCategory" class="hidden text-lg font-black uppercase theme-primary-text mb-6"></p>
+            <div id="resultsBody" role="tabpanel" aria-labelledby="resultsHeading"></div>
+        </section>
+
+        <div id="noMatches" class="hidden bg-slate-900 border-4 border-gray-700 p-10 sm:p-20 text-center">
+            <div class="inline-flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 theme-primary-bg border-4 border-gray-700 mb-6">
+                <svg class="w-12 h-12 sm:w-16 sm:h-16" style="color: #0F172A;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+            </div>
+            <h3 id="noMatchesTitle" class="text-2xl sm:text-3xl font-black text-white mb-3 uppercase">No Results Yet</h3>
+            <p id="noMatchesText" class="text-gray-400 font-bold uppercase text-sm sm:text-lg">Results will be posted after matches are completed</p>
+        </div>
+    </div>
+
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <script>
+    const urlParams    = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('id');
+
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+        });
+        const mm = document.getElementById('mobile-menu');
+        if (mm && !mm.classList.contains('hidden')) mm.classList.add('hidden');
+    }
+
+    // ============================================
+    // SHARED TOURNAMENT DISPLAY HELPERS
+    // (same block on tournaments.html and tournament-details.html)
+    // ============================================
+    const TOURNAMENT_ICONS = {
+        calendar: '<path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+        pin: '<path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>',
+        building: '<path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>',
+        external: '<path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>',
+        arrow: '<path d="M13 7l5 5m0 0l-5 5m5-5H6"/>',
+        chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+        trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        fee: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+        tick: '<path d="M20 6 9 17l-5-5"/>',
+        phone: '<path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>'
+    };
+
+    function svgIcon(name, className) {
+        return `<svg class="${className || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOURNAMENT_ICONS[name] || ''}</svg>`;
+    }
+
+    // Escapes text for both element content and attribute values
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    // 'YYYY-MM-DD' from an API date value, or '' when missing/invalid
+    function toYmd(value) {
+        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : '';
+    }
+
+    // Local-time Date for a 'YYYY-MM-DD' string (never shifted by time zone)
+    function parseYmd(ymd) {
+        const parts = ymd.split('-').map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function todayYmd() {
+        const now = new Date();
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    }
+
+    function daysBetween(fromYmd, toYmdValue) {
+        return Math.round((parseYmd(toYmdValue) - parseYmd(fromYmd)) / 86400000);
+    }
+
+    // "Sat, 28 Nov 2026"
+    function formatShortDate(ymd) {
+        if (!ymd) return '';
+        const d = parseYmd(ymd);
+        return `${WEEKDAYS_SHORT[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    // "Saturday, 28 November 2026"
+    function formatLongDate(ymd) {
+        if (!ymd) return '';
+        const d = parseYmd(ymd);
+        return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    // "10:30" from "10:30:00", or ''
+    function formatTime(value) {
+        const m = /^(\d{2}):(\d{2})/.exec(typeof value === 'string' ? value : '');
+        return m ? `${m[1]}:${m[2]}` : '';
+    }
+
+    // Only http(s) registration links are ever used
+    function safeHttpUrl(value) {
+        if (typeof value !== 'string') return '';
+        const url = value.trim();
+        return /^https?:\/\/[^\s<>"'`]+$/i.test(url) ? url : '';
+    }
+
+    // Only images uploaded to this site are shown as posters
+    function safeImagePath(value) {
+        if (typeof value !== 'string') return '';
+        if (!/^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(value) || value.indexOf('..') !== -1) return '';
+        return value;
+    }
+
+    // Everything the cards and the details page need to decide tags and buttons
+    function getTournamentState(t, hasResults) {
+        const today = todayYmd();
+        const date = toYmd(t.TournamentDate);
+        const isPast = date !== '' && date < today;
+        const regUrl = safeHttpUrl(t.RegistrationUrl);
+        const closeDate = toYmd(t.RegistrationCloseDate);
+        const closePassed = closeDate !== '' && today > closeDate;
+        const canRegister = regUrl !== '' && !isPast && !closePassed;
+
+        let tag;
+        if (isPast) {
+            tag = hasResults
+                ? { label: 'Results available', tone: 'theme', icon: 'trophy' }
+                : { label: 'Completed', tone: 'grey', icon: 'tick' };
+        } else if (closePassed) {
+            tag = { label: 'Registration closed', tone: 'grey', icon: 'clock' };
+        } else if (canRegister && closeDate !== '' && daysBetween(today, closeDate) <= 7) {
+            const n = daysBetween(today, closeDate);
+            tag = { label: n === 0 ? 'Closes today' : `Closes in ${n} ${n === 1 ? 'day' : 'days'}`, tone: 'theme', icon: 'clock' };
+        } else if (canRegister) {
+            tag = { label: 'Registration open', tone: 'theme', icon: 'tick' };
+        } else {
+            tag = { label: 'Upcoming', tone: 'grey', icon: 'calendar' };
+        }
+
+        return { date, isPast, regUrl, canRegister, hasResults: !!hasResults, tag };
+    }
+
+    function statusTagHtml(tag) {
+        return `<span class="t-tag ${tag.tone === 'theme' ? 't-tag-theme' : 't-tag-grey'}">${svgIcon(tag.icon)}<span>${escapeHtml(tag.label)}</span></span>`;
+    }
+
+    // Date tile shown in place of a poster
+    function dateTileHtml(ymd, large) {
+        if (!ymd) {
+            return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}"><span class="t-dt-weekday">Date</span><span class="t-dt-day">--</span><span class="t-dt-month">To be confirmed</span></div>`;
+        }
+        const d = parseYmd(ymd);
+        return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}">
+                    <span class="t-dt-weekday">${WEEKDAYS_SHORT[d.getDay()]}</span>
+                    <span class="t-dt-day">${d.getDate()}</span>
+                    <span class="t-dt-month">${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}</span>
+                </div>`;
+    }
+
+    // Poster image (whole, scaled to fit) or the date tile
+    function posterOrTileHtml(t, large) {
+        const poster = safeImagePath(t.PosterUrl);
+        const date = toYmd(t.TournamentDate);
+        if (!poster) return dateTileHtml(date, large);
+        return `<img src="${escapeHtml(poster)}" alt="Poster for ${escapeHtml(t.Name)}" class="t-poster-img" loading="lazy"
+                     data-date="${escapeHtml(date)}" data-large="${large ? '1' : '0'}">`;
+    }
+
+    // A poster that fails to load falls back to the date tile
+    document.addEventListener('error', function (e) {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG' || !img.classList.contains('t-poster-img')) return;
+        const holder = img.parentNode;
+        if (!holder) return;
+        const date = toYmd(img.getAttribute('data-date') || '');
+        holder.innerHTML = dateTileHtml(date, img.getAttribute('data-large') === '1');
+        if (typeof onPosterUnavailable === 'function') onPosterUnavailable();
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        changeTheme(localStorage.getItem('badminton-theme') || 'emerald');
+    });
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    if (!tournamentId) {
+        document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Invalid Tournament ID</p>';
+    } else {
+        loadTournamentDetails();
+    }
+
+    async function loadTournamentDetails() {
+        try {
+            const response = await fetch(`/api/tournaments.php?id=${encodeURIComponent(tournamentId)}`, { credentials: 'include' });
+            const data     = await response.json();
+            if (!data.success) throw new Error(data.message || 'Failed to load tournament');
+
+            const tournament = data.tournament;
+            const matches    = data.matches || [];
+
+            renderTournamentHeader(tournament, matches);
+
+            if (matches.length > 0) {
+                displayMatches(matches, data.roundPoints);
+                document.getElementById('matchesSection').classList.remove('hidden');
+                document.getElementById('noMatches').classList.add('hidden');
+            } else {
+                document.getElementById('matchesSection').classList.add('hidden');
+                // Past tournament: "No results yet"; future one: results come after it
+                if (!getTournamentState(tournament, false).isPast) {
+                    document.getElementById('noMatchesTitle').textContent = 'Match results';
+                    document.getElementById('noMatchesText').textContent = 'Results will appear here after the tournament.';
+                }
+                document.getElementById('noMatches').classList.remove('hidden');
+            }
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('tournamentContent').classList.remove('hidden');
+
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Tournament Details</p>';
+        }
+    }
+
+    // ============================================
+    // TOURNAMENT HEADER (poster, facts, buttons, about)
+    // ============================================
+    let currentTournament = null;
+
+    // Called by the shared helpers when the poster image cannot be loaded
+    function onPosterUnavailable() {
+        const link = document.getElementById('posterFullSize');
+        if (link) link.remove();
+    }
+
+    function infoRowHtml(iconName, label, valueHtml, extraHtml) {
+        return `
+            <div class="td-row">
+                <span class="td-row-icon">${svgIcon(iconName)}</span>
+                <div class="td-row-body">
+                    <div class="td-row-label">${escapeHtml(label)}</div>
+                    <div class="td-row-value">${valueHtml}</div>
+                    ${extraHtml || ''}
+                </div>
+            </div>`;
+    }
+
+    function renderTournamentHeader(t, matches) {
+        currentTournament = t;
+        const state = getTournamentState(t, matches.length > 0);
+
+        document.title = `${t.Name || 'Tournament'} - KBF-UK`;
+        document.getElementById('tournamentName').textContent = t.Name || '';
+        document.getElementById('statusTag').innerHTML = statusTagHtml(state.tag);
+
+        // Poster panel
+        const poster = safeImagePath(t.PosterUrl);
+        document.getElementById('posterPanel').innerHTML = `
+            <div class="td-poster-frame">${posterOrTileHtml(t, true)}</div>
+            ${poster ? `<a id="posterFullSize" href="${escapeHtml(poster)}" target="_blank" rel="noopener" class="td-fullsize">View full size ${svgIcon('external')}</a>` : ''}`;
+
+        // Facts
+        const rows = [];
+        const time = formatTime(t.StartTime);
+        if (state.date) {
+            rows.push(infoRowHtml('calendar', 'Date', escapeHtml(formatLongDate(state.date)),
+                time ? `<div class="td-row-sub">Starts ${escapeHtml(time)}</div>` : ''));
+        }
+
+        const venue = (t.Venue || '').trim();
+        const town = (t.Location || '').trim();
+        const postcode = (t.PostCode || '').trim();
+        if (venue || town || postcode) {
+            const mapQuery = [venue, postcode || town].filter(Boolean).join(', ');
+            const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery);
+            const townLine = [town, postcode].filter(Boolean).join(' ');
+            rows.push(infoRowHtml('pin', 'Venue', escapeHtml(venue || town),
+                (venue && townLine ? `<div class="td-row-sub">${escapeHtml(townLine)}</div>` : '') +
+                `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener" class="td-link">Open in Google Maps ${svgIcon('external')}</a>`));
+        }
+
+        if (t.ClubName) {
+            rows.push(infoRowHtml('building', 'Organiser', escapeHtml(t.ClubName)));
+        }
+
+        if (t.EntryFee) {
+            rows.push(infoRowHtml('fee', 'Entry fee', escapeHtml(t.EntryFee)));
+        }
+
+        const closeDate = toYmd(t.RegistrationCloseDate);
+        if (closeDate) {
+            rows.push(infoRowHtml('clock', 'Registration closes', escapeHtml(formatLongDate(closeDate))));
+        }
+
+        const contactName = (t.ContactName || '').trim();
+        const contactPhone = (t.ContactPhone || '').trim();
+        const telNumber = contactPhone.replace(/[^\d+]/g, '');
+        const phoneHtml = contactPhone && /\d/.test(telNumber)
+            ? `<a href="tel:${escapeHtml(telNumber)}" class="td-phone">${escapeHtml(contactPhone)}</a>`
+            : escapeHtml(contactPhone);
+        if (contactName || contactPhone) {
+            rows.push(infoRowHtml('phone', 'Contact',
+                contactName ? escapeHtml(contactName) : phoneHtml,
+                contactName && contactPhone ? `<div class="td-row-sub">${phoneHtml}</div>` : ''));
+        }
+
+        const infoRows = document.getElementById('infoRows');
+        infoRows.innerHTML = rows.join('');
+        infoRows.classList.toggle('hidden', rows.length === 0);
+
+        // Categories: the organiser's text, split on commas
+        let categories = (t.CategoriesOffered || '').split(',').map(c => c.trim()).filter(Boolean);
+        if (categories.length === 0) {
+            categories = [...new Set(matches.map(m => m.GroupName).filter(Boolean))];
+        }
+        document.getElementById('categoryChips').innerHTML =
+            categories.map(c => `<span class="td-chip">${escapeHtml(c)}</span>`).join('');
+        document.getElementById('categoriesBlock').classList.toggle('hidden', categories.length === 0);
+
+        // Buttons
+        const buttons = [];
+        if (state.canRegister) {
+            buttons.push(`<a href="${escapeHtml(state.regUrl)}" target="_blank" rel="noopener" class="td-btn td-btn-solid">Register now ${svgIcon('external')}</a>`);
+        }
+        if (!state.isPast && state.date) {
+            buttons.push(`<button type="button" id="addToCalendarBtn" class="td-btn td-btn-outline">${svgIcon('calendar')} Add to calendar</button>`);
+        }
+        const actionButtons = document.getElementById('actionButtons');
+        actionButtons.innerHTML = buttons.join('');
+        actionButtons.classList.toggle('hidden', buttons.length === 0);
+        const calendarBtn = document.getElementById('addToCalendarBtn');
+        if (calendarBtn) calendarBtn.addEventListener('click', () => downloadCalendarFile(currentTournament));
+
+        // About
+        const description = (t.Description || '').trim();
+        document.getElementById('aboutText').textContent = description;
+        document.getElementById('aboutBlock').classList.toggle('hidden', !description);
+    }
+
+    // ============================================
+    // ADD TO CALENDAR (.ics built in the browser)
+    // ============================================
+    function icsText(value) {
+        return String(value || '')
+            .replace(/\\/g, '\\\\')
+            .replace(/;/g, '\\;')
+            .replace(/,/g, '\\,')
+            .replace(/\r\n|\r|\n/g, '\\n');
+    }
+
+    // Fold lines longer than 75 characters (RFC 5545)
+    function icsFold(line) {
+        const chars = Array.from(line);
+        if (chars.length <= 75) return line;
+        const parts = [chars.slice(0, 75).join('')];
+        for (let i = 75; i < chars.length; i += 74) {
+            parts.push(' ' + chars.slice(i, i + 74).join(''));
+        }
+        return parts.join('\r\n');
+    }
+
+    function icsLocalDateTime(d) {
+        return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+    }
+
+    function downloadCalendarFile(t) {
+        if (!t) return;
+        const date = toYmd(t.TournamentDate);
+        if (!date) return;
+
+        const id = parseInt(t.TournamentId, 10);
+        const pageUrl = `${window.location.origin}/tournament-details?id=${id}`;
+        const now = new Date();
+        const stamp = `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}T${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}${pad2(now.getUTCSeconds())}Z`;
+
+        const lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//KBF-UK//Tournaments//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'BEGIN:VEVENT',
+            `UID:tournament-${id}@kbf-uk.org`,
+            `DTSTAMP:${stamp}`
+        ];
+
+        const time = formatTime(t.StartTime);
+        const day = parseYmd(date);
+        if (time) {
+            // Timed event in local time; assumed to run until the end of the day (max 8 hours)
+            const [hh, mm] = time.split(':').map(Number);
+            const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hh, mm);
+            let end = new Date(start.getTime() + 8 * 3600000);
+            const endOfDay = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59);
+            if (end > endOfDay) end = endOfDay;
+            lines.push(`DTSTART:${icsLocalDateTime(start)}`, `DTEND:${icsLocalDateTime(end)}`);
+        } else {
+            // All-day event
+            const next = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+            lines.push(`DTSTART;VALUE=DATE:${date.replace(/-/g, '')}`,
+                       `DTEND;VALUE=DATE:${next.getFullYear()}${pad2(next.getMonth() + 1)}${pad2(next.getDate())}`);
+        }
+
+        const location = [t.Venue, t.PostCode].map(v => (v || '').trim()).filter(Boolean).join(', ');
+        lines.push(`SUMMARY:${icsText(t.Name)}`);
+        if (location) lines.push(`LOCATION:${icsText(location)}`);
+        lines.push(`DESCRIPTION:${icsText(pageUrl)}`, `URL:${pageUrl}`, 'END:VEVENT', 'END:VCALENDAR');
+
+        const content = lines.map(icsFold).join('\r\n') + '\r\n';
+        const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${(t.Name || 'tournament').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'tournament'}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // ============================================
+    // MATCH RESULTS (by category: final, semi-finalists, quarter-finalists)
+    // Each match row holds two teams: slots 1-2 and slots 3-4.
+    // ============================================
+    const RESULT_SLOTS = {
+        1: { id: 'Player1Id', first: 'P1FirstName', last: 'P1LastName', grade: 'P1Category', guest: 'GuestPlayer1Name' },
+        2: { id: 'Partner1Id', first: 'Partner1FirstName', last: 'Partner1LastName', grade: 'Partner1Category', guest: 'GuestPartner1Name' },
+        3: { id: 'Player2Id', first: 'P2FirstName', last: 'P2LastName', grade: 'P2Category', guest: 'GuestPlayer2Name' },
+        4: { id: 'Partner2Id', first: 'Partner2FirstName', last: 'Partner2LastName', grade: 'Partner2Category', guest: 'GuestPartner2Name' }
+    };
+    let resultsByCategory = [];
+    let resultsPoints = null;
+
+    // One player row: linked name and grade, "Guest", or "Former member"
+    function resultPlayerHtml(match, slot) {
+        const s = RESULT_SLOTS[slot];
+        const first = match[s.first] || '';
+        const last = match[s.last] || '';
+        if (first === 'Former' && last === 'member') {
+            return '<div class="tr-player"><span class="tr-name tr-muted">Former member</span></div>';
+        }
+        if (first || last) {
+            const name = escapeHtml((first + ' ' + last).trim());
+            const id = parseInt(match[s.id], 10);
+            const nameHtml = id > 0 ? '<a href="/player-profile?id=' + encodeURIComponent(id) + '">' + name + '</a>' : name;
+            const grade = match[s.grade] ? '<span class="tr-grade" title="Current grade">' + escapeHtml(match[s.grade]) + '</span>' : '';
+            return '<div class="tr-player"><span class="tr-name">' + nameHtml + '</span>' + grade + '</div>';
+        }
+        if (match[s.guest]) {
+            const guestName = String(match[s.guest]).trim();
+            return '<div class="tr-player"><span class="tr-name' + (guestName ? '' : ' tr-muted') + '">'
+                + (guestName ? escapeHtml(guestName) + ' <span class="tr-guest">Guest</span>' : 'Guest')
+                + '</span></div>';
+        }
+        return '';
+    }
+
+    function resultPoints(round, outcome) {
+        const entry = resultsPoints && resultsPoints[round] && resultsPoints[round][outcome];
+        return entry && entry.points != null ? Number(entry.points) : null;
+    }
+
+    function resultCardHtml(match, team, tag, tagClass, points, isWin) {
+        const slots = team === 1 ? [1, 2] : [3, 4];
+        const rows = slots.map(s => resultPlayerHtml(match, s)).join('');
+        if (!rows) return '';
+        return '<div class="tr-card' + (isWin ? ' is-win' : '') + '">'
+            + '<div class="tr-card-head"><span class="tr-tag ' + tagClass + '">'
+            + (isWin ? svgIcon('trophy', 'w-3.5 h-3.5') : '') + escapeHtml(tag) + '</span>'
+            + (points !== null ? '<span class="tr-pts">' + escapeHtml(points) + ' pts each</span>' : '')
+            + '</div><div class="space-y-2">' + rows + '</div></div>';
+    }
+
+    function displayMatches(matches, roundPoints) {
+        resultsPoints = roundPoints || null;
+        const map = new Map();
+        matches.forEach(match => {
+            const name = (match.GroupName || match.CategoryName || 'General').trim() || 'General';
+            if (!map.has(name)) map.set(name, { name: name, Final: [], SemiFinal: [], QuarterFinal: [] });
+            const rounds = map.get(name);
+            if (rounds[match.RoundType]) rounds[match.RoundType].push(match);
+        });
+        resultsByCategory = Array.from(map.values());
+
+        const tabs = document.getElementById('resultsTabs');
+        const single = document.getElementById('resultsCategory');
+        tabs.innerHTML = '';
+        if (resultsByCategory.length > 1) {
+            resultsByCategory.forEach((cat, i) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'tr-tab';
+                b.setAttribute('role', 'tab');
+                b.textContent = cat.name;
+                b.dataset.index = String(i);
+                b.addEventListener('click', () => selectCategory(i));
+                b.addEventListener('keydown', e => {
+                    const n = resultsByCategory.length;
+                    let next = null;
+                    if (e.key === 'ArrowRight') next = (i + 1) % n;
+                    if (e.key === 'ArrowLeft') next = (i + n - 1) % n;
+                    if (next !== null) { e.preventDefault(); selectCategory(next); tabs.children[next].focus(); }
+                });
+                tabs.appendChild(b);
+            });
+            tabs.classList.remove('hidden');
+            single.classList.add('hidden');
+        } else {
+            tabs.classList.add('hidden');
+            single.textContent = resultsByCategory.length ? resultsByCategory[0].name : '';
+            single.classList.toggle('hidden', !resultsByCategory.length);
+        }
+        selectCategory(0);
+    }
+
+    function selectCategory(index) {
+        const tabs = document.getElementById('resultsTabs');
+        Array.from(tabs.children).forEach((b, i) => {
+            b.setAttribute('aria-selected', i === index ? 'true' : 'false');
+            b.tabIndex = i === index ? 0 : -1;
+        });
+        const cat = resultsByCategory[index];
+        const body = document.getElementById('resultsBody');
+        if (!cat) { body.innerHTML = ''; return; }
+        let html = '';
+
+        // Final: winners (larger) and runners-up side by side
+        if (cat.Final.length) {
+            html += '<div class="mb-8"><h3 class="tr-round">Final</h3>';
+            cat.Final.forEach(match => {
+                const winTeam = String(match.WinnerTeam) === '2' ? 2 : 1;
+                const win = resultCardHtml(match, winTeam, 'Winners', 'tr-tag-win', resultPoints('Final', 'Winner'), true);
+                const lose = resultCardHtml(match, winTeam === 1 ? 2 : 1, 'Runners-up', 'tr-tag-light', resultPoints('Final', 'Loser'), false);
+                html += '<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 items-start">'
+                    + (win ? '<div class="md:col-span-3">' + win + '</div>' : '')
+                    + (lose ? '<div class="md:col-span-2">' + lose + '</div>' : '')
+                    + '</div>';
+            });
+            html += '</div>';
+        }
+
+        // Semi-finalists: two per row on desktop
+        const semis = [];
+        cat.SemiFinal.forEach(match => [1, 2].forEach(team => {
+            const card = resultCardHtml(match, team, 'Semi-finalists', 'tr-tag-grey', resultPoints('SemiFinal', 'Winner'), false);
+            if (card) semis.push(card);
+        }));
+        if (semis.length) {
+            html += '<div class="mb-8"><h3 class="tr-round">Semi-finalists</h3>'
+                + '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' + semis.join('') + '</div></div>';
+        }
+
+        // Quarter-finalists: four per row on desktop, two on tablets, one on phones
+        const quarters = [];
+        cat.QuarterFinal.forEach(match => [1, 2].forEach(team => {
+            const card = resultCardHtml(match, team, 'Quarter-finalists', 'tr-tag-grey', resultPoints('QuarterFinal', 'Winner'), false);
+            if (card) quarters.push(card);
+        }));
+        if (quarters.length) {
+            html += '<div class="mb-2"><h3 class="tr-round">Quarter-finalists</h3>'
+                + '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">' + quarters.join('') + '</div></div>';
+        }
+
+        body.innerHTML = html || '<p class="text-gray-400 font-bold uppercase text-sm">No results in this category yet</p>';
+    }
+    </script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

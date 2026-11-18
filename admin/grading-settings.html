@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grading and Seasons - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+
+        .field { background: #1e293b; border: 2px solid #374151; color: #fff; padding: .5rem .625rem; font-weight: 700; font-size: .875rem; width: 100%; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field[aria-invalid="true"] { border-color: #ef4444; }
+        .field-inline { display: inline-block; width: 5.5rem; padding: .25rem .5rem; text-align: center; }
+
+        .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; background: #1e293b; border: 2px solid #374151; color: #d1d5db; }
+        .icon-btn:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+        .icon-btn:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+
+        .month-btn { padding: .5rem .25rem; font-weight: 900; font-size: .75rem; text-transform: uppercase; background: #1e293b; border: 2px solid #374151; color: #d1d5db; }
+        .month-btn:hover { border-color: #6b7280; color: #fff; }
+        .month-btn[aria-pressed="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .month-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        .row-menu { position: absolute; right: 0; top: 100%; margin-top: .25rem; min-width: 11rem; background: #0f172a; border: 2px solid #374151; z-index: 30; box-shadow: 4px 4px 0 var(--theme-primary); }
+        .row-menu button { display: block; width: 100%; text-align: left; padding: .5rem .75rem; font-weight: 700; font-size: .75rem; text-transform: uppercase; color: #d1d5db; }
+        .row-menu button:hover, .row-menu button:focus-visible { background: #1e293b; color: #fff; outline: none; }
+
+        @media (max-width: 768px) {
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Grading</span> and seasons</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Grades, points per placing and the season reset</p>
+        </div>
+
+        <!-- Control centre layout -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0">
+
+        <div id="pageLoading" class="py-16 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+
+        <div id="pageContent" class="hidden space-y-6 sm:space-y-8">
+            <!-- ============================ -->
+            <!-- GRADES -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6" aria-labelledby="gradesHeading">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                    <div>
+                        <h2 id="gradesHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-2">Grades</h2>
+                        <p class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed">Rank runs from the top. Players need the threshold in season points to become eligible for promotion to the grade above.</p>
+                    </div>
+                    <button type="button" id="addGradeBtn" class="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition disabled:opacity-40">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add grade
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto border-2 border-gray-700">
+                    <table class="w-full text-left text-xs sm:text-sm min-w-[44rem]">
+                        <thead class="bg-slate-800 text-gray-400 uppercase text-xs font-black">
+                            <tr>
+                                <th scope="col" class="px-3 py-3 w-14">Rank</th>
+                                <th scope="col" class="px-3 py-3 w-20">Short</th>
+                                <th scope="col" class="px-3 py-3">Full name</th>
+                                <th scope="col" class="px-3 py-3 w-36">Promotion at</th>
+                                <th scope="col" class="px-3 py-3 w-20 text-right">Players</th>
+                                <th scope="col" class="px-3 py-3 w-24 text-center">Order</th>
+                                <th scope="col" class="px-3 py-3 w-12"><span class="sr-only">More actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="gradesBody" class="divide-y-2 divide-gray-800"></tbody>
+                    </table>
+                </div>
+                <p class="mt-3 text-xs text-gray-400 font-semibold">A grade can only be removed once nobody is in it. You can move its players to another grade first.</p>
+
+                <div id="retiredWrap" class="hidden mt-6">
+                    <h3 class="text-sm font-black uppercase text-gray-300 mb-2">Retired grades</h3>
+                    <ul id="retiredList" class="space-y-2"></ul>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- POINTS PER PLACING -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6" aria-labelledby="pointsHeading">
+                <h2 id="pointsHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-2">Points per placing</h2>
+                <p class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed mb-4">Every player in a team gets the points for the furthest round the team reached. Changes apply to results approved from now on; points already awarded never change.</p>
+                <div id="pointsRows" class="divide-y-2 divide-gray-800 border-2 border-gray-700"></div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- SEASONS AND RESET -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="seasonHeading">
+                <h2 id="seasonHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Seasons and reset</h2>
+
+                <fieldset>
+                    <legend class="block text-xs font-black theme-primary-text uppercase mb-2">A new season starts in</legend>
+                    <div id="monthButtons" class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2"></div>
+                </fieldset>
+
+                <p class="text-sm text-gray-200 font-semibold leading-loose">
+                    At each new season, players on
+                    <label class="sr-only" for="triggerInput">Points needed to keep some points</label>
+                    <input type="number" id="triggerInput" class="field field-inline" min="1" max="100000" step="1" inputmode="numeric">
+                    points or more restart on
+                    <label class="sr-only" for="valueInput">Points they restart on</label>
+                    <input type="number" id="valueInput" class="field field-inline" min="0" step="1" inputmode="numeric">
+                    and everyone else restarts on 0.
+                </p>
+
+                <div class="p-4 bg-slate-800 border-2 border-gray-700 space-y-3" aria-live="polite">
+                    <p class="text-sm font-black uppercase text-white">Next reset: <span id="nextReset" class="theme-primary-text"></span></p>
+                    <p id="seasonName" class="text-xs text-gray-400 font-semibold"></p>
+                    <ul class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-gray-200">
+                        <li class="p-2 bg-slate-900 border-2 border-gray-700"><span id="countFloor" class="block text-lg font-black text-white">0</span>restart on <span id="countFloorValue"></span></li>
+                        <li class="p-2 bg-slate-900 border-2 border-gray-700"><span id="countZero" class="block text-lg font-black text-white">0</span>restart on 0</li>
+                        <li class="p-2 bg-slate-900 border-2 border-gray-700"><span id="countSkipped" class="block text-lg font-black text-white">0</span>skipped, eligible for promotion</li>
+                    </ul>
+                    <button type="button" id="seeListBtn" class="px-4 py-2 bg-slate-900 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition">See the full list</button>
+                </div>
+                <p class="text-xs text-gray-400 font-semibold">Changes take effect from the next start month. Saving never resets anyone.</p>
+            </section>
+
+            <!-- ============================ -->
+            <!-- CLOSE TO PROMOTION (Grading page) -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-3" aria-labelledby="closeHeading">
+                <h2 id="closeHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Close to promotion</h2>
+                <div>
+                    <label for="closeInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Show players within this many points under Close to promotion</label>
+                    <input type="number" id="closeInput" class="field field-inline" min="10" max="1000" step="1" inputmode="numeric" aria-describedby="closeHint">
+                    <p id="closeHint" class="text-xs text-gray-400 font-semibold mt-2">From 10 to 1,000. The Grading page lists players whose season points are this close to their grade's threshold.</p>
+                </div>
+            </section>
+
+            <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
+            <p id="readOnlyNote" class="hidden text-xs font-bold uppercase text-amber-400">Not available while viewing as someone else</p>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button type="button" id="discardBtn" class="w-full sm:w-auto px-6 py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 font-black uppercase text-xs sm:text-sm hover:border-gray-500 transition">Discard changes</button>
+                <button type="button" id="saveBtn" class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save changes</button>
+            </div>
+        </div>
+
+        </main>
+        </div>
+    </div>
+
+    <!-- ============================ -->
+    <!-- DIALOG (confirmations, add grade, move players, full list) -->
+    <!-- ============================ -->
+    <div id="dialog" class="hidden fixed inset-0 z-[70] bg-black/80 p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+        <div class="mx-auto mt-6 sm:mt-16 w-full max-w-xl bg-slate-900 border-4 border-gray-700 p-5 sm:p-6 space-y-4">
+            <div class="flex items-start justify-between gap-4">
+                <h2 id="dialogTitle" class="text-lg font-black uppercase theme-primary-text"></h2>
+                <button type="button" class="p-1 text-gray-400 hover:text-white" data-dialog-close aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="dialogBody" class="space-y-3 text-sm text-gray-200 font-semibold"></div>
+            <div id="dialogMessage" class="hidden p-3 border-2 border-red-500 bg-red-500/20 text-red-400 text-xs font-bold" role="alert"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button type="button" class="px-4 py-2 bg-slate-800 border-2 border-gray-700 font-black uppercase text-xs hover:border-gray-500" data-dialog-close>Cancel</button>
+                <button type="button" id="dialogConfirm" class="px-4 py-2 theme-primary-bg theme-on-primary font-black uppercase text-xs disabled:opacity-40"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): control.grading
+    // ============================================
+    KBFShell.startControl({ section: 'grading' }).then(function (user) {
+        window.kbfUser = user;
+        load();
+    });
+
+    const API = '/api/control-grading.php';
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const PLACINGS = [
+        { key: 'winners', label: 'Winners', note: '1 team, 2 players' },
+        { key: 'runnersUp', label: 'Runners-up', note: '1 team, 2 players' },
+        { key: 'semiFinalists', label: 'Semi-finalists', note: '2 teams, 4 players' },
+        { key: 'quarterFinalists', label: 'Quarter-finalists', note: '4 teams, 8 players' }
+    ];
+    const ICON_PATHS = {
+        up: 'M5 15l7-7 7 7',
+        down: 'M19 9l-7 7-7-7',
+        dots: 'M12 5h.01M12 12h.01M12 19h.01'
+    };
+
+    let saved = null;      // last summary from the API
+    let grades = [];       // editable copy, in the current order
+    let months = [];
+    let canEdit = true;
+    let previewTimer = null;
+    let lastFocus = null;
+
+    // ---------- helpers ----------
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    async function post(body) {
+        const res = await authenticatedFetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    }
+
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+    }
+
+    function svgIcon(name) {
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('class', 'w-4 h-4');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-width', name === 'dots' ? '3' : '2');
+        path.setAttribute('d', ICON_PATHS[name]);
+        svg.appendChild(path);
+        return svg;
+    }
+
+    function formatNumber(n) {
+        return Number(n).toLocaleString('en-GB');
+    }
+
+    function showSave(text, ok) {
+        const box = document.getElementById('saveMessage');
+        box.textContent = text;
+        box.setAttribute('role', ok ? 'status' : 'alert');
+        box.className = 'p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (ok
+            ? 'border-green-500 bg-green-500/20 text-green-400'
+            : 'border-red-500 bg-red-500/20 text-red-400');
+    }
+
+    function hideSave() {
+        document.getElementById('saveMessage').classList.add('hidden');
+    }
+
+    function isDirty() {
+        if (!saved) return false;
+        return JSON.stringify(currentPayload()) !== JSON.stringify(savedPayload());
+    }
+
+    // ============================================
+    // LOAD
+    // ============================================
+    async function load() {
+        try {
+            const res = await authenticatedFetch(API + '?action=summary');
+            const data = await res.json();
+            if (!data.success) {
+                document.getElementById('pageLoading').textContent = data.message || 'Could not load grading settings';
+                return;
+            }
+            saved = data;
+            canEdit = data.canEdit !== false;
+            grades = data.grades.map(g => Object.assign({}, g));
+            months = data.season.months.slice();
+
+            renderGrades();
+            renderRetired();
+            renderPoints();
+            renderSeason();
+            renderPreview(data.preview);
+            document.getElementById('closeInput').value = data.close !== undefined ? data.close : 150;
+
+            document.getElementById('readOnlyNote').classList.toggle('hidden', canEdit);
+            ['saveBtn', 'addGradeBtn'].forEach(id => { document.getElementById(id).disabled = !canEdit; });
+            document.getElementById('pageLoading').classList.add('hidden');
+            document.getElementById('pageContent').classList.remove('hidden');
+        } catch (e) {
+            console.error('Load grading settings error:', e);
+            document.getElementById('pageLoading').textContent = 'Could not load grading settings';
+        }
+    }
+
+    // ============================================
+    // GRADES TABLE
+    // ============================================
+    function renderGrades() {
+        const body = document.getElementById('gradesBody');
+        body.innerHTML = '';
+        grades.forEach((g, i) => {
+            const tr = el('tr', 'bg-slate-900 align-middle');
+
+            const rank = el('td', 'px-3 py-2 font-black text-white', String(i + 1));
+            tr.appendChild(rank);
+
+            const shortCell = el('td', 'px-3 py-2');
+            const shortInput = el('input', 'field');
+            shortInput.type = 'text';
+            shortInput.maxLength = 3;
+            shortInput.value = g.shortName;
+            shortInput.id = 'short-' + g.id;
+            shortInput.setAttribute('aria-label', 'Short name for rank ' + (i + 1));
+            shortInput.disabled = !canEdit;
+            shortInput.addEventListener('input', () => { g.shortName = shortInput.value; hideSave(); });
+            shortCell.appendChild(shortInput);
+            tr.appendChild(shortCell);
+
+            const nameCell = el('td', 'px-3 py-2');
+            const nameInput = el('input', 'field');
+            nameInput.type = 'text';
+            nameInput.maxLength = 60;
+            nameInput.value = g.name;
+            nameInput.id = 'name-' + g.id;
+            nameInput.setAttribute('aria-label', 'Full name for rank ' + (i + 1));
+            nameInput.disabled = !canEdit;
+            nameInput.addEventListener('input', () => { g.name = nameInput.value; hideSave(); });
+            nameCell.appendChild(nameInput);
+            tr.appendChild(nameCell);
+
+            const thrCell = el('td', 'px-3 py-2');
+            if (i === 0) {
+                thrCell.appendChild(el('span', 'text-xs font-black uppercase theme-primary-text', 'Top grade'));
+            } else {
+                const wrap = el('span', 'flex items-center gap-2');
+                const thr = el('input', 'field');
+                thr.type = 'number';
+                thr.min = '10';
+                thr.max = '10000';
+                thr.step = '1';
+                thr.value = g.threshold;
+                thr.id = 'threshold-' + g.id;
+                thr.setAttribute('aria-label', 'Promotion threshold for ' + g.shortName);
+                thr.disabled = !canEdit;
+                thr.addEventListener('input', () => { g.threshold = thr.value; hideSave(); });
+                wrap.appendChild(thr);
+                wrap.appendChild(el('span', 'text-xs text-gray-400 font-bold', 'pts'));
+                thrCell.appendChild(wrap);
+            }
+            tr.appendChild(thrCell);
+
+            tr.appendChild(el('td', 'px-3 py-2 text-right font-bold text-gray-200', formatNumber(g.players)));
+
+            const orderCell = el('td', 'px-3 py-2 text-center whitespace-nowrap');
+            const up = el('button', 'icon-btn');
+            up.type = 'button';
+            up.setAttribute('aria-label', 'Move ' + g.shortName + ' up');
+            up.disabled = !canEdit || i === 0;
+            up.appendChild(svgIcon('up'));
+            up.addEventListener('click', () => moveRow(i, -1));
+            const down = el('button', 'icon-btn ml-1');
+            down.type = 'button';
+            down.setAttribute('aria-label', 'Move ' + g.shortName + ' down');
+            down.disabled = !canEdit || i === grades.length - 1;
+            down.appendChild(svgIcon('down'));
+            down.addEventListener('click', () => moveRow(i, 1));
+            orderCell.appendChild(up);
+            orderCell.appendChild(down);
+            tr.appendChild(orderCell);
+
+            const menuCell = el('td', 'px-3 py-2 text-right');
+            menuCell.appendChild(rowMenu(g));
+            tr.appendChild(menuCell);
+
+            body.appendChild(tr);
+        });
+    }
+
+    function moveRow(i, delta) {
+        const j = i + delta;
+        if (j < 0 || j >= grades.length) return;
+        const tmp = grades[i];
+        grades[i] = grades[j];
+        grades[j] = tmp;
+        renderGrades();
+        hideSave();
+        const btn = document.querySelector('#gradesBody tr:nth-child(' + (j + 1) + ') button[aria-label^="Move ' + CSS.escape(tmp.shortName) + (delta < 0 ? ' up' : ' down') + '"]');
+        if (btn && !btn.disabled) btn.focus();
+    }
+
+    function rowMenu(g) {
+        const wrap = el('div', 'relative inline-block');
+        const btn = el('button', 'icon-btn');
+        btn.type = 'button';
+        btn.setAttribute('aria-haspopup', 'true');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-label', 'More actions for ' + g.shortName);
+        btn.disabled = !canEdit;
+        btn.appendChild(svgIcon('dots'));
+        const menu = el('div', 'row-menu hidden');
+        menu.setAttribute('role', 'menu');
+
+        const items = [];
+        items.push(['Move players', () => openMove(g)]);
+        items.push(['Retire', () => confirmSimple('Retire grade ' + g.shortName + '?',
+            ['The grade disappears from public tabs, registration, broadcast targets and grade dropdowns. Its history is kept and it can be restored.'],
+            'Retire', { action: 'retireGrade', id: g.id })]);
+        if (g.canDelete) {
+            items.push(['Delete', () => confirmSimple('Delete grade ' + g.shortName + '?',
+                ['This grade has never been used, so it can be deleted completely.'],
+                'Delete', { action: 'deleteGrade', id: g.id })]);
+        }
+        items.forEach(([label, fn]) => {
+            const item = el('button', '', label);
+            item.type = 'button';
+            item.setAttribute('role', 'menuitem');
+            item.addEventListener('click', () => { closeMenus(); fn(); });
+            menu.appendChild(item);
+        });
+
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = menu.classList.contains('hidden');
+            closeMenus();
+            menu.classList.toggle('hidden', !open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) menu.querySelector('button').focus();
+        });
+        menu.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closeMenus(); btn.focus(); }
+        });
+        wrap.appendChild(btn);
+        wrap.appendChild(menu);
+        return wrap;
+    }
+
+    function closeMenus() {
+        document.querySelectorAll('.row-menu').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('[aria-haspopup="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    }
+    document.addEventListener('click', closeMenus);
+
+    function renderRetired() {
+        const list = document.getElementById('retiredList');
+        list.innerHTML = '';
+        const retired = saved.retired || [];
+        document.getElementById('retiredWrap').classList.toggle('hidden', retired.length === 0);
+        retired.forEach(g => {
+            const li = el('li', 'flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-800 border-2 border-gray-700');
+            li.appendChild(el('span', 'text-sm font-bold text-gray-300', g.shortName + ' - ' + g.name));
+            const actions = el('span', 'flex gap-2');
+            const restore = el('button', 'px-3 py-1.5 bg-slate-900 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 disabled:opacity-40', 'Restore');
+            restore.type = 'button';
+            restore.disabled = !canEdit;
+            restore.addEventListener('click', () => confirmSimple('Restore grade ' + g.shortName + '?',
+                ['It returns at the bottom of the order. You can move it up afterwards.'], 'Restore', { action: 'restoreGrade', id: g.id }));
+            actions.appendChild(restore);
+            if (g.canDelete) {
+                const del = el('button', 'px-3 py-1.5 bg-slate-900 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-red-500 disabled:opacity-40', 'Delete');
+                del.type = 'button';
+                del.disabled = !canEdit;
+                del.addEventListener('click', () => confirmSimple('Delete grade ' + g.shortName + '?',
+                    ['This grade has never been used, so it can be deleted completely.'], 'Delete', { action: 'deleteGrade', id: g.id }));
+                actions.appendChild(del);
+            }
+            li.appendChild(actions);
+            list.appendChild(li);
+        });
+    }
+
+    // ============================================
+    // POINTS PER PLACING
+    // ============================================
+    function renderPoints() {
+        const wrap = document.getElementById('pointsRows');
+        wrap.innerHTML = '';
+        PLACINGS.forEach(p => {
+            const row = el('div', 'flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3');
+            const text = el('label', 'min-w-0');
+            text.htmlFor = 'points-' + p.key;
+            text.appendChild(el('span', 'block text-sm font-black text-white', p.label));
+            text.appendChild(el('span', 'block text-xs text-gray-400 font-semibold', p.note));
+            const inputWrap = el('span', 'flex items-center gap-2');
+            const input = el('input', 'field');
+            input.type = 'number';
+            input.min = '0';
+            input.max = '1000';
+            input.step = '1';
+            input.id = 'points-' + p.key;
+            input.style.width = '7rem';
+            input.value = saved.points[p.key];
+            input.disabled = !canEdit;
+            input.addEventListener('input', hideSave);
+            inputWrap.appendChild(input);
+            inputWrap.appendChild(el('span', 'text-xs text-gray-400 font-bold', 'points'));
+            row.appendChild(text);
+            row.appendChild(inputWrap);
+            wrap.appendChild(row);
+        });
+    }
+
+    // ============================================
+    // SEASONS
+    // ============================================
+    function renderSeason() {
+        const wrap = document.getElementById('monthButtons');
+        wrap.innerHTML = '';
+        MONTHS.forEach((name, i) => {
+            const m = i + 1;
+            const b = el('button', 'month-btn', name.slice(0, 3));
+            b.type = 'button';
+            b.setAttribute('aria-pressed', months.indexOf(m) !== -1 ? 'true' : 'false');
+            b.setAttribute('aria-label', name);
+            b.disabled = !canEdit;
+            b.addEventListener('click', () => {
+                const idx = months.indexOf(m);
+                if (idx === -1) months.push(m); else months.splice(idx, 1);
+                months.sort((a, c) => a - c);
+                b.setAttribute('aria-pressed', months.indexOf(m) !== -1 ? 'true' : 'false');
+                hideSave();
+                schedulePreview();
+            });
+            wrap.appendChild(b);
+        });
+        const trigger = document.getElementById('triggerInput');
+        const value = document.getElementById('valueInput');
+        trigger.value = saved.season.trigger;
+        value.value = saved.season.value;
+        trigger.disabled = value.disabled = !canEdit;
+        trigger.oninput = () => { hideSave(); schedulePreview(); };
+        value.oninput = () => { hideSave(); schedulePreview(); };
+    }
+
+    function renderPreview(p) {
+        document.getElementById('nextReset').textContent = p.status === 'due'
+            ? 'today, at the next run of the reset job'
+            : p.nextResetLabel;
+        document.getElementById('seasonName').textContent = 'Current season: ' + p.seasonName +
+            (p.status === 'baseline' ? '. The reset job has not run yet; its first run records this season and resets nobody.' : '');
+        document.getElementById('countFloor').textContent = formatNumber(p.counts.floor);
+        document.getElementById('countZero').textContent = formatNumber(p.counts.zero);
+        document.getElementById('countSkipped').textContent = formatNumber(p.counts.skipped);
+        document.getElementById('countFloorValue').textContent = document.getElementById('valueInput').value || '0';
+    }
+
+    function previewQuery(offset) {
+        const params = new URLSearchParams();
+        params.set('action', 'preview');
+        params.set('months', (months.length ? months : saved.season.months).join(','));
+        params.set('trigger', document.getElementById('triggerInput').value || String(saved.season.trigger));
+        params.set('value', document.getElementById('valueInput').value || '0');
+        params.set('offset', String(offset || 0));
+        return params.toString();
+    }
+
+    function schedulePreview() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(async () => {
+            try {
+                const res = await authenticatedFetch(API + '?' + previewQuery(0));
+                const data = await res.json();
+                if (data.success) renderPreview(data);
+            } catch (e) {
+                console.error('Preview error:', e);
+            }
+        }, 350);
+    }
+
+    // Full list in the dialog, 50 at a time
+    document.getElementById('seeListBtn').addEventListener('click', async function () {
+        const body = el('div', 'space-y-3');
+        const intro = el('p', 'text-xs text-gray-400 font-semibold', 'Under the settings shown on the page, saved or not.');
+        const tableWrap = el('div', 'overflow-x-auto border-2 border-gray-700 max-h-[55vh] overflow-y-auto');
+        const table = el('table', 'w-full text-left text-xs min-w-[32rem]');
+        table.innerHTML = '<thead class="bg-slate-800 text-gray-400 uppercase font-black sticky top-0"><tr>' +
+            '<th scope="col" class="px-2 py-2">Name</th><th scope="col" class="px-2 py-2">KBF ID</th><th scope="col" class="px-2 py-2">Grade</th>' +
+            '<th scope="col" class="px-2 py-2 text-right">Now</th><th scope="col" class="px-2 py-2 text-right">After</th></tr></thead>';
+        const tbody = el('tbody', 'divide-y divide-gray-800');
+        table.appendChild(tbody);
+        tableWrap.appendChild(table);
+        const more = el('button', 'hidden px-4 py-2 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs', 'Show more');
+        more.type = 'button';
+        body.appendChild(intro);
+        body.appendChild(tableWrap);
+        body.appendChild(more);
+
+        let offset = 0;
+        async function page() {
+            more.disabled = true;
+            try {
+                const res = await authenticatedFetch(API + '?' + previewQuery(offset));
+                const data = await res.json();
+                if (!data.success) return;
+                data.players.forEach(p => {
+                    const tr = el('tr');
+                    tr.appendChild(el('td', 'px-2 py-1.5 text-white font-bold', p.name));
+                    tr.appendChild(el('td', 'px-2 py-1.5 text-gray-300', p.kbfId));
+                    tr.appendChild(el('td', 'px-2 py-1.5 text-gray-300', p.grade));
+                    tr.appendChild(el('td', 'px-2 py-1.5 text-right text-gray-300', formatNumber(p.points)));
+                    tr.appendChild(el('td', 'px-2 py-1.5 text-right font-bold ' + (p.outcome === 'skipped' ? 'text-amber-300' : 'text-white'),
+                        p.outcome === 'skipped' ? formatNumber(p.after) + ' (eligible, skipped)' : formatNumber(p.after)));
+                    tbody.appendChild(tr);
+                });
+                offset = data.nextOffset;
+                more.classList.toggle('hidden', !data.hasMore);
+                if (!tbody.children.length) intro.textContent = 'There are no active players with a grade.';
+            } finally {
+                more.disabled = false;
+            }
+        }
+        more.addEventListener('click', page);
+        openDialog('Players at the next reset', body, null, null);
+        page();
+    });
+
+    // ============================================
+    // DIALOG
+    // ============================================
+    let dialogAction = null;
+
+    function openDialog(title, bodyNode, confirmLabel, onConfirm) {
+        lastFocus = document.activeElement;
+        document.getElementById('dialogTitle').textContent = title;
+        const body = document.getElementById('dialogBody');
+        body.innerHTML = '';
+        body.appendChild(bodyNode);
+        document.getElementById('dialogMessage').classList.add('hidden');
+        const confirmBtn = document.getElementById('dialogConfirm');
+        confirmBtn.classList.toggle('hidden', !confirmLabel);
+        confirmBtn.textContent = confirmLabel || '';
+        confirmBtn.disabled = false;
+        dialogAction = onConfirm;
+        document.getElementById('dialog').classList.remove('hidden');
+        (body.querySelector('input, select') || confirmBtn.classList.contains('hidden') && document.querySelector('[data-dialog-close]') || confirmBtn).focus();
+    }
+
+    function closeDialog() {
+        document.getElementById('dialog').classList.add('hidden');
+        dialogAction = null;
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    function dialogError(text) {
+        const box = document.getElementById('dialogMessage');
+        box.textContent = text;
+        box.classList.remove('hidden');
+    }
+
+    document.querySelectorAll('[data-dialog-close]').forEach(b => b.addEventListener('click', closeDialog));
+    document.getElementById('dialog').addEventListener('click', e => { if (e.target.id === 'dialog') closeDialog(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !document.getElementById('dialog').classList.contains('hidden')) closeDialog();
+    });
+    document.getElementById('dialogConfirm').addEventListener('click', async function () {
+        if (!dialogAction) return;
+        this.disabled = true;
+        try {
+            await dialogAction();
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    function listNode(items, className) {
+        const ul = el('ul', 'space-y-1 list-disc pl-5 ' + (className || ''));
+        items.forEach(t => ul.appendChild(el('li', '', t)));
+        return ul;
+    }
+
+    function unsavedWarning() {
+        return isDirty() ? el('p', 'text-xs font-bold text-amber-400', 'Your other unsaved changes on this page will be lost.') : null;
+    }
+
+    // A one-step action (retire, restore, delete) after confirmation
+    function confirmSimple(title, lines, label, body) {
+        const node = el('div', 'space-y-3');
+        node.appendChild(listNode(lines));
+        const warn = unsavedWarning();
+        if (warn) node.appendChild(warn);
+        openDialog(title, node, label, async () => {
+            const data = await post(body);
+            if (!data.success) { dialogError(data.message || 'That did not work.'); return; }
+            closeDialog();
+            await load();
+            showSave(data.message || 'Done', true);
+        });
+    }
+
+    // ---------- add grade ----------
+    document.getElementById('addGradeBtn').addEventListener('click', function () {
+        const node = el('div', 'space-y-3');
+        node.innerHTML =
+            '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">' +
+                '<div><label for="newShort" class="block text-xs font-black theme-primary-text uppercase mb-1">Short name</label><input id="newShort" class="field" maxlength="3"></div>' +
+                '<div class="sm:col-span-2"><label for="newName" class="block text-xs font-black theme-primary-text uppercase mb-1">Full name</label><input id="newName" class="field" maxlength="60"></div>' +
+            '</div>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+                '<div><label for="newThreshold" class="block text-xs font-black theme-primary-text uppercase mb-1">Promotion at (points)</label><input id="newThreshold" class="field" type="number" min="10" max="10000" value="300"></div>' +
+                '<div><label for="newPosition" class="block text-xs font-black theme-primary-text uppercase mb-1">Position</label><select id="newPosition" class="field"></select></div>' +
+            '</div>';
+        const select = node.querySelector('#newPosition');
+        grades.forEach((g, i) => {
+            const opt = el('option', '', 'Rank ' + (i + 1) + ', above ' + g.shortName);
+            opt.value = String(i);
+            select.appendChild(opt);
+        });
+        const last = el('option', '', 'Rank ' + (grades.length + 1) + ', at the bottom');
+        last.value = String(grades.length);
+        select.appendChild(last);
+        select.value = String(grades.length);
+        const warn = unsavedWarning();
+        if (warn) node.appendChild(warn);
+
+        openDialog('Add grade', node, 'Add grade', async () => {
+            const data = await post({
+                action: 'addGrade',
+                shortName: node.querySelector('#newShort').value,
+                name: node.querySelector('#newName').value,
+                threshold: node.querySelector('#newThreshold').value,
+                position: parseInt(select.value, 10)
+            });
+            if (!data.success) { dialogError(data.message || 'The grade could not be added.'); return; }
+            closeDialog();
+            await load();
+            showSave(data.message || 'Grade added', true);
+        });
+    });
+
+    // ---------- move players ----------
+    function openMove(g) {
+        const node = el('div', 'space-y-3');
+        if (!g.allPlayers) {
+            node.appendChild(el('p', '', 'Nobody is in grade ' + g.shortName + '.'));
+            openDialog('Move players', node, null, null);
+            return;
+        }
+        node.innerHTML = '<div><label for="moveTo" class="block text-xs font-black theme-primary-text uppercase mb-1">Move everyone in this grade to</label><select id="moveTo" class="field"></select></div>' +
+            '<div id="moveEffects" class="space-y-2"></div>';
+        const select = node.querySelector('#moveTo');
+        select.appendChild(Object.assign(el('option', '', 'Choose a grade'), { value: '' }));
+        grades.filter(x => x.id !== g.id).forEach(x => {
+            const opt = el('option', '', x.shortName + ' - ' + x.name);
+            opt.value = String(x.id);
+            select.appendChild(opt);
+        });
+        const effects = node.querySelector('#moveEffects');
+        let checkedCount = null;
+
+        select.addEventListener('change', async () => {
+            effects.innerHTML = '';
+            checkedCount = null;
+            if (!select.value) return;
+            const data = await post({ action: 'moveCheck', fromId: g.id, toId: parseInt(select.value, 10) });
+            if (!data.success) { dialogError(data.message || 'Could not check the move.'); return; }
+            document.getElementById('dialogMessage').classList.add('hidden');
+            checkedCount = data.count;
+            effects.appendChild(listNode(data.effects));
+            const label = el('label', 'block text-xs font-black theme-primary-text uppercase mt-2', 'Type the number of players (' + data.count + ') to confirm');
+            label.htmlFor = 'moveConfirm';
+            const input = el('input', 'field');
+            input.id = 'moveConfirm';
+            input.type = 'number';
+            input.inputMode = 'numeric';
+            effects.appendChild(label);
+            effects.appendChild(input);
+            const warn = unsavedWarning();
+            if (warn) effects.appendChild(warn);
+        });
+
+        openDialog('Move players out of ' + g.shortName, node, 'Move players', async () => {
+            if (!select.value || checkedCount === null) { dialogError('Choose the grade to move the players to.'); return; }
+            const typed = parseInt((node.querySelector('#moveConfirm') || {}).value, 10);
+            if (typed !== checkedCount) { dialogError('Type ' + checkedCount + ' to confirm the move.'); return; }
+            const data = await post({ action: 'movePlayers', fromId: g.id, toId: parseInt(select.value, 10), confirmCount: typed });
+            if (!data.success) { dialogError(data.message || 'The players could not be moved.'); return; }
+            closeDialog();
+            await load();
+            showSave(data.message || 'Players moved', true);
+        });
+    }
+
+    // ============================================
+    // SAVE CHANGES (check first, then confirm)
+    // ============================================
+    function currentPayload() {
+        const points = {};
+        PLACINGS.forEach(p => { points[p.key] = String(document.getElementById('points-' + p.key).value).trim(); });
+        return {
+            grades: grades.map(g => ({ id: g.id, shortName: String(g.shortName).trim(), name: String(g.name).trim(), threshold: String(g.threshold).trim() })),
+            points: points,
+            season: {
+                months: months.slice(),
+                trigger: String(document.getElementById('triggerInput').value).trim(),
+                value: String(document.getElementById('valueInput').value).trim()
+            },
+            close: String(document.getElementById('closeInput').value).trim()
+        };
+    }
+
+    function savedPayload() {
+        const points = {};
+        PLACINGS.forEach(p => { points[p.key] = String(saved.points[p.key]); });
+        return {
+            grades: saved.grades.map(g => ({ id: g.id, shortName: g.shortName, name: g.name, threshold: String(g.threshold) })),
+            points: points,
+            season: { months: saved.season.months.slice(), trigger: String(saved.season.trigger), value: String(saved.season.value) },
+            close: String(saved.close !== undefined ? saved.close : 150)
+        };
+    }
+
+    function markField(field) {
+        document.querySelectorAll('[aria-invalid="true"]').forEach(f => f.removeAttribute('aria-invalid'));
+        if (!field) return;
+        const target = document.getElementById(field === 'months' ? 'monthButtons' : (field === 'trigger' ? 'triggerInput' : (field === 'value' ? 'valueInput' : field)));
+        if (target) {
+            target.setAttribute('aria-invalid', 'true');
+            if (target.focus) target.focus();
+        }
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', async function () {
+        if (!canEdit) return;
+        hideSave();
+        markField(null);
+        const payload = currentPayload();
+        if (payload.season.months.length === 0) {
+            showSave('Choose at least one month for a new season to start.', false);
+            return;
+        }
+        this.disabled = true;
+        try {
+            const check = await post(Object.assign({ action: 'check' }, payload));
+            if (!check.success) {
+                showSave(check.message || 'Please check the values.', false);
+                markField(check.field);
+                return;
+            }
+            if (!check.changes.length) {
+                showSave('Nothing to change.', true);
+                return;
+            }
+            const node = el('div', 'space-y-3');
+            node.appendChild(el('p', 'text-xs font-black uppercase theme-primary-text', 'What will change'));
+            node.appendChild(listNode(check.changes));
+            if (check.effects.length) {
+                node.appendChild(el('p', 'text-xs font-black uppercase theme-primary-text pt-2', 'Effect'));
+                node.appendChild(listNode(check.effects, 'text-amber-200'));
+            }
+            openDialog('Save these changes?', node, 'Save changes', async () => {
+                const data = await post(Object.assign({ action: 'save' }, payload));
+                if (!data.success) { dialogError(data.message || 'Could not save the changes.'); return; }
+                closeDialog();
+                await load();
+                showSave(data.message || 'Changes saved', true);
+            });
+        } catch (e) {
+            console.error('Save grading error:', e);
+            showSave('Could not save the changes. Please try again.', false);
+        } finally {
+            this.disabled = !canEdit;
+        }
+    });
+
+    document.getElementById('discardBtn').addEventListener('click', function () {
+        if (!isDirty()) { hideSave(); return; }
+        if (!confirm('Discard your unsaved changes?')) return;
+        load();
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

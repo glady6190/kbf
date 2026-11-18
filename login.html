@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff sign-in - KBF-UK</title>
+    <link rel="stylesheet" href="/assets/css/auth.css">
+</head>
+<body class="auth-body" data-theme="emerald">
+    <main class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <a href="/" aria-label="KBF-UK home">
+                    <span class="auth-logo-ring">
+                        <span class="auth-logo-glow"></span>
+                        <span class="auth-logo-img"><img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo"></span>
+                    </span>
+                </a>
+            </div>
+
+            <h1 class="auth-title">Staff sign-in</h1>
+            <p class="auth-intro">
+                For KBF admins and organisers. Players do not need an account: your KBF ID arrives by email when your registration is approved.
+                <a href="/register">Register as a player</a>
+            </p>
+
+            <!-- Notices (session ended, maintenance mode) and sign-in results -->
+            <div id="notices"></div>
+            <div id="message" class="auth-msg hidden" role="alert"></div>
+
+            <form id="loginForm" class="auth-form" novalidate>
+                <div class="auth-field">
+                    <label for="email" class="auth-label">Email</label>
+                    <input id="email" name="email" type="email" required autocomplete="username" inputmode="email" spellcheck="false" class="auth-input">
+                </div>
+                <div class="auth-field">
+                    <label for="password" class="auth-label">Password</label>
+                    <div class="pw-wrap">
+                        <input id="password" name="password" type="password" required autocomplete="current-password" class="auth-input">
+                        <button type="button" class="pw-toggle" aria-controls="password"></button>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="auth-btn">Sign in</button>
+
+                <div class="auth-link-row">
+                    <a href="/forgot-password" class="auth-link">Forgot password?</a>
+                </div>
+            </form>
+
+            <div class="auth-footer">
+                <a href="/" class="auth-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                    Back to the website
+                </a>
+                <div class="auth-themes" role="group" aria-label="Colour theme">
+                    <button type="button" onclick="changeTheme('emerald')" class="theme-switcher-btn theme-dot-emerald active" data-theme="emerald" aria-label="Emerald theme"></button>
+                    <button type="button" onclick="changeTheme('cyan')" class="theme-switcher-btn theme-dot-cyan" data-theme="cyan" aria-label="Cyan theme"></button>
+                    <button type="button" onclick="changeTheme('yellow')" class="theme-switcher-btn theme-dot-yellow" data-theme="yellow" aria-label="Yellow theme"></button>
+                    <button type="button" onclick="changeTheme('orange')" class="theme-switcher-btn theme-dot-orange" data-theme="orange" aria-label="Orange theme"></button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/password-toggle.js"></script>
+    <script>
+    var THEMES = ['emerald', 'cyan', 'yellow', 'orange'];
+
+    function changeTheme(theme) {
+        if (THEMES.indexOf(theme) === -1) theme = 'emerald';
+        document.body.setAttribute('data-theme', theme);
+        try { localStorage.setItem('badminton-theme', theme); } catch (e) { /* ignore */ }
+        document.querySelectorAll('.theme-switcher-btn').forEach(function (btn) {
+            var on = btn.getAttribute('data-theme') === theme;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    }
+
+    (function () {
+        'use strict';
+
+        var ICONS = {
+            error: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+            success: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+            warning: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+            info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'
+        };
+        var MISMATCH = 'That email and password do not match. Check them and try again.';
+
+        var form = document.getElementById('loginForm');
+        var messageBox = document.getElementById('message');
+        var notices = document.getElementById('notices');
+        var submitBtn = document.getElementById('submitBtn');
+        var busy = false;
+
+        // Fill a message box: constant icon markup, the text via textContent
+        function fillBox(box, kind, text) {
+            box.className = 'auth-msg auth-msg-' + kind;
+            box.textContent = '';
+            box.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[kind] + '</svg>');
+            var span = document.createElement('span');
+            span.textContent = text;
+            box.appendChild(span);
+        }
+
+        function showMessage(kind, text) { fillBox(messageBox, kind, text); }
+        function hideMessage() { messageBox.className = 'auth-msg hidden'; messageBox.textContent = ''; }
+
+        function addNotice(kind, text) {
+            var box = document.createElement('div');
+            box.setAttribute('role', 'status');
+            fillBox(box, kind, text);
+            notices.appendChild(box);
+        }
+
+        function setBusy(on, label) {
+            busy = on;
+            submitBtn.disabled = on;
+            submitBtn.textContent = label || (on ? 'Signing in...' : 'Sign in');
+        }
+
+        function go(url) { window.location.href = url; }
+
+        // Saved colour theme
+        var saved = 'emerald';
+        try { saved = localStorage.getItem('badminton-theme') || 'emerald'; } catch (e) { /* ignore */ }
+        changeTheme(saved);
+
+        // Arriving from a session timeout
+        if (new URLSearchParams(window.location.search).get('reason') === 'timeout') {
+            addNotice('info', 'You were signed out because the session ended. Please sign in again.');
+        }
+
+        // Maintenance mode on
+        fetch('/api/public-settings.php', { credentials: 'include' })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data && data.success && data.maintenanceMode === true) {
+                    addNotice('info', 'The website is in maintenance mode. Staff can still sign in.');
+                }
+            })
+            .catch(function () { /* not essential */ });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (busy) return;
+
+            var email = document.getElementById('email').value.trim().toLowerCase();
+            var password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showMessage('error', 'Enter your email and password.');
+                (email ? document.getElementById('password') : document.getElementById('email')).focus();
+                return;
+            }
+
+            hideMessage();
+            setBusy(true);
+
+            fetch('/api/auth/login.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password })
+            }).then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    return { status: response.status, data: data || {} };
+                });
+            }).then(function (result) {
+                var data = result.data;
+
+                if (data.success) {
+                    if (data.csrf_token) {
+                        try { sessionStorage.setItem('csrf_token', data.csrf_token); } catch (e) { /* ignore */ }
+                    }
+                    KBFPasswordToggle.hideAll();
+
+                    // A temporary password must be changed first
+                    if (data.requirePasswordChange) {
+                        showMessage('warning', 'You need to change your temporary password before you continue. Opening the change password page...');
+                        setBusy(true, 'Please wait...');
+                        setTimeout(function () { go('/change-password'); }, 1500);
+                        return;
+                    }
+
+                    // 2-step verification: enter a code, or set it up, before signing in
+                    if (data.twoStepRequired) {
+                        go(data.mode === 'setup' ? '/admin/two-step' : '/two-step');
+                        return;
+                    }
+
+                    // Only staff can sign in; every staff member starts on the admin dashboard
+                    showMessage('success', 'Signed in. Opening the dashboard...');
+                    setBusy(true, 'Please wait...');
+                    setTimeout(function () { go('/admin/dashboard'); }, 600);
+                    return;
+                }
+
+                var text;
+                if (result.status === 401) {
+                    text = MISMATCH;
+                } else if (result.status === 429) {
+                    var minutes = parseInt(data.lockoutMinutes, 10);
+                    text = minutes > 0
+                        ? 'Too many attempts. Please wait ' + minutes + ' minutes and try again.'
+                        : (data.message ? String(data.message) : 'Too many attempts. Please wait a few minutes and try again.');
+                } else {
+                    text = data.message ? String(data.message) : 'Something went wrong. Please try again.';
+                }
+                showMessage('error', text);
+                setBusy(false);
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+            }).catch(function () {
+                showMessage('error', 'Something went wrong. Please check your connection and try again.');
+                setBusy(false);
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

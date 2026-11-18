@@ -1,0 +1,115 @@
+# ============================================
+# SECURITY CONFIGURATION
+# ============================================
+# Prevent directory listing
+Options -Indexes
+# Follow symbolic links (needed for routing)
+Options +FollowSymLinks
+# Enable rewrite engine
+RewriteEngine On
+
+# ============================================
+# PROTECT SENSITIVE FILES
+# ============================================
+# Block access to config files
+<FilesMatch "^(config|security-init|recaptcha-config)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Block access to hidden files (like .htaccess, .env, .git)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Block access to backup and sensitive file types
+<FilesMatch "\.(bak|config|sql|log|sh|ini)$">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# ALLOW PHP EXECUTION (except in uploads)
+# ============================================
+# By default, allow PHP execution everywhere
+<FilesMatch "\.php$">
+    Require all granted
+</FilesMatch>
+
+# ============================================
+# CORS HEADERS FOR API
+# ============================================
+<IfModule mod_headers.c>
+    # Set CORS headers for API requests
+    SetEnvIf Request_URI "^/api/" IS_API
+    Header always set Access-Control-Allow-Origin "https://kbf-uk.org" env=IS_API
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" env=IS_API
+    Header always set Access-Control-Allow-Headers "Content-Type, X-CSRF-Token" env=IS_API
+    Header always set Access-Control-Allow-Credentials "true" env=IS_API
+</IfModule>
+
+# ============================================
+# SECURITY HEADERS
+# ============================================
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ============================================
+# HTTPS ENFORCEMENT
+# ============================================
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ============================================
+# MAINTENANCE MODE (Site settings, Super Admin only)
+# While storage/maintenance.flag exists, public pages answer 503 with the
+# back-soon page (maintenance.html). api/control-site.php writes and
+# removes the flag. Visitors with the kbf_staff cookie (set when a staff
+# session is confirmed) see the normal site. Sign-in pages, the admin and
+# organiser pages, the API, the unsubscribe page and static files keep
+# working for everyone.
+# ============================================
+ErrorDocument 503 /maintenance.html
+RewriteCond %{DOCUMENT_ROOT}/storage/maintenance.flag -f
+RewriteCond %{HTTP_COOKIE} !(^|;\s*)kbf_staff=1(;|$)
+RewriteCond %{REQUEST_URI} !^/(admin|clubadmin|api|assets|js|uploads|storage)(/|$)
+RewriteCond %{REQUEST_URI} !^/(login|two-step|change-password|forgot-password|reset-password|maintenance)(\.html)?$
+RewriteCond %{REQUEST_URI} !^/unsubscribe\.php$
+RewriteCond %{REQUEST_URI} !\.(css|js|png|jpe?g|webp|gif|svg|ico|woff2?|ttf)$ [NC]
+RewriteRule ^ - [R=503,L]
+
+# ============================================
+# CLEAN URLs (Remove .html extension)
+# ============================================
+# Remove .html extension from URLs
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [L,QSA]
+
+# Redirect .html URLs to clean URLs (301 permanent)
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /([^.]+)\.html\ HTTP
+RewriteRule ^([^.]+)\.html$ /$1 [R=301,L]
+
+# ============================================
+# UPLOADS DIRECTORY ACCESS
+# ============================================
+# Explicitly allow access to uploads directory
+<Directory "/uploads">
+    Require all granted
+</Directory>
+
+# Allow image files in uploads (fallback rule)
+<FilesMatch "^uploads/.*\.(jpg|jpeg|png|webp|gif)$">
+    Require all granted
+</FilesMatch>
+
+# Prevent rewrites for uploads directory
+RewriteRule ^uploads/ - [L]
+
+
+<Files .env>
+    Require all denied
+</Files>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" style="visibility:hidden">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2-step verification - KBF-UK</title>
+    <link rel="stylesheet" href="/assets/css/auth.css">
+    <style>
+        .backup-input { text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 900; font-size: 18px; letter-spacing: .15em; text-transform: uppercase; }
+        .verify-step { margin: 0 0 6px; text-align: center; color: var(--theme-primary); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    </style>
+</head>
+<body class="auth-body" data-theme="emerald">
+    <main class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <span class="auth-logo-ring">
+                    <span class="auth-logo-glow"></span>
+                    <span class="auth-logo-img"><img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo"></span>
+                </span>
+            </div>
+
+            <p class="verify-step">2-step verification</p>
+            <h1 id="verifyHeading" class="auth-title">Enter your code</h1>
+            <p id="verifyIntro" class="auth-intro">Open your authenticator app and enter the 6-digit code for KBF-UK.</p>
+
+            <div id="message" class="hidden" role="alert"></div>
+
+            <form id="verifyForm" class="auth-form" novalidate>
+                <!-- Code from the app -->
+                <div id="appCodeArea" class="auth-field">
+                    <div id="codeInput"></div>
+                </div>
+
+                <!-- Backup code -->
+                <div id="backupCodeArea" class="auth-field hidden">
+                    <label for="backupCode" class="auth-label">Backup code</label>
+                    <input id="backupCode" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                           class="auth-input backup-input" placeholder="ABCDE-FGHJK" aria-describedby="backupHint">
+                    <p id="backupHint" class="auth-hint">Each backup code works once.</p>
+                </div>
+
+                <button type="submit" id="verifyButton" class="auth-btn">Verify</button>
+
+                <div class="auth-link-row">
+                    <button type="button" id="switchMode" class="auth-link">Use a backup code instead</button>
+                </div>
+            </form>
+
+            <div class="auth-footer">
+                <p class="auth-small">Lost your phone? Ask a Super Admin to reset your 2-step verification.</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/code-input.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        var form = document.getElementById('verifyForm');
+        var messageBox = document.getElementById('message');
+        var verifyButton = document.getElementById('verifyButton');
+        var switchButton = document.getElementById('switchMode');
+        var appArea = document.getElementById('appCodeArea');
+        var backupArea = document.getElementById('backupCodeArea');
+        var backupInput = document.getElementById('backupCode');
+        var intro = document.getElementById('verifyIntro');
+
+        var APP_TEXT = 'Open your authenticator app and enter the 6-digit code for KBF-UK.';
+        var BACKUP_TEXT = 'Enter one of the backup codes you saved when you set up 2-step verification.';
+
+        var ICONS = {
+            error: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+            success: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+            warning: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'
+        };
+
+        var useBackup = false;
+        var busy = false;
+        var finished = false;
+        var codeInput = null;
+
+        function go(url) { window.location.href = url; }
+
+        function csrfToken() {
+            try { return sessionStorage.getItem('csrf_token') || ''; } catch (e) { return ''; }
+        }
+
+        function saveCsrf(token) {
+            if (!token) return;
+            try { sessionStorage.setItem('csrf_token', token); } catch (e) { /* ignore */ }
+        }
+
+        function applySavedTheme() {
+            var theme = 'emerald';
+            try { theme = localStorage.getItem('badminton-theme') || 'emerald'; } catch (e) { /* ignore */ }
+            if (['emerald', 'cyan', 'yellow', 'orange'].indexOf(theme) === -1) theme = 'emerald';
+            document.body.setAttribute('data-theme', theme);
+        }
+
+        // Constant icon markup; the text always via textContent
+        function showMessage(text, kind) {
+            if (!ICONS[kind]) kind = 'error';
+            messageBox.className = 'auth-msg auth-msg-' + kind;
+            messageBox.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[kind] + '</svg>';
+            var span = document.createElement('span');
+            span.textContent = text;
+            messageBox.appendChild(span);
+        }
+
+        function hideMessage() {
+            messageBox.className = 'hidden';
+            messageBox.textContent = '';
+        }
+
+        function setBusy(on) {
+            busy = on;
+            verifyButton.disabled = on;
+            switchButton.disabled = on;
+            backupInput.disabled = on;
+            if (codeInput) codeInput.setDisabled(on);
+            verifyButton.textContent = on ? 'Checking...' : 'Verify';
+        }
+
+        function focusCurrent() {
+            if (useBackup) backupInput.focus();
+            else if (codeInput) codeInput.focus();
+        }
+
+        function setMode(backup) {
+            useBackup = backup;
+            hideMessage();
+            appArea.classList.toggle('hidden', backup);
+            backupArea.classList.toggle('hidden', !backup);
+            intro.textContent = backup ? BACKUP_TEXT : APP_TEXT;
+            switchButton.textContent = backup ? 'Use the code from my app' : 'Use a backup code instead';
+            if (codeInput) codeInput.clear();
+            backupInput.value = '';
+            focusCurrent();
+        }
+
+        function safeRedirect(url) {
+            return (typeof url === 'string' && /^\/admin\/[A-Za-z0-9\-\/]*$/.test(url)) ? url : '/admin/dashboard';
+        }
+
+        function backupCodesLine(remaining) {
+            var n = Number(remaining);
+            if (!isFinite(n) || n < 0) return 'Signed in with a backup code.';
+            if (n === 0) return 'Signed in with a backup code. You have no backup codes left.';
+            return 'Signed in with a backup code. You have ' + n + ' backup code' + (n === 1 ? '' : 's') + ' left.';
+        }
+
+        function submit() {
+            if (busy || finished) return;
+            var body;
+            if (useBackup) {
+                var backup = backupInput.value.trim().toUpperCase();
+                if (!backup) {
+                    showMessage('Please enter a backup code.', 'error');
+                    backupInput.focus();
+                    return;
+                }
+                body = { action: 'verify', backupCode: backup };
+            } else {
+                var code = codeInput ? codeInput.value() : '';
+                if (!/^\d{6}$/.test(code)) {
+                    showMessage('Please enter the 6-digit code from your authenticator app.', 'error');
+                    focusCurrent();
+                    return;
+                }
+                body = { action: 'verify', code: code };
+            }
+
+            hideMessage();
+            setBusy(true);
+
+            fetch('/api/auth/two-step.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+                body: JSON.stringify(body)
+            }).then(function (res) {
+                return res.json().catch(function () { return { success: false }; });
+            }).then(function (data) {
+                data = data || {};
+                if (data.success) {
+                    finished = true;
+                    saveCsrf(data.csrf_token);
+                    var target = safeRedirect(data.redirectUrl);
+                    if (data.usedBackupCode) {
+                        var remaining = Number(data.backupCodesRemaining);
+                        var text = backupCodesLine(data.backupCodesRemaining);
+                        var few = isFinite(remaining) && remaining <= 3;
+                        if (few) text += ' Make new ones from 2-step verification in the account menu.';
+                        showMessage(text, few ? 'warning' : 'success');
+                        verifyButton.textContent = 'Signing in...';
+                        setTimeout(function () { go(target); }, few ? 5000 : 3000);
+                    } else {
+                        showMessage('Code accepted. Signing in...', 'success');
+                        verifyButton.textContent = 'Signing in...';
+                        go(target);
+                    }
+                    return;
+                }
+
+                var message = data.message ? String(data.message) : 'That code did not work. Please try again.';
+                if (data.restart) {
+                    finished = true;
+                    showMessage(message, 'error');
+                    verifyButton.textContent = 'Returning to sign in...';
+                    setTimeout(function () { go('/login'); }, 2500);
+                    return;
+                }
+                showMessage(message, 'error');
+                setBusy(false);
+                if (codeInput) codeInput.clear();
+                backupInput.value = '';
+                focusCurrent();
+            }).catch(function () {
+                showMessage('Something went wrong. Please check your connection and try again.', 'error');
+                setBusy(false);
+                if (codeInput) codeInput.clear();
+                focusCurrent();
+            });
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            submit();
+        });
+
+        switchButton.addEventListener('click', function () {
+            if (busy || finished) return;
+            setMode(!useBackup);
+        });
+
+        function showPage() {
+            applySavedTheme();
+            codeInput = KBFCodeInput.mount(document.getElementById('codeInput'), {
+                label: '6-digit code from your authenticator app',
+                onComplete: function () { submit(); }
+            });
+            document.documentElement.style.visibility = 'visible';
+            codeInput.focus();
+        }
+
+        // Only show this page during a sign-in that is waiting for a code
+        fetch('/api/auth/session.php', { method: 'GET', credentials: 'include' })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                data = data || {};
+                if (data.loggedIn) { go('/admin/dashboard'); return; }
+                if (data.twoStepPending) {
+                    saveCsrf(data.csrf_token);
+                    if (data.twoStepPending.mode === 'verify') { showPage(); return; }
+                    if (data.twoStepPending.mode === 'setup') { go('/admin/two-step'); return; }
+                }
+                if (data.mustChangePassword) { go('/change-password'); return; }
+                go('/login');
+            })
+            .catch(function () { go('/login'); });
+    })();
+    </script>
+</body>
+</html>

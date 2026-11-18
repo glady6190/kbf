@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Tournament - Organiser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
+        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        @media (max-width: 768px) {
+            .theme-switcher-btn { width: 24px; height: 24px; }
+            .theme-switcher-btn.active::after { font-size: 10px; }
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2" id="pageHeading"><span class="theme-primary-text">Create</span> Tournament</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm" id="pageSubheading">Fill in the details to create a tournament</p>
+        </div>
+
+        <form id="tournamentForm" novalidate>
+            <div id="tournamentFormFields"></div>
+
+            <div id="formMessage" class="hidden mt-5 sm:mt-6 p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm" role="status" aria-live="polite"></div>
+
+            <div class="flex flex-col sm:flex-row justify-end gap-3 mt-5 sm:mt-6 pt-4 sm:pt-6 border-t-2 sm:border-t-4 border-gray-700">
+                <a href="/clubadmin/dashboard" id="cancelLink"
+                   class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-center font-black uppercase text-xs sm:text-sm hover:border-gray-600 transition">
+                    Cancel
+                </a>
+                <button type="submit" id="submitButton"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 theme-primary-bg font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        style="color:#0F172A">
+                    <span id="submitButtonText">Submit for Approval</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="/js/tournament-form.js"></script>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // Page guard and shared header
+    // ============================================
+    KBFShell.start({ anyOf: ['tournaments.organise_own'], active: 'my-tournaments' }).then(function (user) {
+        window.kbfUser = user;
+        tournamentForm = KBFTournamentForm.mount(document.getElementById('tournamentFormFields'), {
+            showHowItWorks: true,
+            canEditOrganiser: user.has('tournaments.manage_all')
+        });
+        if (editTournamentId) {
+            setupEditMode();
+        }
+    });
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getCSRFToken() {
+        return sessionStorage.getItem('csrf_token');
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        
+        if (!options.headers) {
+            options.headers = {};
+        }
+        
+        if (token) {
+            options.headers['X-CSRF-Token'] = token;
+        }
+        
+        options.credentials = 'include';
+        
+        return fetch(url, options);
+    }
+
+    // ============================================
+    // FORM SETUP
+    // ============================================
+    // Mounted once the page guard has passed (see KBFShell.start above)
+    let tournamentForm = null;
+
+    // ?edit=<id> opens the same form to edit the registration, poster and contact details
+    const editTournamentId = (function () {
+        const raw = new URLSearchParams(window.location.search).get('edit');
+        return raw && /^\d+$/.test(raw) ? parseInt(raw, 10) : null;
+    })();
+
+    function showFormMessage(type, title, detail) {
+        const messageDiv = document.getElementById('formMessage');
+        messageDiv.className = 'mt-5 sm:mt-6 p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (
+            type === 'success' ? 'border-green-500 bg-green-500/20 text-green-400' :
+            type === 'info' ? 'border-gray-600 bg-slate-800 text-gray-300' :
+            'border-red-500 bg-red-500/20 text-red-400'
+        );
+        messageDiv.textContent = '';
+        const titleEl = document.createElement('p');
+        titleEl.className = 'font-black uppercase';
+        titleEl.textContent = title;
+        messageDiv.appendChild(titleEl);
+        if (detail) {
+            const detailEl = document.createElement('p');
+            detailEl.className = 'text-xs mt-1';
+            detailEl.textContent = detail;
+            messageDiv.appendChild(detailEl);
+        }
+        messageDiv.classList.remove('hidden');
+    }
+
+    function hideFormMessage() {
+        document.getElementById('formMessage').classList.add('hidden');
+    }
+
+    async function setupEditMode() {
+        const heading = document.getElementById('pageHeading');
+        heading.textContent = '';
+        const accent = document.createElement('span');
+        accent.className = 'theme-primary-text';
+        accent.textContent = 'Edit';
+        heading.appendChild(accent);
+        heading.appendChild(document.createTextNode(' Tournament Details'));
+        document.getElementById('pageSubheading').textContent = 'Add or change the registration link, poster and contact details';
+        document.getElementById('submitButtonText').textContent = 'Save Details';
+        document.getElementById('cancelLink').setAttribute('href', '/clubadmin/tournaments');
+        document.title = 'Edit Tournament Details - Organiser';
+
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = true;
+
+        try {
+            const response = await authenticatedFetch(`/api/tournaments.php?id=${editTournamentId}`);
+            const data = await response.json();
+
+            if (!data.success || !data.tournament) {
+                showFormMessage('error', 'Tournament not found', data.message || '');
+                return;
+            }
+
+            const t = data.tournament;
+            const isOwn = t.IsOwn === true || t.IsOwn === 1 || t.IsOwn === '1';
+            if (!isOwn && !(window.kbfUser && window.kbfUser.has('tournaments.manage_all'))) {
+                showFormMessage('error', 'Not your tournament', 'You can only edit tournaments you created.');
+                return;
+            }
+            if (t.Status !== 'Pending' && t.Status !== 'Approved') {
+                showFormMessage('error', 'Cannot edit this tournament', 'Details can only be changed while a tournament is Pending or Approved.');
+                return;
+            }
+
+            tournamentForm.loadForEdit(t);
+            submitButton.disabled = false;
+        } catch (error) {
+            console.error('Error loading tournament:', error);
+            showFormMessage('error', 'Error loading tournament', 'Please refresh the page and try again.');
+        }
+    }
+
+    // ============================================
+    // FORM SUBMISSION
+    // ============================================
+    document.getElementById('tournamentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        hideFormMessage();
+        if (!tournamentForm) return;
+
+        const validationError = tournamentForm.validate();
+        if (validationError) {
+            showFormMessage('error', 'Please check the form', validationError);
+            return;
+        }
+
+        const isEdit = tournamentForm.isEdit();
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = true;
+
+        try {
+            const response = await authenticatedFetch('/api/tournaments.php', {
+                method: 'POST',
+                body: tournamentForm.buildFormData()
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                if (isEdit) {
+                    const newOrganiser = tournamentForm.organiserChange();
+                    if (newOrganiser !== null) {
+                        try {
+                            const orgResponse = await authenticatedFetch('/api/tournaments.php', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tournamentId: editTournamentId, organiserName: newOrganiser })
+                            });
+                            const orgResult = await orgResponse.json();
+                            if (!orgResult.success) {
+                                showFormMessage('error', 'Details saved, but the organiser was not changed', orgResult.message || 'Please try again.');
+                                submitButton.disabled = false;
+                                return;
+                            }
+                        } catch (orgError) {
+                            console.error('Error saving organiser:', orgError);
+                            showFormMessage('error', 'Details saved, but the organiser was not changed', 'Please try again.');
+                            submitButton.disabled = false;
+                            return;
+                        }
+                    }
+                    showFormMessage('success', 'Details saved', 'Your changes are live. The approval status has not changed.');
+                    setTimeout(() => { window.location.href = '/clubadmin/tournaments'; }, 1500);
+                } else {
+                    if (result.status === 'Approved') {
+                        showFormMessage('success', 'Tournament created and approved', 'It is approved immediately and now appears on the Tournaments page.');
+                    } else {
+                        showFormMessage('success', 'Tournament created successfully', 'Submitted for approval by KBF. It will appear publicly once approved.');
+                    }
+                    tournamentForm.reset();
+                    setTimeout(() => { window.location.href = '/clubadmin/dashboard'; }, 2000);
+                }
+            } else {
+                showFormMessage('error', isEdit ? 'Could not save details' : 'Could not create tournament', result.message || 'Please try again.');
+                submitButton.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showFormMessage('error', isEdit ? 'Could not save details' : 'Could not create tournament', 'Please try again.');
+            submitButton.disabled = false;
+        }
+    });
+</script>
+<script src="/js/session-manager.js"></script>
+</body>
+</html>

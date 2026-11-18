@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
+        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        
+        @media (max-width: 768px) {
+            .theme-switcher-btn { width: 24px; height: 24px; }
+            .theme-switcher-btn.active::after { font-size: 10px; }
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+
+        .dropdown { position: relative; display: inline-flex; align-items: center; }
+        .dropdown-menu { display: none; position: absolute; top: 100%; left: 0; background-color: #1e293b; border: 4px solid; border-color: var(--theme-primary); min-width: 200px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); z-index: 100; }
+        .dropdown:hover .dropdown-menu { display: block; }
+        .dropdown-menu a { display: block; padding: 12px 20px; color: #9ca3af; font-weight: bold; text-transform: uppercase; font-size: 0.875rem; transition: all 0.2s; border-bottom: 2px solid #374151; }
+        .dropdown-menu a:last-child { border-bottom: none; }
+        .dropdown-menu a:hover { background-color: #0f172a; color: var(--theme-primary); padding-left: 30px; }
+        .dropdown-toggle { display: inline-flex; align-items: center; }
+        .dropdown-toggle::after { content: '▼'; font-size: 0.6rem; margin-left: 5px; transition: transform 0.3s; display: inline-block; vertical-align: middle; }
+        .dropdown:hover .dropdown-toggle::after { transform: rotate(180deg); }
+        .mobile-dropdown-menu { display: none; background-color: #0f172a; padding-left: 1rem; margin-top: 0.5rem; }
+        .mobile-dropdown-menu.active { display: block; }
+        .mobile-dropdown-menu a { display: block; padding: 10px 20px; color: #9ca3af; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; border-left: 3px solid #374151; margin: 5px 0; transition: all 0.2s; }
+        .mobile-dropdown-menu a:hover { border-left-color: var(--theme-primary); color: var(--theme-primary); padding-left: 25px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <!-- Navigation (same as register.html) -->
+    <nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+                    <div class="relative">
+                        <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                        <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                             style="box-shadow: 0 0 12px var(--theme-primary);">
+                            <img src="/assets/images/logo/KBF-Logo.jpeg"
+                                 alt="KBF-UK Logo"
+                                 class="w-full h-full object-contain">
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+                        <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                    </div>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                    <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
+                    <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
+                    <a href="/gallery" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                    <div class="dropdown">
+                        <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">More</a>
+                        <div class="dropdown-menu">
+                            <a href="/news">News</a>
+                            <a href="/register">Register</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                        <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                        <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                        <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                        <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                    </div>
+                    <div class="ml-4">
+                        <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">Login</a>
+                    </div>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="theme-primary-text p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+                <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
+                <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+                <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+                <div>
+                    <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">More<span id="mobile-dropdown-arrow" class="text-xs">▼</span></button>
+                    <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                        <a href="/news">News</a>
+                        <a href="/register">Register</a>
+                    </div>
+                </div>
+                <div class="px-3 py-4 border-t-2 border-gray-700">
+                    <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald"></button>
+                        <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan"></button>
+                        <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow"></button>
+                        <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange"></button>
+                    </div>
+                </div>
+                <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+        <div class="mb-8 sm:mb-12 text-center">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black uppercase mb-3 sm:mb-4"><span class="theme-primary-text">Terms &</span> Conditions</h1>
+            <div class="h-2 w-32 sm:w-48 theme-primary-bg mx-auto mb-4 sm:mb-6"></div>
+            <p class="text-gray-400 font-bold uppercase text-sm sm:text-base">Kerala Badminton Federation UK</p>
+        </div>
+
+        <!-- The only copy of the terms. register.html loads #terms-content into its pop-up. -->
+        <div id="terms-content" class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-6 sm:p-8 lg:p-12">
+            <!-- Section 1: Acceptance -->
+            <div class="mb-8 sm:mb-10">
+                <div class="flex items-center mb-4 sm:mb-6">
+                    <div class="w-3 h-3 theme-primary-bg mr-3"></div>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase theme-primary-text">1. Acceptance of Terms</h2>
+                </div>
+                <div class="bg-slate-800 border-2 border-gray-700 p-4 sm:p-6">
+                    <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">By registering with Kerala Badminton Federation UK (KBF-UK), you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
+                </div>
+            </div>
+
+            <!-- Section 2: Information Accuracy -->
+            <div class="mb-8 sm:mb-10">
+                <div class="flex items-center mb-4 sm:mb-6">
+                    <div class="w-3 h-3 theme-primary-bg mr-3"></div>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase theme-primary-text">2. Accuracy of Information</h2>
+                </div>
+                <div class="bg-slate-800 border-2 border-gray-700 p-4 sm:p-6 space-y-4">
+                    <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">You declare that:</p>
+                    <ul class="space-y-3 ml-4 sm:ml-6">
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">All information provided is <span class="theme-primary-text font-bold">accurate, complete, and genuine</span></span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Your personal details are <span class="theme-primary-text font-bold">truthful and verifiable</span></span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">You will update any changes promptly</span></li>
+                    </ul>
+                    <div class="mt-6 p-4 bg-red-950 border-2 border-red-700">
+                        <p class="flex items-center text-red-400 font-black uppercase text-xs sm:text-sm mb-2"><svg class="w-4 h-4 mr-2 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Warning</p>
+                        <p class="text-red-300 font-semibold text-xs sm:text-sm leading-relaxed">Providing false or misleading information is strictly prohibited and will result in immediate action.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Membership Approval -->
+            <div class="mb-8 sm:mb-10">
+                <div class="flex items-center mb-4 sm:mb-6">
+                    <div class="w-3 h-3 theme-primary-bg mr-3"></div>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase theme-primary-text">3. Membership Approval</h2>
+                </div>
+                <div class="bg-slate-800 border-2 border-gray-700 p-4 sm:p-6 space-y-4">
+                    <ul class="space-y-3 ml-4 sm:ml-6">
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Membership is <span class="theme-primary-text font-bold">subject to administrative approval</span></span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Your Player ID is provisional until approval</span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Administrators may accept or reject applications</span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">You'll be notified via email</span></li>
+                    </ul>
+                    <div class="mt-6 p-4 bg-slate-950 border-2 theme-primary-border">
+                        <p class="flex items-center theme-primary-text font-black uppercase text-xs sm:text-sm mb-2"><svg class="w-4 h-4 mr-2 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>Important</p>
+                        <p class="text-gray-300 font-semibold text-xs sm:text-sm leading-relaxed">Until approved, you cannot participate in KBF-UK tournaments or events.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Consequences -->
+            <div class="mb-8 sm:mb-10">
+                <div class="flex items-center mb-4 sm:mb-6">
+                    <div class="w-3 h-3 theme-primary-bg mr-3"></div>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase theme-primary-text">4. Consequences of Incorrect Information</h2>
+                </div>
+                <div class="bg-slate-800 border-2 border-gray-700 p-4 sm:p-6 space-y-4">
+                    <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">False information will result in:</p>
+                    <div class="space-y-4 ml-4 sm:ml-6">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 mt-0.5 mr-3 flex-shrink-0 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <div>
+                                <p class="text-red-400 font-black uppercase text-sm sm:text-base mb-1">Immediate Disqualification</p>
+                                <p class="text-gray-400 font-semibold text-xs sm:text-sm">From all tournaments and events</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 mt-0.5 mr-3 flex-shrink-0 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <div>
+                                <p class="text-red-400 font-black uppercase text-sm sm:text-base mb-1">Membership Revocation</p>
+                                <p class="text-gray-400 font-semibold text-xs sm:text-sm">Suspension of your membership and Player ID</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 mt-0.5 mr-3 flex-shrink-0 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <div>
+                                <p class="text-red-400 font-black uppercase text-sm sm:text-base mb-1">Disciplinary Action</p>
+                                <p class="text-gray-400 font-semibold text-xs sm:text-sm">Warnings, fines, or permanent bans</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 bg-red-950 border-2 border-red-700">
+                        <p class="flex items-center text-red-400 font-black uppercase text-xs sm:text-sm mb-2"><svg class="w-4 h-4 mr-2 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>Zero Tolerance</p>
+                        <p class="text-red-300 font-semibold text-xs sm:text-sm leading-relaxed">KBF-UK maintains strict policies against fraudulent registration.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Code of Conduct -->
+            <div class="mb-8 sm:mb-10">
+                <div class="flex items-center mb-4 sm:mb-6">
+                    <div class="w-3 h-3 theme-primary-bg mr-3"></div>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase theme-primary-text">5. Code of Conduct</h2>
+                </div>
+                <div class="bg-slate-800 border-2 border-gray-700 p-4 sm:p-6">
+                    <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed mb-4">As a member, you agree to:</p>
+                    <ul class="space-y-3 ml-4 sm:ml-6">
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Maintain sportsmanship and fair play</span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Respect officials, players, and rules</span></li>
+                        <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">Compete honestly and ethically</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Section 6: Your information -->
+            <div class="mb-8 sm:mb-10">
+                <div class="flex items-center mb-4 sm:mb-6">
+                    <div class="w-3 h-3 theme-primary-bg mr-3"></div>
+                    <h2 class="text-xl sm:text-2xl font-black uppercase theme-primary-text">6. Your information and how we use it</h2>
+                </div>
+                <div class="bg-slate-800 border-2 border-gray-700 p-4 sm:p-6 space-y-5">
+                    <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">When you register, you agree that KBF-UK may use the information you give us, and your tournament results, to run your membership and the KBF grading system.</p>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-3">What we use it for</h3>
+                        <ul class="space-y-3 ml-4 sm:ml-6">
+                            <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">To review your registration and give you a KBF ID.</span></li>
+                            <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">To grade you, record your tournament results and points, and decide promotions between grades.</span></li>
+                            <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">To show you on the public Grading pages and in tournament results.</span></li>
+                            <li class="flex items-start"><svg class="w-2 h-2 mt-2 mr-3 flex-shrink-0 theme-primary-text" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true" focusable="false"><rect width="8" height="8"/></svg><span class="text-gray-300 font-semibold text-sm sm:text-base">To contact you about your registration, your grade, tournaments and KBF news.</span></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">What everyone can see on the website</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">Your name, KBF ID, city, grade, season and career points, finals reached, tournament results, and your photo if you upload one. When you are promoted, we may announce it on the News page with your name and photo.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">What stays private</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">Your email address, mobile number, post code and year of birth are never shown publicly. Only KBF administrators who need them can see them.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">Who else sees your information</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">Tournament organisers see your name and KBF ID so they can record results. We do not sell or share your information with anyone else, apart from the companies that host our website and send our emails, who handle it only on our behalf.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">Emails</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">We email you about your registration and your grade. You can stop KBF news emails at any time using the unsubscribe link in any of them.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">How long we keep it</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">We keep your information while you are a member. If you ask to leave, we delete your contact details and remove your name and photo from the website. Past tournament results may be kept without your name.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">Your rights</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">You can ask to see, correct or delete your information, or object to how we use it, by emailing <a href="mailto:admin@kbf-uk.org" class="theme-primary-text font-bold underline hover:opacity-80 break-all">admin@kbf-uk.org</a>. You can also complain to the Information Commissioner's Office (<a href="https://ico.org.uk" target="_blank" rel="noopener" class="theme-primary-text font-bold underline hover:opacity-80">ico.org.uk</a>).</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white font-bold text-sm sm:text-base mb-2">Players under 18</h3>
+                        <p class="text-gray-300 font-semibold text-sm sm:text-base leading-relaxed">If you are under 18, a parent or guardian must complete the registration and agree to these terms for you.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Agreement -->
+            <div class="mt-10 sm:mt-12 p-6 sm:p-8 bg-slate-950 border-4 theme-primary-border">
+                <p class="theme-primary-text font-black uppercase text-base sm:text-xl mb-4 text-center">Declaration</p>
+                <p class="text-gray-300 font-bold text-sm sm:text-base leading-relaxed text-center">By completing registration, you confirm understanding and acceptance of all terms. False information may result in disqualification and disciplinary action. Membership is subject to admin approval.</p>
+            </div>
+
+            <p class="mt-8 text-center text-gray-500 font-semibold text-xs sm:text-sm">Last updated: November 2026</p>
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="/register" class="inline-block px-8 sm:px-12 py-3 sm:py-4 theme-primary-bg text-slate-900 font-black uppercase text-sm sm:text-base brutal-shadow transition-all hover:scale-105">← Back to Registration</a>
+        </div>
+    </div>
+
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-12 sm:mt-16">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+   <script>
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
+        });
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+        }
+    }
+
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        changeTheme(savedTheme);
+        
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    });
+</script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

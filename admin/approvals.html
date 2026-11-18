@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approvals - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; box-shadow: 5px 5px 0 #020617; transition: transform .15s, box-shadow .15s; }
+        .btn-solid:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: #d1d5db; border: 2px solid #6b7280; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-ghost:hover:not(:disabled) { color: #fff; border-color: #9ca3af; }
+        .btn-reject { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: #f87171; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-reject:hover:not(:disabled) { background: rgba(239, 68, 68, .15); }
+        .btn-reject-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #ef4444; color: #fff; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-reject-solid:disabled, .btn-reject:disabled, .btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-solid:focus-visible, .btn-plain:focus-visible, .btn-ghost:focus-visible, .btn-reject:focus-visible, .btn-reject-solid:focus-visible,
+        .ap-tab:focus-visible, .ap-open:focus-visible, .ap-check:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Tabs */
+        .ap-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .ap-tab:hover { color: #fff; }
+        .ap-tab .ap-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
+        .ap-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
+        .ap-tab.is-active .ap-count { background: #0F172A; color: var(--theme-primary); }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .55rem .7rem; font-weight: 700; font-size: .8125rem; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
+        .choice { accent-color: var(--theme-primary); width: 18px; height: 18px; flex-shrink: 0; }
+
+        /* Layout: queue column and review panel */
+        .ap-split { display: grid; grid-template-columns: 1fr; gap: 1.25rem; align-items: start; }
+        @media (min-width: 1024px) { .ap-split { grid-template-columns: 430px minmax(0, 1fr); } }
+        .ap-review { display: none; background: #0f172a; border: 4px solid #374151; }
+        @media (min-width: 1024px) { .ap-review { display: block; position: sticky; top: 1rem; } }
+        @media (max-width: 1023px) {
+            .ap-review.is-open { display: block; position: fixed; inset: 0; z-index: 40; overflow-y: auto; border: 0; background: #020617; }
+        }
+
+        /* Queue rows */
+        .ap-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .75rem; border-bottom: 2px solid #1e293b; transition: background-color .15s; }
+        .ap-row:hover { background: #1e293b; }
+        .ap-row.is-open { background: #1e293b; box-shadow: inset 4px 0 0 var(--theme-primary); }
+        .ap-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem; text-align: left; }
+        .ap-avatar { border-radius: 9999px; border: 2px solid var(--theme-primary); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: #e5e7eb; font-weight: 900; }
+        .ap-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .ap-date { width: 3rem; flex-shrink: 0; border: 2px solid #374151; background: #0f172a; text-align: center; padding: .15rem 0 .2rem; line-height: 1.05; }
+        .ap-date-month { display: block; color: var(--theme-primary); font-size: .6rem; font-weight: 900; text-transform: uppercase; }
+        .ap-date-day { display: block; color: #fff; font-size: 1.1rem; font-weight: 900; }
+        .ap-days { font-size: .7rem; font-weight: 900; white-space: nowrap; color: #9ca3af; }
+        .ap-days.is-amber { color: #fbbf24; }
+        .ap-days.is-red { color: #f87171; }
+        .ap-tag { display: inline-block; padding: .1rem .4rem; border: 2px solid; font-size: .6rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .ap-tag.is-amber { border-color: #f59e0b; color: #fbbf24; background: rgba(245, 158, 11, .1); }
+        .ap-tag.is-red { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .ap-tag.is-approved { border-color: var(--theme-primary); background: var(--theme-primary); color: #0F172A; }
+        .ap-tag.is-rejected { border-color: #ef4444; background: #ef4444; color: #fff; }
+        .ap-tag.is-grey { border-color: #4b5563; color: #d1d5db; background: #1e293b; }
+        .ap-grade { width: 2.1rem; height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; font-size: .78rem; flex-shrink: 0; }
+
+        /* Waiting-time bar */
+        .ap-bar { display: flex; height: .6rem; background: #1e293b; overflow: hidden; }
+        .ap-bar span { display: block; height: 100%; }
+        .ap-bar .is-new { background: var(--theme-primary); }
+        .ap-bar .is-mid { background: #f59e0b; }
+        .ap-bar .is-old { background: #ef4444; }
+        .ap-key { display: inline-block; width: .7rem; height: .7rem; margin-right: .3rem; vertical-align: -1px; }
+
+        /* Dialogs */
+        .ap-dialog-wrap { position: fixed; inset: 0; background: rgba(2, 6, 23, .82); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+        @media (min-width: 640px) { .ap-dialog-wrap { align-items: center; } }
+        .ap-dialog { background: #0f172a; border: 4px solid #374151; width: 100%; max-width: 32rem; margin: 2rem 0; }
+
+        /* Messages */
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .78rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Approvals</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Review new players, tournaments and results</p>
+        </div>
+
+        <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
+
+        <!-- Tabs -->
+        <div class="flex gap-3 overflow-x-auto pb-2 pt-1 pl-1 mb-4" role="tablist" aria-label="What to review" id="tabs">
+            <button type="button" class="ap-tab hidden" role="tab" data-tab="registrations">Player registrations <span class="ap-count" data-count="registrations">0</span></button>
+            <button type="button" class="ap-tab hidden" role="tab" data-tab="tournaments">Tournaments <span class="ap-count" data-count="tournaments">0</span></button>
+            <button type="button" class="ap-tab hidden" role="tab" data-tab="results">Results <span class="ap-count" data-count="results">0</span></button>
+            <button type="button" class="ap-tab" role="tab" data-tab="history">History</button>
+        </div>
+
+        <!-- ============================ -->
+        <!-- QUEUE AND REVIEW -->
+        <!-- ============================ -->
+        <div id="queueView" class="ap-split hidden">
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 min-w-0" aria-label="Queue">
+                <div class="p-3 space-y-2 border-b-2 border-gray-700">
+                    <div class="relative">
+                        <label for="searchInput" class="sr-only">Search</label>
+                        <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="search" id="searchInput" class="field pl-9" autocomplete="off" maxlength="100">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="sortSelect" class="sr-only">Sort</label>
+                            <select id="sortSelect" class="field">
+                                <option value="oldest">Oldest first</option>
+                                <option value="newest">Newest first</option>
+                                <option value="name">Name</option>
+                            </select>
+                        </div>
+                        <div id="gradeWrap">
+                            <label for="gradeSelect" class="sr-only">Grade</label>
+                            <select id="gradeSelect" class="field"><option value="">All grades</option></select>
+                        </div>
+                    </div>
+                    <div id="waitingBox" class="hidden pt-1">
+                        <div class="ap-bar" id="waitingBar" aria-hidden="true">
+                            <span class="is-new"></span><span class="is-mid"></span><span class="is-old"></span>
+                        </div>
+                        <p class="text-xs font-bold text-gray-400 mt-1.5 flex flex-wrap gap-x-3 gap-y-1" id="waitingLegend"></p>
+                    </div>
+                </div>
+                <ul id="queueList" aria-label="Waiting for review"></ul>
+                <p id="queueEmpty" class="hidden px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm"></p>
+                <div id="selectionBar" class="hidden p-3 border-t-2 border-gray-700 flex items-center justify-between gap-2 bg-slate-800">
+                    <span id="selectionCount" class="text-xs font-black uppercase text-white"></span>
+                    <div class="flex gap-2">
+                        <button type="button" id="selectionClear" class="btn-plain">Clear</button>
+                        <button type="button" id="approveSelectedBtn" class="btn-solid">Approve selected</button>
+                    </div>
+                </div>
+                <div class="p-3 border-t-2 border-gray-700 flex items-center justify-between gap-2">
+                    <p id="queueCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite">Loading...</p>
+                    <button type="button" id="moreBtn" class="btn-plain hidden">Show more</button>
+                </div>
+            </section>
+
+            <section id="review" class="ap-review" aria-label="Review" aria-live="polite">
+                <div id="reviewEmpty" class="p-8 text-center text-gray-400 font-bold uppercase text-sm">Choose an item from the list to review it.</div>
+                <div id="reviewBody" class="hidden"></div>
+            </section>
+        </div>
+
+        <!-- ============================ -->
+        <!-- HISTORY -->
+        <!-- ============================ -->
+        <section id="historyView" class="hidden" aria-label="History">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
+                <div class="lg:col-span-2 relative">
+                    <label for="hSearch" class="sr-only">Search the history</label>
+                    <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="search" id="hSearch" class="field pl-9" placeholder="Search by name, person or reason" autocomplete="off" maxlength="100">
+                </div>
+                <div>
+                    <label for="hType" class="sr-only">Type</label>
+                    <select id="hType" class="field"><option value="">All types</option></select>
+                </div>
+                <div>
+                    <label for="hDecision" class="sr-only">Decision</label>
+                    <select id="hDecision" class="field">
+                        <option value="">All decisions</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="hPerson" class="sr-only">Decided by</label>
+                    <select id="hPerson" class="field"><option value="">Anyone</option></select>
+                </div>
+                <div>
+                    <label for="hRange" class="sr-only">Date</label>
+                    <select id="hRange" class="field">
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="season">This season</option>
+                        <option value="all" selected>All time</option>
+                        <option value="custom">Custom dates</option>
+                    </select>
+                </div>
+            </div>
+            <div id="hCustom" class="hidden flex flex-wrap items-end gap-2 mb-3">
+                <div>
+                    <label for="hFrom" class="field-label">From</label>
+                    <input type="date" id="hFrom" class="field">
+                </div>
+                <div>
+                    <label for="hTo" class="field-label">To</label>
+                    <input type="date" id="hTo" class="field">
+                </div>
+            </div>
+            <div class="bg-slate-900 border-2 sm:border-4 border-gray-700 overflow-x-auto">
+                <table class="w-full min-w-[48rem]">
+                    <thead class="bg-slate-800 border-b-2 border-gray-700">
+                        <tr>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">When</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">Type</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">Item</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">Decision</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">Decided by</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">Grade</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hBody" class="divide-y-2 divide-gray-800"></tbody>
+                </table>
+                <p id="hEmpty" class="hidden px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm">No decisions match these filters</p>
+            </div>
+            <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p id="hCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite"></p>
+                <div class="flex gap-2">
+                    <a id="hCsv" href="#" class="btn-plain">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download CSV
+                    </a>
+                    <button type="button" id="hMore" class="btn-plain hidden">Show more</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Reject dialog -->
+    <div id="rejectDialog" class="ap-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="rejectTitle">
+        <div class="ap-dialog p-5 sm:p-6">
+            <h2 id="rejectTitle" class="text-lg font-black uppercase theme-primary-text mb-4 break-words"></h2>
+            <fieldset>
+                <legend class="field-label">Reason</legend>
+                <div id="rejectReasons" class="space-y-2"></div>
+            </fieldset>
+            <label for="rejectMessage" class="field-label mt-4">Message</label>
+            <textarea id="rejectMessage" class="field" rows="4" maxlength="1000"></textarea>
+            <p class="text-xs text-gray-400 font-semibold mt-1">You can change the wording before sending.</p>
+            <div id="rejectError" class="hidden msg msg-error mt-3" role="alert"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+                <button type="button" id="rejectCancel" class="btn-plain">Cancel</button>
+                <button type="button" id="rejectYes" class="btn-reject-solid">Reject and email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm dialog -->
+    <div id="confirmDialog" class="ap-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+        <div class="ap-dialog p-5 sm:p-6">
+            <h2 id="confirmTitle" class="text-lg font-black uppercase theme-primary-text mb-3"></h2>
+            <p id="confirmText" class="text-sm text-gray-300 font-semibold mb-5"></p>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button type="button" id="confirmNo" class="btn-plain">Cancel</button>
+                <button type="button" id="confirmYes" class="btn-solid">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD + SHARED HEADER
+    // ============================================
+    KBFShell.start({ anyOf: ['players.approve_registrations', 'tournaments.approve'], active: 'approvals' }).then(function (user) {
+        me = user;
+        initPage();
+    });
+
+    // ============================================
+    // STATE
+    // ============================================
+    const API = '/api/approvals.php';
+    const QUEUE_TABS = ['registrations', 'tournaments', 'results'];
+    const DETAIL_ACTION = { registrations: 'registration', tournaments: 'tournament', results: 'results' };
+    const DECISION_TYPE = { registrations: 'registration', tournaments: 'tournament', results: 'results' };
+    let me = null;
+    let meta = null;
+    const state = { tab: 'registrations', q: '', sort: 'oldest', grade: '', openId: null };
+    const queue = { items: [], total: 0, seq: 0 };
+    let detail = null;            // the item open in the review panel
+    const selected = new Set();   // registrations ticked for "Approve selected"
+    const hist = { entries: [], total: 0, seq: 0, ready: false };
+    const layers = [];
+
+    // ============================================
+    // HELPERS
+    // ============================================
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    async function getJson(url) {
+        const res = await authenticatedFetch(url);
+        return res.json().catch(() => ({ success: false, message: 'Unexpected response from the server.' }));
+    }
+
+    async function postJson(payload) {
+        const res = await authenticatedFetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return res.json().catch(() => ({ success: false, message: 'Unexpected response from the server.' }));
+    }
+
+    function can(key) { return !!(me && me.has(key)); }
+
+    // Every value reaches the page with textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+    }
+
+    // Constant icon markup only (never data)
+    const ICONS = {
+        check: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>',
+        warn: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>',
+        back: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>',
+        mail: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>',
+        phone: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>',
+        external: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>',
+        image: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+        pin: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>'
+    };
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('class', className || 'w-4 h-4');
+        svg.innerHTML = ICONS[name] || '';
+        return svg;
+    }
+
+    function button(className, text, iconName) {
+        const b = el('button', className);
+        b.type = 'button';
+        if (iconName) b.appendChild(icon(iconName, 'w-4 h-4 flex-shrink-0'));
+        b.appendChild(document.createTextNode(text));
+        return b;
+    }
+
+    function safePhoto(path) {
+        return (typeof path === 'string' && /^\/uploads\/(profiles|registrations)\/[A-Za-z0-9_]+\.(jpg|jpeg|png|webp)$/i.test(path)) ? path : null;
+    }
+
+    function safePoster(path) {
+        return (typeof path === 'string' && /^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(path) && path.indexOf('..') === -1) ? path : null;
+    }
+
+    function safeHttpUrl(url) {
+        try {
+            const u = new URL(String(url || ''));
+            return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+        } catch (e) { return null; }
+    }
+
+    function initialsOf(name) {
+        const words = String(name || '').split(/\s+/).filter(Boolean);
+        if (!words.length) return '?';
+        return (words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '')).toUpperCase();
+    }
+
+    function avatar(photo, name, sizeClass) {
+        const box = el('div', 'ap-avatar ' + sizeClass);
+        box.setAttribute('aria-hidden', 'true');
+        const src = safePhoto(photo);
+        if (src) {
+            const img = el('img');
+            img.src = src;
+            img.alt = '';
+            img.loading = 'lazy';
+            box.appendChild(img);
+        } else {
+            box.textContent = initialsOf(name);
+        }
+        return box;
+    }
+
+    function parseDate(value) {
+        if (!value) return null;
+        const s = String(value);
+        const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T12:00:00' : s.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDate(value) {
+        const d = parseDate(value);
+        return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    }
+
+    function formatDateTime(value) {
+        const d = parseDate(value);
+        if (!d) return '';
+        return formatDate(value) + ', ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function daysText(n) {
+        n = Number(n) || 0;
+        return n === 1 ? '1 day' : n.toLocaleString('en-GB') + ' days';
+    }
+
+    function daysClass(n) {
+        return n > 30 ? ' is-red' : (n >= 7 ? ' is-amber' : '');
+    }
+
+    function dateTile(date) {
+        const box = el('div', 'ap-date');
+        const d = parseDate(date);
+        box.appendChild(el('span', 'ap-date-month', d ? d.toLocaleDateString('en-GB', { month: 'short' }) : '-'));
+        box.appendChild(el('span', 'ap-date-day', d ? String(d.getDate()) : '-'));
+        return box;
+    }
+
+    function showMsg(text, kind) {
+        const box = document.getElementById('pageMessage');
+        if (!text) { box.classList.add('hidden'); return; }
+        box.textContent = text;
+        box.className = 'msg mb-5 ' + (kind === 'error' ? 'msg-error' : (kind === 'warn' ? 'msg-warn' : 'msg-ok'));
+        box.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    }
+
+    function gradeLabel(id) {
+        const g = (meta && meta.grades || []).find(x => x.id === Number(id));
+        return g ? g.shortName : '';
+    }
+
+    // ============================================
+    // DIALOGS: focus, Escape and the Tab key
+    // ============================================
+    function focusables(root) {
+        return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'))
+            .filter(n => n.offsetParent !== null);
+    }
+
+    function pushLayer(node, close) {
+        layers.push({ node: node, close: close, returnFocus: document.activeElement });
+    }
+
+    function popLayer(node) {
+        const i = layers.findIndex(l => l.node === node);
+        if (i === -1) return null;
+        return layers.splice(i, 1)[0];
+    }
+
+    document.addEventListener('keydown', function (e) {
+        const top = layers[layers.length - 1];
+        if (!top) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            top.close();
+            return;
+        }
+        if (e.key === 'Tab' && top.node.classList.contains('ap-dialog-wrap')) {
+            const items = focusables(top.node);
+            if (!items.length) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (e.shiftKey && (document.activeElement === first || !top.node.contains(document.activeElement))) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && (document.activeElement === last || !top.node.contains(document.activeElement))) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    });
+
+    function openDialog(id, focusEl) {
+        const wrap = document.getElementById(id);
+        wrap.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        pushLayer(wrap, () => closeDialog(id));
+        (focusEl || focusables(wrap)[0] || wrap).focus();
+    }
+
+    function closeDialog(id) {
+        const wrap = document.getElementById(id);
+        wrap.classList.add('hidden');
+        const layer = popLayer(wrap);
+        if (!layers.length) document.body.style.overflow = '';
+        if (layer && layer.returnFocus && document.contains(layer.returnFocus)) layer.returnFocus.focus();
+    }
+
+    function askConfirm(title, text, yesText) {
+        return new Promise(resolve => {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmText').textContent = text;
+            const yes = document.getElementById('confirmYes');
+            const no = document.getElementById('confirmNo');
+            yes.textContent = yesText;
+            let done = false;
+            function finish(answer) {
+                if (done) return;
+                done = true;
+                yes.onclick = null;
+                no.onclick = null;
+                closeDialog('confirmDialog');
+                resolve(answer);
+            }
+            yes.onclick = () => finish(true);
+            no.onclick = () => finish(false);
+            const wrap = document.getElementById('confirmDialog');
+            wrap.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            pushLayer(wrap, () => finish(false));
+            no.focus();
+        });
+    }
+
+    // ============================================
+    // ADDRESS (?tab=, ?registration= or ?id=, ?q=, ?sort=, ?grade=)
+    // ============================================
+    function allowedTabs() {
+        const tabs = [];
+        if (meta.can.registrations) tabs.push('registrations');
+        if (meta.can.tournaments) tabs.push('tournaments', 'results');
+        tabs.push('history');
+        return tabs;
+    }
+
+    function stateFromUrl() {
+        const p = new URLSearchParams(window.location.search);
+        const allowed = allowedTabs();
+        let tab = p.get('tab');
+        const reg = parseInt(p.get('registration') || '', 10);
+        if (reg > 0 && allowed.includes('registrations')) tab = 'registrations';
+        if (!allowed.includes(tab)) tab = allowed[0];
+        const id = tab === 'registrations' ? reg : parseInt(p.get('id') || '', 10);
+        const sort = p.get('sort');
+        return {
+            tab: tab,
+            openId: id > 0 ? id : null,
+            q: (p.get('q') || '').slice(0, 100),
+            sort: ['oldest', 'newest', 'name'].includes(sort) ? sort : 'oldest',
+            grade: /^[1-9][0-9]*$/.test(p.get('grade') || '') ? p.get('grade') : ''
+        };
+    }
+
+    function writeUrl(push) {
+        const p = new URLSearchParams();
+        const first = allowedTabs()[0];
+        if (state.tab !== first) p.set('tab', state.tab);
+        if (state.tab !== 'history') {
+            if (state.openId) p.set(state.tab === 'registrations' ? 'registration' : 'id', String(state.openId));
+            if (state.q) p.set('q', state.q);
+            if (state.sort !== 'oldest') p.set('sort', state.sort);
+            if (state.tab === 'registrations' && state.grade) p.set('grade', state.grade);
+        }
+        const s = p.toString();
+        const url = window.location.pathname + (s ? '?' + s : '');
+        if (url === window.location.pathname + window.location.search) return;
+        try {
+            if (push) window.history.pushState(null, '', url); else window.history.replaceState(null, '', url);
+        } catch (e) { /* ignore */ }
+    }
+
+    window.addEventListener('popstate', function () {
+        if (!meta) return;
+        const s = stateFromUrl();
+        const tabChanged = s.tab !== state.tab;
+        const listChanged = tabChanged || s.q !== state.q || s.sort !== state.sort || s.grade !== state.grade;
+        Object.assign(state, s);
+        showTab(listChanged, true);
+    });
+
+    // ============================================
+    // INITIALISE
+    // ============================================
+    async function initPage() {
+        const data = await getJson(API + '?action=meta');
+        if (!data.success) {
+            showMsg(data.message || 'The approvals could not be loaded.', 'error');
+            return;
+        }
+        meta = data;
+        document.querySelectorAll('#tabs .ap-tab').forEach(btn => {
+            const tab = btn.dataset.tab;
+            btn.classList.toggle('hidden', !allowedTabs().includes(tab));
+            btn.addEventListener('click', () => {
+                if (tab === state.tab) return;
+                state.tab = tab;
+                state.openId = null;
+                state.q = '';
+                state.sort = 'oldest';
+                state.grade = '';
+                writeUrl(true);
+                showTab(true, false);
+            });
+        });
+        setCounts(meta.counts);
+        const gradeSelect = document.getElementById('gradeSelect');
+        (meta.grades || []).forEach(g => {
+            const o = el('option', '', g.shortName + (g.name && g.name !== g.shortName ? ' (' + g.name + ')' : ''));
+            o.value = String(g.id);
+            gradeSelect.appendChild(o);
+        });
+        Object.assign(state, stateFromUrl());
+        showTab(true, true);
+    }
+
+    function setCounts(counts) {
+        Object.keys(counts || {}).forEach(key => {
+            const badge = document.querySelector(`[data-count="${key}"]`);
+            if (badge) badge.textContent = Number(counts[key]).toLocaleString('en-GB');
+        });
+    }
+
+    function showTab(reloadList, fromUrl) {
+        document.querySelectorAll('#tabs .ap-tab').forEach(btn => {
+            const on = btn.dataset.tab === state.tab;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        const isHistory = state.tab === 'history';
+        document.getElementById('queueView').classList.toggle('hidden', isHistory);
+        document.getElementById('historyView').classList.toggle('hidden', !isHistory);
+        if (isHistory) {
+            closeReviewMobile();
+            initHistory();
+            return;
+        }
+        const search = document.getElementById('searchInput');
+        search.placeholder = state.tab === 'registrations' ? 'Search by name or city' : 'Search by tournament, organiser or town';
+        search.value = state.q;
+        document.getElementById('sortSelect').value = state.sort;
+        document.getElementById('gradeWrap').classList.toggle('hidden', state.tab !== 'registrations');
+        document.getElementById('gradeSelect').value = state.grade;
+        if (reloadList) {
+            selected.clear();
+            loadQueue(true);
+        }
+        if (state.openId) openItem(state.openId, { fromUrl: true });
+        else clearReview();
+    }
+
+    // ============================================
+    // QUEUE
+    // ============================================
+    let searchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        const value = this.value.trim().slice(0, 100);
+        searchTimer = setTimeout(() => {
+            if (value === state.q) return;
+            state.q = value;
+            writeUrl(false);
+            loadQueue(true);
+        }, 300);
+    });
+    document.getElementById('sortSelect').addEventListener('change', function () {
+        state.sort = this.value;
+        writeUrl(true);
+        loadQueue(true);
+    });
+    document.getElementById('gradeSelect').addEventListener('change', function () {
+        state.grade = this.value;
+        writeUrl(true);
+        loadQueue(true);
+    });
+    document.getElementById('moreBtn').addEventListener('click', () => loadQueue(false));
+
+    async function loadQueue(reset) {
+        const seq = ++queue.seq;
+        const tab = state.tab;
+        const p = new URLSearchParams({ action: 'queue', type: tab, sort: state.sort, offset: String(reset ? 0 : queue.items.length) });
+        if (state.q) p.set('q', state.q);
+        if (tab === 'registrations' && state.grade) p.set('grade', state.grade);
+        const data = await getJson(API + '?' + p.toString());
+        if (seq !== queue.seq || tab !== state.tab) return queue.items;
+        if (!data.success) {
+            showMsg(data.message || 'The list could not be loaded.', 'error');
+            return queue.items;
+        }
+        setCounts(data.counts);
+        queue.items = reset ? data.items : queue.items.concat(data.items);
+        queue.total = Number(data.total) || 0;
+        renderWaiting(tab === 'registrations' ? data.waiting : null);
+        renderQueue();
+        document.getElementById('moreBtn').classList.toggle('hidden', queue.items.length >= queue.total);
+        return queue.items;
+    }
+
+    function renderWaiting(w) {
+        const box = document.getElementById('waitingBox');
+        if (!w) { box.classList.add('hidden'); return; }
+        const total = w.under7 + w.from7to30 + w.over30;
+        const spans = document.querySelectorAll('#waitingBar span');
+        [w.under7, w.from7to30, w.over30].forEach((n, i) => { spans[i].style.width = total ? (n / total * 100) + '%' : '0'; });
+        const legend = document.getElementById('waitingLegend');
+        legend.textContent = '';
+        [['theme-primary-bg', 'Under a week', w.under7], ['', '1 to 4 weeks', w.from7to30], ['', 'Over a month', w.over30]].forEach((item, i) => {
+            const span = el('span');
+            const key = el('span', 'ap-key ' + item[0]);
+            if (i === 1) key.style.background = '#f59e0b';
+            if (i === 2) key.style.background = '#ef4444';
+            span.appendChild(key);
+            span.appendChild(document.createTextNode(item[1] + ': ' + item[2]));
+            legend.appendChild(span);
+        });
+        box.classList.remove('hidden');
+    }
+
+    function renderQueue() {
+        const list = document.getElementById('queueList');
+        list.textContent = '';
+        const empty = document.getElementById('queueEmpty');
+        const tab = state.tab;
+        if (!queue.items.length) {
+            empty.textContent = state.q || state.grade ? 'Nothing matches this search' : 'Nothing is waiting';
+            empty.classList.remove('hidden');
+        } else {
+            empty.classList.add('hidden');
+        }
+        const ticks = tab === 'registrations' && meta.can.approveSelected;
+        queue.items.forEach(item => list.appendChild(queueRow(item, ticks)));
+        const n = queue.items.length;
+        document.getElementById('queueCount').textContent = n
+            ? 'Showing 1 to ' + n.toLocaleString('en-GB') + ' of ' + queue.total.toLocaleString('en-GB')
+            : 'Showing 0';
+        updateSelection();
+        markOpen();
+    }
+
+    function queueRow(item, ticks) {
+        const li = el('li', 'ap-row');
+        li.dataset.id = String(item.id);
+        if (ticks) {
+            const box = el('input', 'choice ap-check');
+            box.type = 'checkbox';
+            box.checked = selected.has(item.id);
+            box.setAttribute('aria-label', 'Select ' + item.name);
+            box.addEventListener('change', () => {
+                if (box.checked) selected.add(item.id); else selected.delete(item.id);
+                updateSelection();
+            });
+            li.appendChild(box);
+        }
+        const open = el('button', 'ap-open');
+        open.type = 'button';
+        if (state.tab === 'registrations') {
+            open.appendChild(avatar(item.photo, item.name, 'w-10 h-10 text-xs'));
+            const text = el('div', 'min-w-0 flex-1');
+            text.appendChild(el('p', 'text-sm font-black text-white break-words', item.name));
+            text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [item.city, item.grade ? 'Chose ' + item.grade : ''].filter(Boolean).join(' • ')));
+            if (item.possibleMember) {
+                const tagLine = el('div', 'mt-1');
+                tagLine.appendChild(el('span', 'ap-tag is-amber', 'Possible existing member'));
+                text.appendChild(tagLine);
+            }
+            open.appendChild(text);
+        } else if (state.tab === 'tournaments') {
+            open.appendChild(dateTile(item.date));
+            const text = el('div', 'min-w-0 flex-1');
+            text.appendChild(el('p', 'text-sm font-black text-white break-words', item.name));
+            text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', item.organiser || ''));
+            open.appendChild(text);
+        } else {
+            const text = el('div', 'min-w-0 flex-1');
+            text.appendChild(el('p', 'text-sm font-black text-white break-words', item.name));
+            text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', item.categories || 'No category name'));
+            open.appendChild(text);
+        }
+        open.appendChild(el('span', 'ap-days' + daysClass(item.days), daysText(item.days)));
+        open.addEventListener('click', () => openItem(item.id, { push: true }));
+        li.appendChild(open);
+        return li;
+    }
+
+    function markOpen() {
+        document.querySelectorAll('#queueList .ap-row').forEach(row => {
+            const on = state.openId !== null && row.dataset.id === String(state.openId);
+            row.classList.toggle('is-open', on);
+            const b = row.querySelector('.ap-open');
+            if (b) {
+                if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+            }
+        });
+    }
+
+    // ---------- Approve selected ----------
+    function updateSelection() {
+        const bar = document.getElementById('selectionBar');
+        const show = state.tab === 'registrations' && meta && meta.can.approveSelected && selected.size > 0;
+        bar.classList.toggle('hidden', !show);
+        document.getElementById('selectionCount').textContent = selected.size + ' selected';
+    }
+
+    document.getElementById('selectionClear').addEventListener('click', () => {
+        selected.clear();
+        document.querySelectorAll('#queueList .ap-check').forEach(b => { b.checked = false; });
+        updateSelection();
+    });
+
+    document.getElementById('approveSelectedBtn').addEventListener('click', async function () {
+        const ids = Array.from(selected).slice(0, 50);
+        if (!ids.length) return;
+        const ok = await askConfirm('Approve selected', 'Approve ' + ids.length + ' registration' + (ids.length === 1 ? '' : 's') +
+            ' at the grades they chose? Each will be emailed their KBF ID.', 'Approve selected');
+        if (!ok) return;
+        this.disabled = true;
+        try {
+            const result = await postJson({ action: 'approveSelected', ids: ids });
+            if (!result.success) {
+                showMsg(result.message || 'The registrations could not be approved.', 'error');
+                return;
+            }
+            let text = result.approved + ' registration' + (result.approved === 1 ? '' : 's') + ' approved.';
+            const skipped = (result.skipped || []).filter(s => s.reason === 'needs individual review');
+            const other = (result.skipped || []).filter(s => s.reason !== 'needs individual review');
+            if (skipped.length) text += ' Needs individual review: ' + skipped.map(s => s.name).join(', ') + '.';
+            if (other.length) text += ' Already decided: ' + other.map(s => s.name).join(', ') + '.';
+            if ((result.failed || []).length) text += ' Could not be approved: ' + result.failed.map(f => f.name + ' (' + f.message + ')').join(', ') + '.';
+            showMsg(text, skipped.length || (result.failed || []).length ? 'warn' : 'ok');
+            selected.clear();
+            await loadQueue(true);
+            if (state.openId && !queue.items.some(i => i.id === state.openId)) clearReview();
+        } catch (e) {
+            console.error('Approve selected error:', e);
+            showMsg('The registrations could not be approved.', 'error');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    // ============================================
+    // REVIEW PANEL
+    // ============================================
+    const reviewEl = document.getElementById('review');
+
+    function clearReview() {
+        state.openId = null;
+        detail = null;
+        document.getElementById('reviewBody').classList.add('hidden');
+        document.getElementById('reviewEmpty').classList.remove('hidden');
+        closeReviewMobile();
+        markOpen();
+    }
+
+    function closeReviewMobile() {
+        reviewEl.classList.remove('is-open');
+        if (popLayer(reviewEl)) document.body.style.overflow = '';
+    }
+
+    function backToList() {
+        const id = state.openId;
+        clearReview();
+        writeUrl(true);
+        const row = document.querySelector(`#queueList .ap-row[data-id="${id}"] .ap-open`);
+        if (row) row.focus();
+    }
+
+    async function openItem(id, opts) {
+        opts = opts || {};
+        const tab = state.tab;
+        state.openId = Number(id);
+        if (opts.push) writeUrl(true);
+        markOpen();
+        const body = document.getElementById('reviewBody');
+        body.textContent = '';
+        body.appendChild(el('p', 'p-8 text-center text-gray-400 font-bold uppercase text-sm', 'Loading...'));
+        body.classList.remove('hidden');
+        document.getElementById('reviewEmpty').classList.add('hidden');
+        // Phones: the review opens full screen
+        if (window.matchMedia('(max-width: 1023px)').matches && !reviewEl.classList.contains('is-open')) {
+            reviewEl.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+            pushLayer(reviewEl, backToList);
+        }
+        const data = await getJson(API + '?action=' + DETAIL_ACTION[tab] + '&id=' + encodeURIComponent(String(state.openId)));
+        if (state.openId !== Number(id) || tab !== state.tab) return;
+        if (!data.success) {
+            body.textContent = '';
+            body.appendChild(el('p', 'p-8 text-center text-gray-400 font-bold text-sm', data.message || 'This item could not be loaded.'));
+            return;
+        }
+        detail = data;
+        if (tab === 'registrations') renderRegistration(data);
+        else if (tab === 'tournaments') renderTournament(data.tournament);
+        else renderResults(data.results);
+        if (!opts.fromUrl) {
+            const heading = body.querySelector('h2');
+            if (heading) { heading.tabIndex = -1; heading.focus(); }
+        }
+    }
+
+    // The next item after the one open now (used after a decision or Skip)
+    function nextAfter(id) {
+        const i = queue.items.findIndex(x => x.id === id);
+        if (i === -1) return queue.items[0] || null;
+        return queue.items[i + 1] || null;
+    }
+
+    function panelTop(container) {
+        const top = el('div', 'flex items-center justify-between gap-2 px-4 sm:px-5 pt-4');
+        const back = button('btn-plain lg:hidden', 'Back to list', 'back');
+        back.addEventListener('click', backToList);
+        top.appendChild(back);
+        container.appendChild(top);
+    }
+
+    function infoList(rows) {
+        const dl = el('dl', 'grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3');
+        rows.forEach(r => {
+            if (r[1] === null || r[1] === undefined || r[1] === '') return;
+            const div = el('div', 'min-w-0');
+            div.appendChild(el('dt', 'text-xs font-black uppercase text-gray-500', r[0]));
+            const dd = el('dd', 'text-sm font-bold text-white break-words');
+            if (r[1] instanceof Node) dd.appendChild(r[1]); else dd.textContent = String(r[1]);
+            div.appendChild(dd);
+            dl.appendChild(div);
+        });
+        return dl;
+    }
+
+    function sectionTitle(text) {
+        return el('h3', 'text-xs font-black uppercase theme-primary-text mb-2', text);
+    }
+
+    function footer(container, approveText, onApprove, onReject, nextNote) {
+        const foot = el('div', 'sticky bottom-0 bg-slate-800 border-t-4 border-gray-700 px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2');
+        const reject = button('btn-reject', 'Reject');
+        const skip = button('btn-ghost', 'Skip');
+        foot.appendChild(reject);
+        foot.appendChild(skip);
+        foot.appendChild(el('span', 'text-xs font-semibold text-gray-400 flex-1 min-w-[8rem]', nextNote));
+        const approve = button('btn-solid', approveText, 'check');
+        foot.appendChild(approve);
+        reject.addEventListener('click', () => onReject(reject));
+        skip.addEventListener('click', () => {
+            const next = nextAfter(state.openId);
+            if (next) openItem(next.id, { push: true }); else backToList();
+        });
+        approve.addEventListener('click', () => onApprove(approve));
+        container.appendChild(foot);
+        return { approve: approve };
+    }
+
+    function decidedNote(container, status) {
+        container.appendChild(el('div', 'msg msg-ok mx-4 sm:mx-5 mb-4', 'This has already been ' + String(status || 'decided').toLowerCase() + '. Nothing is waiting here.'));
+    }
+
+    // After a decision: reload the list, then open the next item
+    async function afterDecision(message, decidedId) {
+        showMsg(message, 'ok');
+        const next = nextAfter(decidedId);
+        await loadQueue(true);
+        const stillThere = next && queue.items.some(i => i.id === next.id);
+        if (stillThere) openItem(next.id, { push: false, replace: true });
+        else if (queue.items.length) openItem(queue.items[0].id, {});
+        else backToList();
+        writeUrl(false);
+    }
+
+    async function approve(type, id, extra, btn, name) {
+        if (btn) btn.disabled = true;
+        try {
+            const result = await postJson(Object.assign({ type: type, id: id, action: 'approve' }, extra || {}));
+            if (!result.success) {
+                showMsg(result.message || 'This could not be approved.', 'error');
+                return;
+            }
+            await afterDecision(result.message || (name + ' approved.'), id);
+        } catch (e) {
+            console.error('Approve error:', e);
+            showMsg('This could not be approved.', 'error');
+        } finally {
+            if (btn && document.contains(btn)) btn.disabled = false;
+        }
+    }
+
+    // ---------- Registration ----------
+    function renderRegistration(data) {
+        const r = data.registration;
+        const matches = data.matches || [];
+        const body = document.getElementById('reviewBody');
+        body.textContent = '';
+        panelTop(body);
+
+        const main = el('div', 'px-4 sm:px-5 py-4 space-y-5');
+        const head = el('div', 'flex items-start gap-4');
+        const photoBox = el('div', 'flex flex-col items-center gap-1');
+        photoBox.appendChild(avatar(r.photo, r.name, 'w-20 h-20 text-xl'));
+        if (!safePhoto(r.photo)) photoBox.appendChild(el('span', 'text-xs font-bold text-gray-500', 'No photo'));
+        head.appendChild(photoBox);
+        const headText = el('div', 'min-w-0');
+        const tags = el('div', 'flex flex-wrap items-center gap-2 mb-1');
+        if (r.status === 'Pending' && r.days > 7) tags.appendChild(el('span', 'ap-tag ' + (r.days > 30 ? 'is-red' : 'is-amber'), 'Waiting ' + daysText(r.days)));
+        tags.appendChild(el('span', 'text-xs font-bold text-gray-400', 'Submitted ' + formatDate(r.submitted)));
+        headText.appendChild(tags);
+        headText.appendChild(el('h2', 'text-xl font-black uppercase text-white break-words', r.name));
+        if (r.kbfId) headText.appendChild(el('p', 'text-sm font-black theme-primary-text', 'KBF ID: ' + r.kbfId));
+        head.appendChild(headText);
+        main.appendChild(head);
+
+        if (r.status !== 'Pending') {
+            body.appendChild(main);
+            decidedNote(body, r.status);
+            return;
+        }
+
+        const terms = r.termsVersion
+            ? 'Version ' + r.termsVersion + (r.termsDate ? ', agreed ' + formatDate(r.termsDate) : '')
+            : 'Agreed to an earlier version';
+        main.appendChild(infoList([
+            ['City', r.city || '-'],
+            ['Post code', r.postCode || '-'],
+            ['Year of birth', r.yearOfBirth || '-'],
+            ['Terms', terms]
+        ]));
+
+        // Contact
+        if (r.email || r.phone) {
+            const contact = el('section');
+            contact.appendChild(sectionTitle('Contact'));
+            const list = el('div', 'space-y-1');
+            if (r.email) {
+                const a = el('a', 'flex items-center gap-2 text-sm font-bold text-white hover:underline break-all');
+                a.href = 'mailto:' + r.email;
+                a.appendChild(icon('mail', 'w-4 h-4 flex-shrink-0 text-gray-500'));
+                a.appendChild(document.createTextNode(r.email));
+                list.appendChild(a);
+            }
+            if (r.phone) {
+                const a = el('a', 'flex items-center gap-2 text-sm font-bold text-white hover:underline');
+                a.href = 'tel:' + String(r.phone).replace(/[^0-9+]/g, '');
+                a.appendChild(icon('phone', 'w-4 h-4 flex-shrink-0 text-gray-500'));
+                a.appendChild(document.createTextNode(r.phone));
+                list.appendChild(a);
+            }
+            contact.appendChild(list);
+            contact.appendChild(el('p', 'text-xs font-semibold text-gray-400 mt-1', 'Shown while the registration is waiting, so you can check their details.'));
+            main.appendChild(contact);
+        }
+
+        // Grade on approval
+        const gradeSection = el('section');
+        gradeSection.appendChild(sectionTitle('Grade on approval'));
+        let gradeSelect = null;
+        if (meta.can.changeGrades) {
+            gradeSection.appendChild(el('p', 'text-sm font-semibold text-gray-300 mb-2', 'They chose ' + (r.grade || 'no grade') + '. Change it if you know their level.'));
+            gradeSelect = el('select', 'field sm:max-w-xs');
+            gradeSelect.id = 'reviewGrade';
+            gradeSelect.setAttribute('aria-label', 'Grade on approval');
+            (meta.grades || []).forEach(g => {
+                const o = el('option', '', g.shortName + (g.name && g.name !== g.shortName ? ' (' + g.name + ')' : ''));
+                o.value = String(g.id);
+                gradeSelect.appendChild(o);
+            });
+            if (r.gradeId && !Array.from(gradeSelect.options).some(o => o.value === String(r.gradeId))) {
+                const o = el('option', '', r.grade || 'Chosen grade');
+                o.value = String(r.gradeId);
+                gradeSelect.appendChild(o);
+            }
+            gradeSelect.value = r.gradeId ? String(r.gradeId) : gradeSelect.value;
+            gradeSection.appendChild(gradeSelect);
+        } else {
+            const line = el('p', 'flex items-center gap-2 text-sm font-semibold text-gray-300');
+            line.appendChild(el('span', 'ap-grade', r.grade || '-'));
+            line.appendChild(document.createTextNode('They chose ' + (r.grade || 'no grade') + '.'));
+            gradeSection.appendChild(line);
+        }
+        main.appendChild(gradeSection);
+
+        // Checks
+        const checks = el('section');
+        checks.appendChild(sectionTitle('Checks'));
+        const ul = el('ul', 'space-y-2');
+        const byEmail = matches.filter(m => m.byEmail);
+        const byName = matches.filter(m => m.byName && !m.byEmail);
+        function tick(text) {
+            const li = el('li', 'flex items-start gap-2 text-sm font-bold text-gray-200');
+            li.appendChild(icon('check', 'w-4 h-4 flex-shrink-0 mt-0.5 theme-primary-text'));
+            li.appendChild(document.createTextNode(text));
+            ul.appendChild(li);
+        }
+        function warning(m, what) {
+            const li = el('li', 'msg msg-warn flex items-start gap-2');
+            li.appendChild(icon('warn', 'w-4 h-4 flex-shrink-0 mt-0.5'));
+            const text = el('div', 'flex-1 min-w-0');
+            text.appendChild(el('p', 'font-bold', 'Existing member with ' + what + ': ' + m.name +
+                (m.kbfId ? ' (' + m.kbfId + ')' : '') + (m.city ? ', ' + m.city : '')));
+            li.appendChild(text);
+            const open = el('a', 'text-xs font-black uppercase underline whitespace-nowrap', 'Open');
+            open.href = '/admin/people?person=' + encodeURIComponent(String(m.id));
+            open.target = '_blank';
+            open.rel = 'noopener';
+            open.setAttribute('aria-label', 'Open ' + m.name + ' in People (new tab)');
+            li.appendChild(open);
+            ul.appendChild(li);
+        }
+        if (byEmail.length) byEmail.forEach(m => warning(m, 'this email')); else tick('No existing member with this email');
+        if (byName.length) byName.forEach(m => warning(m, 'this name and city')); else tick('No existing member with this name and city');
+        checks.appendChild(ul);
+        main.appendChild(checks);
+        body.appendChild(main);
+
+        const f = footer(body, 'Approve as ' + (r.grade || 'chosen grade'), btn => {
+            const extra = {};
+            if (gradeSelect) extra.categoryId = parseInt(gradeSelect.value, 10);
+            approve('registration', r.id, extra, btn, r.name);
+        }, btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
+        if (gradeSelect) {
+            gradeSelect.addEventListener('change', () => {
+                f.approve.lastChild.textContent = 'Approve as ' + (gradeLabel(gradeSelect.value) || r.grade || 'chosen grade');
+            });
+        }
+    }
+
+    // ---------- Tournament ----------
+    function renderTournament(t) {
+        const body = document.getElementById('reviewBody');
+        body.textContent = '';
+        panelTop(body);
+        const main = el('div', 'px-4 sm:px-5 py-4 space-y-5');
+        const head = el('div', 'flex items-start gap-3');
+        head.appendChild(dateTile(t.date));
+        const headText = el('div', 'min-w-0');
+        const tags = el('div', 'flex flex-wrap items-center gap-2 mb-1');
+        if (t.status === 'Pending' && t.days > 7) tags.appendChild(el('span', 'ap-tag ' + (t.days > 30 ? 'is-red' : 'is-amber'), 'Waiting ' + daysText(t.days)));
+        tags.appendChild(el('span', 'text-xs font-bold text-gray-400', 'Submitted ' + formatDate(t.submitted) + (t.submittedBy ? ' by ' + t.submittedBy : '')));
+        headText.appendChild(tags);
+        headText.appendChild(el('h2', 'text-xl font-black uppercase text-white break-words', t.name));
+        if (t.organiser) headText.appendChild(el('p', 'text-sm font-bold text-gray-300', t.organiser));
+        head.appendChild(headText);
+        main.appendChild(head);
+
+        if (t.status !== 'Pending') {
+            body.appendChild(main);
+            decidedNote(body, t.status);
+            return;
+        }
+
+        const posterSrc = safePoster(t.poster);
+        const poster = el('div', 'border-2 border-gray-700 bg-slate-950 flex items-center justify-center p-2 min-h-[8rem]');
+        if (posterSrc) {
+            const img = el('img', 'block max-w-full w-auto h-auto');
+            img.style.maxHeight = '28rem';
+            img.style.objectFit = 'contain';
+            img.src = posterSrc;
+            img.alt = 'Poster for ' + t.name;
+            poster.appendChild(img);
+        } else {
+            const none = el('div', 'text-center text-gray-500');
+            none.appendChild(icon('image', 'w-10 h-10 mx-auto mb-1'));
+            none.appendChild(el('p', 'text-xs font-bold uppercase', 'No poster'));
+            poster.appendChild(none);
+        }
+        main.appendChild(poster);
+
+        let regLink = null;
+        const safeUrl = safeHttpUrl(t.registrationUrl);
+        if (safeUrl) {
+            regLink = el('a', 'inline-flex items-center gap-1 theme-primary-text hover:underline break-all');
+            regLink.href = safeUrl;
+            regLink.target = '_blank';
+            regLink.rel = 'noopener noreferrer';
+            regLink.appendChild(document.createTextNode(safeUrl));
+            regLink.appendChild(icon('external', 'w-4 h-4 flex-shrink-0'));
+        }
+        main.appendChild(infoList([
+            ['Date', parseDate(t.date) ? parseDate(t.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : t.date],
+            ['Start time', t.startTime ? String(t.startTime).slice(0, 5) : ''],
+            ['Venue', [t.venue, t.town, t.postCode].filter(Boolean).join(', ')],
+            ['Organiser', t.organiser],
+            ['Categories', t.categories],
+            ['Entry fee', t.entryFee],
+            ['Registration closes', t.registrationCloseDate ? formatDate(t.registrationCloseDate) : ''],
+            ['Registration link', regLink],
+            ['Contact', [t.contactName, t.contactPhone].filter(Boolean).join(', ')],
+            ['Submitted by', t.submittedBy]
+        ]));
+        if (t.description) {
+            const about = el('section');
+            about.appendChild(sectionTitle('About this tournament'));
+            about.appendChild(el('p', 'text-sm font-semibold text-gray-300 whitespace-pre-wrap break-words', t.description));
+            main.appendChild(about);
+        }
+        body.appendChild(main);
+        footer(body, 'Approve tournament', btn => approve('tournament', t.id, {}, btn, t.name),
+            btn => openReject('tournament', t.id, t.name, btn), 'Then opens the next tournament');
+    }
+
+    // ---------- Results ----------
+    function renderResults(r) {
+        const body = document.getElementById('reviewBody');
+        body.textContent = '';
+        panelTop(body);
+        const main = el('div', 'px-4 sm:px-5 py-4 space-y-5');
+        const head = el('div', 'flex items-start gap-3');
+        head.appendChild(dateTile(r.date));
+        const headText = el('div', 'min-w-0');
+        const tags = el('div', 'flex flex-wrap items-center gap-2 mb-1');
+        if (r.status === 'Pending' && r.days > 7) tags.appendChild(el('span', 'ap-tag ' + (r.days > 30 ? 'is-red' : 'is-amber'), 'Waiting ' + daysText(r.days)));
+        tags.appendChild(el('span', 'text-xs font-bold text-gray-400', 'Submitted ' + formatDate(r.submitted) + (r.submittedBy ? ' by ' + r.submittedBy : '')));
+        headText.appendChild(tags);
+        headText.appendChild(el('h2', 'text-xl font-black uppercase text-white break-words', 'Results: ' + r.name));
+        const where = el('p', 'flex items-center gap-1 text-sm font-bold text-gray-300');
+        where.appendChild(icon('pin', 'w-4 h-4 flex-shrink-0 text-gray-500'));
+        where.appendChild(document.createTextNode([r.venue, r.town].filter(Boolean).join(', ') || '-'));
+        headText.appendChild(where);
+        const link = el('a', 'inline-flex items-center gap-1 text-xs font-black uppercase theme-primary-text hover:underline mt-1');
+        link.href = '/tournament-details?id=' + encodeURIComponent(String(r.tournamentId));
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.appendChild(document.createTextNode('Open the tournament'));
+        link.appendChild(icon('external', 'w-4 h-4'));
+        headText.appendChild(link);
+        head.appendChild(headText);
+        main.appendChild(head);
+
+        if (r.status !== 'Pending') {
+            body.appendChild(main);
+            decidedNote(body, r.status);
+            return;
+        }
+
+        if (!(r.categories || []).length) {
+            main.appendChild(el('p', 'text-sm font-bold text-gray-400', 'No results are waiting for this tournament.'));
+        }
+        (r.categories || []).forEach(cat => {
+            const section = el('section');
+            section.appendChild(el('h3', 'text-sm font-black uppercase theme-primary-text mb-2', cat.name || 'No category name'));
+            const list = el('div', 'space-y-2');
+            cat.teams.forEach(team => {
+                const box = el('div', 'border-2 border-gray-700 bg-slate-900 p-3');
+                const top = el('div', 'flex items-center justify-between gap-2 mb-1');
+                top.appendChild(el('span', 'text-xs font-black uppercase text-gray-300', team.label + (team.placing ? ' • ' + team.placing : '')));
+                top.appendChild(el('span', 'text-xs font-black theme-primary-text whitespace-nowrap', team.points + ' pts each'));
+                box.appendChild(top);
+                const ul = el('ul');
+                team.players.forEach(p => {
+                    const li = el('li', 'flex items-center justify-between gap-3 py-0.5');
+                    li.appendChild(el('span', 'text-sm font-bold text-white break-words', p.name + (p.kbfId ? ' (' + p.kbfId + ')' : '')));
+                    li.appendChild(el('span', 'text-xs font-black whitespace-nowrap ' + (p.guest || p.careerOnly ? 'text-gray-400' : 'theme-primary-text'),
+                        p.guest ? 'Guest • no points' : (p.careerOnly ? team.points + ' pts • career only' : team.points + ' pts')));
+                    ul.appendChild(li);
+                    // Career points only: tournament before their latest grade change or this season
+                    if (p.note) ul.appendChild(el('li', 'text-xs font-semibold text-gray-400 pb-1', p.note));
+                });
+                box.appendChild(ul);
+                list.appendChild(box);
+            });
+            section.appendChild(list);
+            main.appendChild(section);
+        });
+        body.appendChild(main);
+        footer(body, 'Approve results', btn => approve('results', r.id, {}, btn, r.name),
+            btn => openReject('results', r.id, r.name, btn), 'Then opens the next results');
+    }
+
+    // ============================================
+    // REJECT DIALOG
+    // ============================================
+    let rejecting = null;
+
+    function openReject(type, id, name, btn) {
+        rejecting = { type: type, id: id, name: name };
+        document.getElementById('rejectTitle').textContent = 'Reject ' + name + '?';
+        const reasons = (meta.reasons || {})[type === 'registration' ? 'registration' : 'tournament'] || [];
+        const box = document.getElementById('rejectReasons');
+        box.textContent = '';
+        reasons.forEach((r, i) => {
+            const label = el('label', 'flex items-center gap-3 p-2.5 bg-slate-800 border-2 border-gray-700 cursor-pointer');
+            const input = el('input', 'choice');
+            input.type = 'radio';
+            input.name = 'rejectReason';
+            input.value = r.key;
+            if (i === 0) input.checked = true;
+            input.addEventListener('change', () => { document.getElementById('rejectMessage').value = r.message; });
+            label.appendChild(input);
+            label.appendChild(el('span', 'text-sm font-bold text-white', r.label));
+            box.appendChild(label);
+        });
+        document.getElementById('rejectMessage').value = reasons.length ? reasons[0].message : '';
+        document.getElementById('rejectError').classList.add('hidden');
+        document.getElementById('rejectYes').disabled = false;
+        openDialog('rejectDialog', box.querySelector('input'));
+    }
+
+    document.getElementById('rejectCancel').addEventListener('click', () => closeDialog('rejectDialog'));
+    document.getElementById('rejectDialog').addEventListener('click', e => { if (e.target.id === 'rejectDialog') closeDialog('rejectDialog'); });
+
+    document.getElementById('rejectYes').addEventListener('click', async function () {
+        if (!rejecting) return;
+        const reason = document.querySelector('input[name="rejectReason"]:checked');
+        const message = document.getElementById('rejectMessage').value.trim();
+        const error = document.getElementById('rejectError');
+        if (!reason) {
+            error.textContent = 'Please choose a reason.';
+            error.classList.remove('hidden');
+            return;
+        }
+        if (reason.value === 'other' && !message) {
+            error.textContent = 'Please write the message for "Something else".';
+            error.classList.remove('hidden');
+            document.getElementById('rejectMessage').focus();
+            return;
+        }
+        this.disabled = true;
+        const item = rejecting;
+        try {
+            const result = await postJson({ type: item.type, id: item.id, action: 'reject', reasonKey: reason.value, message: message });
+            if (!result.success) {
+                error.textContent = result.message || 'This could not be rejected.';
+                error.classList.remove('hidden');
+                return;
+            }
+            closeDialog('rejectDialog');
+            await afterDecision(result.message || (item.name + ' rejected.'), item.id);
+        } catch (e) {
+            console.error('Reject error:', e);
+            error.textContent = 'This could not be rejected.';
+            error.classList.remove('hidden');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    // ============================================
+    // HISTORY
+    // ============================================
+    function historyParams() {
+        const p = new URLSearchParams({ range: document.getElementById('hRange').value });
+        const add = (key, id) => { const v = document.getElementById(id).value.trim(); if (v) p.set(key, v); };
+        add('q', 'hSearch');
+        add('type', 'hType');
+        add('decision', 'hDecision');
+        add('person', 'hPerson');
+        if (p.get('range') === 'custom') {
+            add('from', 'hFrom');
+            add('to', 'hTo');
+        }
+        return p;
+    }
+
+    function initHistory() {
+        if (!hist.ready) {
+            hist.ready = true;
+            let timer = null;
+            document.getElementById('hSearch').addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => loadHistory(true), 300);
+            });
+            ['hType', 'hDecision', 'hPerson', 'hFrom', 'hTo'].forEach(id => document.getElementById(id).addEventListener('change', () => loadHistory(true)));
+            document.getElementById('hRange').addEventListener('change', function () {
+                document.getElementById('hCustom').classList.toggle('hidden', this.value !== 'custom');
+                loadHistory(true);
+            });
+            document.getElementById('hMore').addEventListener('click', () => loadHistory(false));
+        }
+        loadHistory(true);
+    }
+
+    async function loadHistory(reset) {
+        const seq = ++hist.seq;
+        const p = historyParams();
+        p.set('action', 'history');
+        p.set('offset', String(reset ? 0 : hist.entries.length));
+        const csv = new URLSearchParams(p);
+        csv.set('action', 'historyCsv');
+        csv.delete('offset');
+        document.getElementById('hCsv').href = API + '?' + csv.toString();
+        const data = await getJson(API + '?' + p.toString());
+        if (seq !== hist.seq) return;
+        if (!data.success) {
+            showMsg(data.message || 'The history could not be loaded.', 'error');
+            return;
+        }
+        fillSelect('hType', data.types || [], t => [t.key, t.label]);
+        fillSelect('hPerson', data.people || [], x => [String(x.id), x.name]);
+        hist.entries = reset ? data.entries : hist.entries.concat(data.entries);
+        hist.total = Number(data.total) || 0;
+        renderHistory();
+        document.getElementById('hMore').classList.toggle('hidden', !data.hasMore);
+    }
+
+    // Add options once, keeping the first ("All ...") and the current choice
+    function fillSelect(id, items, pair) {
+        const select = document.getElementById(id);
+        if (select.dataset.filled) return;
+        select.dataset.filled = '1';
+        items.forEach(item => {
+            const [value, label] = pair(item);
+            const o = el('option', '', label);
+            o.value = value;
+            select.appendChild(o);
+        });
+    }
+
+    function renderHistory() {
+        const tbody = document.getElementById('hBody');
+        tbody.textContent = '';
+        hist.entries.forEach(h => {
+            const tr = el('tr');
+            tr.appendChild(el('td', 'px-3 py-2 text-xs font-bold text-gray-400 whitespace-nowrap', formatDateTime(h.when)));
+            tr.appendChild(el('td', 'px-3 py-2 text-xs font-bold text-gray-300 whitespace-nowrap', h.type));
+            tr.appendChild(el('td', 'px-3 py-2 text-sm font-black text-white break-words', h.item));
+            const tdDecision = el('td', 'px-3 py-2');
+            tdDecision.appendChild(el('span', 'ap-tag ' + (h.decision === 'Approved' ? 'is-approved' : 'is-rejected'), h.decision));
+            tr.appendChild(tdDecision);
+            tr.appendChild(el('td', 'px-3 py-2 text-sm font-semibold text-gray-300 break-words', h.decidedBy));
+            tr.appendChild(el('td', 'px-3 py-2 text-sm font-black theme-primary-text', h.grade || ''));
+            tr.appendChild(el('td', 'px-3 py-2 text-xs font-semibold text-gray-400 break-words max-w-xs', h.reason || ''));
+            tbody.appendChild(tr);
+        });
+        document.getElementById('hEmpty').classList.toggle('hidden', hist.entries.length > 0);
+        const n = hist.entries.length;
+        document.getElementById('hCount').textContent = n
+            ? 'Showing 1 to ' + n.toLocaleString('en-GB') + ' of ' + hist.total.toLocaleString('en-GB')
+            : 'Showing 0';
+    }
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

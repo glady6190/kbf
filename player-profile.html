@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Profile - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        
+        .theme-switcher-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 3px solid transparent; cursor: pointer;
+            transition: all 0.3s ease; position: relative;
+        }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 15px currentColor; }
+        .theme-switcher-btn.active::after {
+            content: '✓'; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); color: white;
+            font-weight: bold; font-size: 20px;
+        }
+        
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        
+        /* ============ Player profile ============ */
+        .pp-hero { background: #0f172a; border: 4px solid #374151; padding: 1.25rem; position: relative; }
+        @media (min-width: 640px) { .pp-hero { padding: 2rem; } }
+        .pp-back { display: inline-flex; align-items: center; gap: .4rem; color: #d1d5db; font-weight: 900; font-size: .75rem; text-transform: uppercase; }
+        .pp-back:hover { color: var(--theme-primary); }
+        .pp-share { display: inline-flex; align-items: center; gap: .5rem; padding: .5rem .85rem; background: #1e293b; border: 2px solid #374151; color: #e5e7eb; font-weight: 900; font-size: .72rem; text-transform: uppercase; }
+        .pp-share:hover { border-color: var(--theme-primary); color: #fff; }
+        .pp-back:focus-visible, .pp-share:focus-visible, .pp-switch:focus-visible, .pp-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .pp-ring { width: 9rem; height: 9rem; border-radius: 9999px; border: 4px solid var(--theme-primary); padding: 4px; flex-shrink: 0; box-shadow: 0 0 24px color-mix(in srgb, var(--theme-primary) 35%, transparent); }
+        @media (min-width: 640px) { .pp-ring { width: 11rem; height: 11rem; } }
+        .pp-ring-inner { width: 100%; height: 100%; border-radius: 9999px; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; }
+        .pp-ring-inner img { width: 100%; height: 100%; object-fit: cover; }
+        .pp-initials { font-size: 3rem; font-weight: 900; color: var(--theme-primary); }
+        .pp-grade-sq { display: inline-flex; align-items: center; justify-content: center; min-width: 3.25rem; height: 3.25rem; padding: 0 .5rem; background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: 1.5rem; }
+
+        .pp-tile { background: #0f172a; border: 4px solid #374151; padding: 1rem; display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
+        .pp-tile-head { display: flex; align-items: center; gap: .45rem; color: #9ca3af; font-size: .68rem; font-weight: 900; text-transform: uppercase; }
+        .pp-tile-head svg { color: var(--theme-primary); flex-shrink: 0; }
+        .pp-tile-value { font-size: 1.75rem; line-height: 1.1; font-weight: 900; color: #fff; }
+        @media (min-width: 640px) { .pp-tile-value { font-size: 2.25rem; } }
+        .pp-tile-note { font-size: .72rem; font-weight: 700; color: #9ca3af; }
+        .pp-track { background: #334155; height: 6px; width: 100%; margin-top: .25rem; }
+        .pp-fill { background: var(--theme-primary); height: 100%; }
+
+        .pp-section { background: #0f172a; border: 4px solid #374151; }
+        .pp-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 4px solid #374151; background: #1e293b; }
+        .pp-h2 { font-size: 1.25rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); }
+        .pp-switches { display: inline-flex; border: 2px solid #374151; }
+        .pp-switch { padding: .4rem .8rem; font-weight: 900; font-size: .7rem; text-transform: uppercase; color: #9ca3af; background: #0f172a; }
+        .pp-switch[aria-pressed="true"] { background: var(--theme-primary); color: #0F172A; }
+
+        .pp-tag { display: inline-block; padding: .15rem .5rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .pp-tag-winner { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .pp-tag-runner { background: #e5e7eb; border-color: #e5e7eb; color: #0F172A; }
+        .pp-tag-grey { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .pp-guest { display: inline-block; padding: 2px 6px; background: #1F2937; color: #E5E7EB; font-size: 10px; font-weight: 900; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
+        .pp-career { display: inline-block; padding: .05rem .35rem; border: 1px solid #4b5563; color: #9ca3af; font-size: .6rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .pp-link { color: #fff; font-weight: 800; text-decoration: none; }
+        .pp-link:hover { color: var(--theme-primary); text-decoration: underline; }
+
+        .pp-timeline { position: relative; padding-left: 1.75rem; }
+        .pp-timeline::before { content: ''; position: absolute; left: .55rem; top: .35rem; bottom: .35rem; width: 3px; background: #374151; }
+        .pp-step { position: relative; padding-bottom: 1.25rem; }
+        .pp-step:last-child { padding-bottom: 0; }
+        .pp-dot { position: absolute; left: -1.62rem; top: .2rem; width: 1rem; height: 1rem; border: 3px solid #374151; background: #0f172a; }
+        .pp-step.is-up .pp-dot { background: var(--theme-primary); border-color: var(--theme-primary); }
+        .pp-sq { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; height: 2rem; padding: 0 .35rem; font-weight: 900; font-size: .8rem; }
+        .pp-sq-old { border: 2px solid #6b7280; color: #e5e7eb; }
+        .pp-sq-new { background: var(--theme-primary); border: 2px solid var(--theme-primary); color: #0F172A; }
+        /* Dropdown Menu Styles */
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #1e293b;
+    border: 4px solid;
+    border-color: var(--theme-primary);
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid #374151;
+}
+
+.dropdown-menu a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu a:hover {
+    background-color: #0f172a;
+    color: var(--theme-primary);
+    padding-left: 30px;
+}
+
+.dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    font-size: 0.6rem;
+    margin-left: 5px;
+    transition: transform 0.3s;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.dropdown:hover .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Mobile Dropdown */
+.mobile-dropdown-menu {
+    display: none;
+    background-color: #0f172a;
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+}
+
+.mobile-dropdown-menu.active {
+    display: block;
+}
+
+.mobile-dropdown-menu a {
+    display: block;
+    padding: 10px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-left: 3px solid #374151;
+    margin: 5px 0;
+    transition: all 0.2s;
+}
+
+.mobile-dropdown-menu a:hover {
+    border-left-color: var(--theme-primary);
+    color: var(--theme-primary);
+    padding-left: 25px;
+}
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <!-- Navigation -->
+<nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+                <div class="relative">
+                    <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                    <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                         style="box-shadow: 0 0 12px var(--theme-primary);">
+                        <img src="/assets/images/logo/KBF-Logo.jpeg"
+                             alt="KBF-UK Logo"
+                             class="w-full h-full object-contain">
+                    </div>
+                </div>
+                <div>
+                    <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+<p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                </div>
+            </a>
+            
+            <div class="hidden md:flex items-center space-x-2">
+                <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
+                <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
+                <a href="/gallery" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                
+                <!-- Dropdown More Menu -->
+                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
+                        More
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="/news">News</a>
+                        <a href="/register">Register</a>
+                    </div>
+                </div>
+                
+                <!-- Theme Switcher -->
+                <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+                
+                <div class="ml-4">
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
+                        Login
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Mobile menu button -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-btn" class="theme-primary-text p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+            <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Rankings</a>
+            <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+            <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+            
+            <!-- Mobile Dropdown More -->
+            <div>
+                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                    More
+                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                </button>
+                <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                    <a href="/news">News</a>
+                    <a href="/register">Register</a>
+                </div>
+            </div>
+            
+            <!-- Mobile Theme Switcher -->
+            <div class="px-3 py-4 border-t-2 border-gray-700">
+                <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                <div class="flex items-center space-x-3">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+            </div>
+            
+            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+        </div>
+    </div>
+</nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Loading -->
+        <div id="loading" class="py-20 text-center" role="status">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 mb-4" style="border-top-color: var(--theme-primary);"></div>
+            <p class="text-gray-400 font-bold uppercase text-sm">Loading player profile...</p>
+        </div>
+
+        <!-- Not found, not listed or error -->
+        <div id="profileMessage" class="hidden pp-section p-10 sm:p-16 text-center">
+            <p id="profileMessageText" class="text-lg sm:text-xl font-black uppercase text-white mb-6"></p>
+            <a href="/rankings" class="pp-back">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                Grading
+            </a>
+        </div>
+
+        <div id="profileContent" class="hidden space-y-6 sm:space-y-8">
+            <!-- ============================ -->
+            <!-- HERO -->
+            <!-- ============================ -->
+            <section class="pp-hero" aria-labelledby="heroName">
+                <div class="flex items-center justify-between gap-3 mb-6">
+                    <a href="/rankings" class="pp-back">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        Grading
+                    </a>
+                    <div class="flex items-center gap-3">
+                        <span id="shareMsg" class="text-xs font-bold theme-primary-text" role="status" aria-live="polite"></span>
+                        <button type="button" id="shareBtn" class="pp-share">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                            Share
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center sm:items-center gap-6 sm:gap-8 text-center sm:text-left">
+                    <div class="pp-ring">
+                        <div class="pp-ring-inner">
+                            <img id="heroPhoto" class="hidden" alt="">
+                            <span id="heroInitials" class="pp-initials" aria-hidden="true"></span>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 id="heroName" class="text-3xl sm:text-4xl lg:text-5xl font-black uppercase text-white break-words mb-2"></h1>
+                        <p class="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-sm font-bold mb-4">
+                            <span id="heroKbf" class="theme-primary-text uppercase"></span>
+                            <span id="heroCityWrap" class="hidden inline-flex items-center gap-1 text-gray-300">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <span id="heroCity"></span>
+                            </span>
+                        </p>
+                        <div id="gradeBadge" class="hidden inline-flex items-center gap-3">
+                            <span id="gradeSquare" class="pp-grade-sq"></span>
+                            <span class="text-left">
+                                <span class="block text-[10px] font-black uppercase text-gray-400 tracking-wider">Grade</span>
+                                <span id="gradeDesc" class="block text-sm font-black uppercase text-white"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- FIGURES -->
+            <!-- ============================ -->
+            <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Figures">
+                <div class="pp-tile">
+                    <span class="pp-tile-head">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        Season points
+                    </span>
+                    <span id="tileSeason" class="pp-tile-value">0</span>
+                    <span id="tileSeasonNote" class="pp-tile-note"></span>
+                    <div id="tileSeasonBar" class="pp-track hidden" role="progressbar" aria-valuemin="0" aria-label="Season points toward promotion"><div class="pp-fill" style="width: 0%;"></div></div>
+                </div>
+                <div class="pp-tile">
+                    <span class="pp-tile-head">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                        Career points
+                    </span>
+                    <span id="tileCareer" class="pp-tile-value">0</span>
+                    <span class="pp-tile-note">Since joining KBF</span>
+                </div>
+                <div class="pp-tile">
+                    <span class="pp-tile-head">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                        Finals reached
+                    </span>
+                    <span id="tileFinals" class="pp-tile-value">0</span>
+                    <span id="tileFinalsNote" class="pp-tile-note"></span>
+                </div>
+                <div class="pp-tile">
+                    <span class="pp-tile-head">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        Tournaments
+                    </span>
+                    <span id="tileTournaments" class="pp-tile-value">0</span>
+                    <span class="pp-tile-note">With results</span>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- TOURNAMENT RESULTS -->
+            <!-- ============================ -->
+            <section class="pp-section" aria-labelledby="resultsHeading">
+                <div class="pp-section-head">
+                    <h2 id="resultsHeading" class="pp-h2">Tournament results</h2>
+                    <div class="pp-switches" role="group" aria-label="Which results to show">
+                        <button type="button" class="pp-switch" data-range="all" aria-pressed="true">All</button>
+                        <button type="button" class="pp-switch" data-range="season" aria-pressed="false">This season</button>
+                    </div>
+                </div>
+                <div id="resultsBody"></div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- GRADE JOURNEY -->
+            <!-- ============================ -->
+            <section class="pp-section" aria-labelledby="journeyHeading">
+                <div class="pp-section-head">
+                    <h2 id="journeyHeading" class="pp-h2">Grade journey</h2>
+                </div>
+                <div id="journeyBody" class="p-4 sm:p-6"></div>
+            </section>
+
+            <p class="text-xs sm:text-sm text-gray-400 font-semibold text-center">
+                Is this you and something is wrong? Email <a id="correctLink" class="pp-link theme-primary-text" href="mailto:admin@kbf-uk.org">admin@kbf-uk.org</a> and we will correct it.
+            </p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <script>
+    // ============================================
+    // NAVIGATION AND THEME
+    // ============================================
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        try { localStorage.setItem('badminton-theme', theme); } catch (e) { /* ignore */ }
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+        });
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) mobileMenu.classList.add('hidden');
+    }
+
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        let saved = 'emerald';
+        try { saved = localStorage.getItem('badminton-theme') || 'emerald'; } catch (e) { /* ignore */ }
+        changeTheme(saved);
+    });
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    // ============================================
+    // PLAYER PROFILE (api/users.php?id=, api/player-profile-data.php)
+    // ============================================
+    const playerId = new URLSearchParams(window.location.search).get('id');
+    const FINISHED = {
+        winner: { label: 'Winner', cls: 'pp-tag-winner' },
+        runnerUp: { label: 'Runner-up', cls: 'pp-tag-runner' },
+        semi: { label: 'Semi-finalist', cls: 'pp-tag-grey' },
+        quarter: { label: 'Quarter-finalist', cls: 'pp-tag-grey' }
+    };
+    let profile = null;
+    let range = 'all';
+
+    function esc(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
+
+    // 'YYYY-MM-DD' -> '5 Dec 2026' (no time zone shift)
+    function formatDate(ymd) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd || '');
+        if (!m) return '-';
+        const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+        return d.toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function timesText(n) {
+        return n === 1 ? 'once' : (n === 2 ? 'twice' : n + ' times');
+    }
+
+    function showMessage(text) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('profileContent').classList.add('hidden');
+        document.getElementById('profileMessageText').textContent = text;
+        document.getElementById('profileMessage').classList.remove('hidden');
+    }
+
+    async function loadProfile() {
+        if (!playerId || !/^[1-9][0-9]*$/.test(playerId)) {
+            showMessage('Player not found.');
+            return;
+        }
+        try {
+            const res = await fetch('/api/users.php?id=' + encodeURIComponent(playerId), { credentials: 'include' });
+            const data = await res.json();
+            if (!data.success) {
+                showMessage(data.notListed ? 'This player is no longer listed.' : (data.message || 'Player not found.'));
+                return;
+            }
+            profile = data;
+            renderHero(data.player);
+            renderTiles(data.player);
+            renderResults();
+            renderJourney(data.journey, data.player);
+            fillContact();
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('profileContent').classList.remove('hidden');
+        } catch (e) {
+            showMessage('The player profile could not be loaded. Please try again.');
+        }
+    }
+
+    // ---------- hero ----------
+    function renderHero(p) {
+        document.title = p.name + ' - Player Profile - KBF-UK';
+        document.getElementById('heroName').textContent = p.name;
+        document.getElementById('heroKbf').textContent = p.kbfId || '';
+        if (p.city) {
+            document.getElementById('heroCity').textContent = p.city;
+            document.getElementById('heroCityWrap').classList.remove('hidden');
+        }
+        const img = document.getElementById('heroPhoto');
+        const initials = document.getElementById('heroInitials');
+        initials.textContent = p.initials || '';
+        if (p.photo && /^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(p.photo) && p.photo.indexOf('..') === -1) {
+            img.alt = p.name;
+            img.addEventListener('error', function () { img.classList.add('hidden'); initials.classList.remove('hidden'); });
+            img.src = p.photo;
+            img.classList.remove('hidden');
+            initials.classList.add('hidden');
+        }
+        if (p.grade && p.grade.short) {
+            document.getElementById('gradeSquare').textContent = p.grade.short;
+            document.getElementById('gradeDesc').textContent = p.grade.name || p.grade.short;
+            document.getElementById('gradeBadge').classList.remove('hidden');
+        }
+    }
+
+    // Native share sheet, otherwise copy the link
+    document.getElementById('shareBtn').addEventListener('click', async function () {
+        const url = window.location.href;
+        const msg = document.getElementById('shareMsg');
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: document.title, url: url });
+            } catch (e) { /* closed by the visitor */ }
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(url);
+            msg.textContent = 'Link copied';
+        } catch (e) {
+            msg.textContent = 'Copy this page address to share it';
+        }
+        setTimeout(() => { msg.textContent = ''; }, 3000);
+    });
+
+    // ---------- figures ----------
+    function renderTiles(p) {
+        document.getElementById('tileSeason').textContent = fmt(p.seasonPoints);
+        const note = document.getElementById('tileSeasonNote');
+        const bar = document.getElementById('tileSeasonBar');
+        if (p.grade && p.grade.top) {
+            note.textContent = 'Top grade';
+        } else if (p.eligible) {
+            note.textContent = 'Eligible for promotion';
+            note.classList.add('theme-primary-text');
+        } else if (p.threshold) {
+            note.textContent = fmt(p.toGo) + ' to promotion';
+        }
+        if (p.threshold && !(p.grade && p.grade.top)) {
+            const pct = Math.max(0, Math.min(100, Math.round(p.seasonPoints / p.threshold * 100)));
+            bar.firstElementChild.style.width = pct + '%';
+            bar.setAttribute('aria-valuemax', String(p.threshold));
+            bar.setAttribute('aria-valuenow', String(Math.min(p.seasonPoints, p.threshold)));
+            bar.classList.remove('hidden');
+        }
+
+        document.getElementById('tileCareer').textContent = fmt(p.careerPoints);
+
+        const won = p.finals ? p.finals.won : 0;
+        const ru = p.finals ? p.finals.runnerUp : 0;
+        document.getElementById('tileFinals').textContent = fmt(won + ru);
+        const parts = [];
+        if (won) parts.push('Winner ' + timesText(won));
+        if (ru) parts.push((parts.length ? 'runner-up ' : 'Runner-up ') + timesText(ru));
+        document.getElementById('tileFinalsNote').textContent = parts.length ? parts.join(', ') : 'Not yet';
+
+        document.getElementById('tileTournaments').textContent = fmt(p.tournaments);
+    }
+
+    // ---------- results ----------
+    document.querySelectorAll('.pp-switch').forEach(btn => {
+        btn.addEventListener('click', function () {
+            range = btn.dataset.range;
+            document.querySelectorAll('.pp-switch').forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+            renderResults();
+        });
+    });
+
+    function partnerHtml(partner) {
+        if (!partner || partner.type === 'none') return '<span class="text-gray-500">-</span>';
+        if (partner.type === 'guest') {
+            return partner.name
+                ? '<span class="text-gray-300 font-bold">' + esc(partner.name) + '</span> <span class="pp-guest">Guest</span>'
+                : '<span class="text-gray-300 font-bold">Guest</span>';
+        }
+        if (partner.type === 'former') return '<span class="text-gray-400 font-bold">Former member</span>';
+        return '<a class="pp-link" href="/player-profile?id=' + encodeURIComponent(partner.id) + '">' + esc(partner.name) + '</a>';
+    }
+
+    function tagHtml(r) {
+        const f = FINISHED[r.finished] || FINISHED.quarter;
+        return '<span class="pp-tag ' + f.cls + '">' + esc(f.label) + '</span>';
+    }
+
+    function pointsHtml(r) {
+        return '<span class="text-sm font-black text-white whitespace-nowrap">' + (r.points > 0 ? '+' + fmt(r.points) : '0') + '</span>'
+            + (r.careerOnly ? ' <span class="pp-career">Career points only</span>' : '');
+    }
+
+    function tournamentHtml(r) {
+        return '<a class="pp-link" href="/tournament-details?id=' + encodeURIComponent(r.tournamentId) + '">' + esc(r.tournament) + '</a>'
+            + (r.category ? '<span class="block text-xs text-gray-400 font-semibold mt-0.5">' + esc(r.category) + '</span>' : '');
+    }
+
+    function renderResults() {
+        const box = document.getElementById('resultsBody');
+        const all = profile ? profile.results : [];
+        if (!all.length) {
+            box.innerHTML = '<p class="p-8 sm:p-10 text-center text-sm text-gray-300 font-semibold">No results yet. Results appear here after their first KBF tournament.</p>';
+            return;
+        }
+        const rows = range === 'season' ? all.filter(r => r.thisSeason) : all;
+        if (!rows.length) {
+            box.innerHTML = '<p class="p-8 sm:p-10 text-center text-sm text-gray-400 font-bold uppercase">No results this season yet</p>';
+            return;
+        }
+        box.innerHTML =
+            // Table (md and up)
+            '<div class="hidden md:block overflow-x-auto"><table class="w-full">'
+            + '<thead class="border-b-2 border-gray-700"><tr>'
+            + ['Date', 'Tournament', 'Finished', 'Partner', 'Points'].map((h, i) =>
+                '<th scope="col" class="px-4 py-3 text-xs font-black theme-primary-text uppercase ' + (i === 4 ? 'text-right' : 'text-left') + '">' + h + '</th>').join('')
+            + '</tr></thead><tbody class="divide-y-2 divide-gray-800">'
+            + rows.map(r => '<tr class="align-top">'
+                + '<td class="px-4 py-3 text-sm text-gray-300 font-semibold whitespace-nowrap">' + esc(formatDate(r.date)) + '</td>'
+                + '<td class="px-4 py-3 text-sm">' + tournamentHtml(r) + '</td>'
+                + '<td class="px-4 py-3">' + tagHtml(r) + '</td>'
+                + '<td class="px-4 py-3 text-sm">' + partnerHtml(r.partner) + '</td>'
+                + '<td class="px-4 py-3 text-right">' + pointsHtml(r) + '</td>'
+                + '</tr>').join('')
+            + '</tbody></table></div>'
+            // Cards (phones)
+            + '<ul class="md:hidden divide-y-2 divide-gray-800">'
+            + rows.map(r => '<li class="p-4 space-y-2">'
+                + '<div class="flex items-center justify-between gap-3">' + tagHtml(r) + '<span>' + pointsHtml(r) + '</span></div>'
+                + '<div class="text-sm">' + tournamentHtml(r) + '</div>'
+                + '<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 font-semibold">'
+                + '<span>' + esc(formatDate(r.date)) + '</span>'
+                + (r.partner && r.partner.type !== 'none' ? '<span>With ' + partnerHtml(r.partner) + '</span>' : '')
+                + '</div>'
+                + '</li>').join('')
+            + '</ul>';
+    }
+
+    // ---------- grade journey (no reasons or notes) ----------
+    function renderJourney(journey, p) {
+        const box = document.getElementById('journeyBody');
+        const changes = (journey && journey.changes) || [];
+        const current = p.grade && p.grade.short ? p.grade.short : '';
+        if (!changes.length) {
+            box.innerHTML = '<p class="text-sm text-gray-300 font-semibold">' + (current
+                ? 'In grade <span class="pp-sq pp-sq-new align-middle mx-1">' + esc(current) + '</span> since joining'
+                : 'No grade yet') + '</p>';
+            return;
+        }
+        const kinds = { promoted: 'Promoted', down: 'Moved down', moved: 'Moved' };
+        let html = '<ol class="pp-timeline">';
+        if (journey.joinedGrade) {
+            html += '<li class="pp-step"><span class="pp-dot" aria-hidden="true"></span>'
+                + (journey.joinedDate ? '<p class="text-xs font-bold uppercase text-gray-400">' + esc(formatDate(journey.joinedDate)) + '</p>' : '')
+                + '<p class="text-sm font-black text-white mt-1">Joined KBF in grade <span class="pp-sq pp-sq-old align-middle ml-1">' + esc(journey.joinedGrade) + '</span></p></li>';
+        }
+        changes.forEach(c => {
+            html += '<li class="pp-step' + (c.kind === 'promoted' ? ' is-up' : '') + '"><span class="pp-dot" aria-hidden="true"></span>'
+                + '<p class="text-xs font-bold uppercase text-gray-400">' + esc(formatDate(c.date)) + '</p>'
+                + '<p class="flex flex-wrap items-center gap-2 mt-1">'
+                + '<span class="text-sm font-black uppercase ' + (c.kind === 'promoted' ? 'theme-primary-text' : 'text-white') + '">' + esc(kinds[c.kind] || 'Moved') + '</span>'
+                + '<span class="pp-sq pp-sq-old">' + esc(c.from || '-') + '</span>'
+                + '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-label="to"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>'
+                + '<span class="pp-sq pp-sq-new">' + esc(c.to || '-') + '</span></p></li>';
+        });
+        html += '</ol>';
+        box.innerHTML = html;
+    }
+
+    // ---------- correction line (contact_email from Site settings) ----------
+    function fillContact() {
+        const link = document.getElementById('correctLink');
+        const apply = email => {
+            if (!email || !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) return;
+            link.href = 'mailto:' + email;
+            link.textContent = email;
+        };
+        if (window.KBFSiteSettings) {
+            KBFSiteSettings.ready.then(s => { if (s) apply(KBFSiteSettings.get('contact.email', '')); });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

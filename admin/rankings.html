@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grading - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .6rem .9rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-sm { padding: .45rem .75rem; font-size: .68rem; }
+        .btn-solid:focus-visible, .btn-plain:focus-visible, .gr-tab:focus-visible, .gr-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Tabs */
+        .gr-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .gr-tab:hover { color: #fff; }
+        .gr-tab .gr-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
+        .gr-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
+        .gr-tab.is-active .gr-count { background: #0F172A; color: var(--theme-primary); }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .55rem .7rem; font-weight: 700; font-size: .8125rem; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
+
+        /* Player rows */
+        .gr-avatar { width: 2.75rem; height: 2.75rem; flex-shrink: 0; border: 2px solid #374151; background: #1e293b; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: .85rem; color: #9ca3af; overflow: hidden; }
+        .gr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .gr-sq { display: inline-flex; align-items: center; justify-content: center; min-width: 2.25rem; height: 2.25rem; padding: 0 .4rem; font-weight: 900; font-size: .85rem; }
+        .gr-sq-old { border: 2px solid #6b7280; color: #e5e7eb; }
+        .gr-sq-new { background: var(--theme-primary); border: 2px solid var(--theme-primary); color: #0F172A; }
+        .gr-track { background: #334155; height: 6px; width: 100%; }
+        .gr-fill { background: var(--theme-primary); height: 100%; }
+        .gr-stat { min-width: 3.5rem; text-align: center; }
+        .gr-link { color: var(--theme-primary); text-decoration: underline; font-weight: 900; }
+
+        /* Tags */
+        .gr-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .gr-tag-promotion { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .gr-tag-down { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
+        .gr-tag-across { background: #1e293b; border-color: #6b7280; color: #e5e7eb; }
+        .gr-tag-moved { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+
+        /* Messages */
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Grading</h1>
+                <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+                <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Promotions and grade changes</p>
+            </div>
+            <div class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-3 sm:p-4 md:min-w-[18rem]" aria-live="polite">
+                <p class="text-xs font-black uppercase text-gray-400">Current season</p>
+                <p id="seasonName" class="text-base sm:text-lg font-black uppercase text-white">-</p>
+                <p id="seasonRules" class="text-xs text-gray-300 font-semibold mt-1"></p>
+            </div>
+        </div>
+
+        <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
+
+        <!-- Tabs -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+            <div class="flex gap-3 overflow-x-auto pb-2 pt-1 pl-1" role="tablist" aria-label="Grading lists" id="tabs">
+                <button type="button" class="gr-tab" role="tab" id="tab-eligible" aria-controls="panel-eligible" data-tab="eligible">Eligible for promotion <span class="gr-count" data-count="eligible">0</span></button>
+                <button type="button" class="gr-tab" role="tab" id="tab-close" aria-controls="panel-close" data-tab="close">Close to promotion <span class="gr-count" data-count="close">0</span></button>
+                <button type="button" class="gr-tab" role="tab" id="tab-history" aria-controls="panel-history" data-tab="history">Recent grade changes <span class="gr-count" data-count="history">0</span></button>
+            </div>
+            <button type="button" id="changeGradeBtn" class="btn-solid btn-shadow self-start lg:self-auto">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+                Change a grade
+            </button>
+        </div>
+
+        <!-- Eligible for promotion -->
+        <section id="panel-eligible" role="tabpanel" aria-labelledby="tab-eligible" class="bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <ul id="eligibleList" class="divide-y-2 divide-gray-800">
+                <li class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</li>
+            </ul>
+        </section>
+
+        <!-- Close to promotion -->
+        <section id="panel-close" role="tabpanel" aria-labelledby="tab-close" class="hidden bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <p id="closeInfo" class="px-4 sm:px-6 py-3 border-b-2 border-gray-800 bg-slate-800 text-xs sm:text-sm text-gray-300 font-semibold flex items-start gap-2">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5 theme-primary-text" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="closeInfoText"></span>
+            </p>
+            <ul id="closeList" class="divide-y-2 divide-gray-800"></ul>
+        </section>
+
+        <!-- Recent grade changes -->
+        <section id="panel-history" role="tabpanel" aria-labelledby="tab-history" class="hidden bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <form id="historyFilters" class="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 sm:p-6 border-b-2 border-gray-800 bg-slate-800">
+                <div>
+                    <label for="filterType" class="field-label">Type</label>
+                    <select id="filterType" class="field">
+                        <option value="">All types</option>
+                        <option value="promotion">Promotion</option>
+                        <option value="down">Moving down</option>
+                        <option value="across">Moving across</option>
+                        <option value="moved">Moved by an admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterFrom" class="field-label">From</label>
+                    <input type="date" id="filterFrom" class="field">
+                </div>
+                <div>
+                    <label for="filterTo" class="field-label">To</label>
+                    <input type="date" id="filterTo" class="field">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button type="submit" class="btn-plain flex-1">Show</button>
+                    <button type="button" id="filterClear" class="btn-plain">Clear</button>
+                </div>
+            </form>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-800 border-b-2 border-gray-700">
+                        <tr>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Date</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Player</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Grades</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Type</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase hidden md:table-cell">Reason</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase hidden lg:table-cell">Made by</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody" class="divide-y-2 divide-gray-800"></tbody>
+                </table>
+            </div>
+            <div id="historyPager" class="hidden flex flex-col sm:flex-row items-center justify-center gap-3 p-4">
+                <button type="button" id="prevPage" class="btn-plain btn-sm">Previous</button>
+                <span id="pageInfo" class="text-xs font-bold uppercase text-gray-400"></span>
+                <button type="button" id="nextPage" class="btn-plain btn-sm">Next</button>
+            </div>
+        </section>
+
+        <!-- When someone becomes eligible -->
+        <section class="mt-6 sm:mt-8 bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6" aria-labelledby="howHeading">
+            <h2 id="howHeading" class="text-base sm:text-lg font-black uppercase theme-primary-text mb-4">When someone becomes eligible</h2>
+            <ol class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <li class="flex gap-3 p-3 bg-slate-800 border-2 border-gray-700">
+                    <span class="gr-sq gr-sq-new flex-shrink-0" aria-hidden="true">1</span>
+                    <span class="text-xs sm:text-sm text-gray-200 font-semibold leading-relaxed">They appear in the Eligible tab with their points, finals and events this season.</span>
+                </li>
+                <li class="flex gap-3 p-3 bg-slate-800 border-2 border-gray-700">
+                    <span class="gr-sq gr-sq-new flex-shrink-0" aria-hidden="true">2</span>
+                    <span class="text-xs sm:text-sm text-gray-200 font-semibold leading-relaxed">Promote them in one click: they move up a grade, and the promotion email and news post follow your Notifications settings.</span>
+                </li>
+                <li class="flex gap-3 p-3 bg-slate-800 border-2 border-gray-700">
+                    <span class="gr-sq gr-sq-new flex-shrink-0" aria-hidden="true">3</span>
+                    <span class="text-xs sm:text-sm text-gray-200 font-semibold leading-relaxed">Until promoted, their points are kept at the season reset, so nobody loses out by waiting.</span>
+                </li>
+            </ol>
+        </section>
+    </main>
+
+    <script src="/js/admin-shell.js"></script>
+    <script src="/js/grade-change.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell): players.change_grades
+    // ============================================
+    KBFShell.start({ anyOf: ['players.change_grades'], active: 'grading' }).then(function (user) {
+        window.kbfUser = user;
+        const t = new URLSearchParams(window.location.search).get('tab');
+        setTab(['eligible', 'close', 'history'].includes(t) ? t : 'eligible', false);
+        loadSummary();
+    });
+
+    const API = '/api/rankings.php';
+    let summary = null;
+    let activeTab = 'eligible';
+    let historyPage = 1;
+    let historyLoaded = false;
+
+    // ---------- helpers ----------
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function getJson(url) {
+        const token = getCSRFToken();
+        const res = await fetch(url, { credentials: 'include', headers: token ? { 'X-CSRF-Token': token } : {} });
+        return res.json();
+    }
+
+    function esc(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
+
+    function showMsg(text, kind) {
+        const box = document.getElementById('pageMessage');
+        if (!text) { box.classList.add('hidden'); return; }
+        box.textContent = text;
+        box.className = 'msg mb-5 ' + (kind === 'ok' ? 'msg-ok' : (kind === 'warn' ? 'msg-warn' : 'msg-error'));
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(String(value).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function avatarHtml(p) {
+        return '<span class="gr-avatar">' + (p.photo ? '<img src="' + esc(p.photo) + '" alt="">' : esc(p.initials)) + '</span>';
+    }
+
+    function moveHtml(p) {
+        if (!p.nextGrade) return '<span class="gr-sq gr-sq-old">' + esc(p.grade || '-') + '</span>';
+        return '<span class="flex items-center gap-2" aria-label="' + esc('Grade ' + p.grade + ' to ' + p.nextGrade) + '">'
+            + '<span class="gr-sq gr-sq-old">' + esc(p.grade) + '</span>'
+            + '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>'
+            + '<span class="gr-sq gr-sq-new">' + esc(p.nextGrade) + '</span></span>';
+    }
+
+    function barHtml(points, threshold) {
+        const pct = threshold ? Math.max(0, Math.min(100, Math.round(points / threshold * 100))) : 0;
+        return '<div class="gr-track mt-1" role="progressbar" aria-valuemin="0" aria-valuemax="' + esc(threshold || 0) + '" aria-valuenow="' + esc(points) + '" aria-label="Season points"><div class="gr-fill" style="width: ' + pct + '%;"></div></div>';
+    }
+
+    // ============================================
+    // TABS
+    // ============================================
+    document.querySelectorAll('.gr-tab').forEach(tab => {
+        tab.addEventListener('click', () => setTab(tab.dataset.tab, true));
+        tab.addEventListener('keydown', e => {
+            const tabs = Array.from(document.querySelectorAll('.gr-tab'));
+            const i = tabs.indexOf(tab);
+            let next = null;
+            if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+            if (e.key === 'ArrowLeft') next = tabs[(i + tabs.length - 1) % tabs.length];
+            if (next) { e.preventDefault(); next.focus(); setTab(next.dataset.tab, true); }
+        });
+    });
+
+    function setTab(name, writeUrl) {
+        activeTab = name;
+        document.querySelectorAll('.gr-tab').forEach(tab => {
+            const on = tab.dataset.tab === name;
+            tab.classList.toggle('is-active', on);
+            tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            tab.tabIndex = on ? 0 : -1;
+        });
+        ['eligible', 'close', 'history'].forEach(t => {
+            document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
+        });
+        if (writeUrl) {
+            const url = new URL(window.location.href);
+            if (name === 'eligible') url.searchParams.delete('tab'); else url.searchParams.set('tab', name);
+            history.replaceState(null, '', url.pathname + url.search);
+        }
+        if (name === 'history' && !historyLoaded) loadHistory(1);
+    }
+
+    // ============================================
+    // SUMMARY (season card, counts, Eligible and Close lists)
+    // ============================================
+    async function loadSummary() {
+        try {
+            const data = await getJson(API + '?action=summary');
+            if (!data.success) {
+                showMsg(data.message || 'The grading lists could not be loaded.', 'error');
+                return;
+            }
+            summary = data;
+            renderSeason();
+            ['eligible', 'close', 'history'].forEach(k => {
+                document.querySelector('[data-count="' + k + '"]').textContent = fmt(data.counts[k]);
+            });
+            renderEligible();
+            renderClose();
+        } catch (e) {
+            showMsg('The grading lists could not be loaded.', 'error');
+        }
+    }
+
+    function renderSeason() {
+        const s = summary.season;
+        document.getElementById('seasonName').textContent = s.name;
+        const days = s.resetDays === null ? '' : ' (' + s.resetDays + ' day' + (s.resetDays === 1 ? '' : 's') + ')';
+        const parts = [];
+        if (s.threshold) parts.push('Promotion at ' + s.threshold + ' points');
+        parts.push('Reset on ' + s.resetLabel + days);
+        document.getElementById('seasonRules').textContent = parts.join(' • ');
+    }
+
+    function playerRow(p, mode) {
+        const pointsText = mode === 'close'
+            ? fmt(p.points) + ' / ' + fmt(p.threshold)
+            : fmt(p.points) + ' pts';
+        const sub = mode === 'close'
+            ? '<span class="text-xs font-bold theme-primary-text">' + fmt(p.toGo) + ' to go</span>'
+            : '';
+        const button = mode === 'close'
+            ? '<a class="btn-plain btn-sm" href="/admin/people.html?person=' + encodeURIComponent(p.userId) + '" aria-label="' + esc('Open ' + p.name) + '">Open</a>'
+            : (p.nextGradeId
+                ? '<button type="button" class="btn-solid btn-sm" data-promote="' + esc(p.userId) + '" aria-label="' + esc('Promote ' + p.name + ' to ' + p.nextGrade) + '">Promote</button>'
+                : '<span class="text-xs font-bold uppercase text-gray-500">Top grade</span>');
+        return '<li class="px-4 sm:px-6 py-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-5">'
+            + '<div class="flex items-center gap-3 min-w-0 md:flex-1">'
+            + avatarHtml(p)
+            + '<div class="min-w-0"><p class="text-sm font-black text-white truncate">' + esc(p.name) + '</p>'
+            + '<p class="text-xs text-gray-400 font-semibold truncate">' + esc(p.kbfId) + (p.city ? ' • ' + esc(p.city) : '') + '</p></div>'
+            + '</div>'
+            + '<div class="flex flex-wrap items-center gap-4 md:gap-5">'
+            + moveHtml(p)
+            + '<div class="w-36"><div class="flex items-baseline justify-between gap-2"><span class="text-sm font-black text-white">' + pointsText + '</span>' + sub + '</div>' + barHtml(p.points, p.threshold) + '</div>'
+            + '<div class="gr-stat"><p class="text-sm font-black text-white">' + fmt(p.finals) + '</p><p class="text-[10px] font-bold uppercase text-gray-400">Finals</p></div>'
+            + '<div class="gr-stat"><p class="text-sm font-black text-white">' + fmt(p.events) + '</p><p class="text-[10px] font-bold uppercase text-gray-400">Events</p></div>'
+            + '<div class="ml-auto md:ml-0">' + button + '</div>'
+            + '</div>'
+            + '</li>';
+    }
+
+    function renderEligible() {
+        const list = document.getElementById('eligibleList');
+        const rows = summary.eligible || [];
+        if (!rows.length) {
+            list.innerHTML = '<li class="px-6 py-10 text-center text-sm text-gray-300 font-semibold">'
+                + esc('Nobody has reached ' + (summary.season.threshold || '') + ' points this season yet.')
+                + ' <button type="button" class="gr-link" id="toCloseLink">See who is close to promotion</button></li>';
+            document.getElementById('toCloseLink').addEventListener('click', () => { setTab('close', true); document.getElementById('tab-close').focus(); });
+            return;
+        }
+        list.innerHTML = rows.map(p => playerRow(p, 'eligible')).join('');
+    }
+
+    function renderClose() {
+        document.getElementById('closeInfoText').textContent = 'These players are within ' + fmt(summary.closeRange)
+            + ' points of promotion. The list updates after each approved result and every night.';
+        const list = document.getElementById('closeList');
+        const rows = summary.close || [];
+        if (!rows.length) {
+            list.innerHTML = '<li class="px-6 py-10 text-center text-sm text-gray-400 font-bold uppercase">Nobody is close to promotion right now</li>';
+            return;
+        }
+        list.innerHTML = rows.map(p => playerRow(p, 'close')).join('');
+    }
+
+    document.getElementById('eligibleList').addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-promote]');
+        if (!btn) return;
+        const p = (summary.eligible || []).find(x => String(x.userId) === btn.dataset.promote);
+        if (!p) return;
+        KBFGradeChange.open({
+            player: p,
+            newGradeId: p.nextGradeId,
+            reason: 'Reached ' + fmt(p.threshold) + ' season points',
+            meta: { grades: summary.grades, defaults: summary.defaults },
+            onDone: afterChange
+        });
+    });
+
+    document.getElementById('changeGradeBtn').addEventListener('click', function () {
+        KBFGradeChange.open({
+            meta: summary ? { grades: summary.grades, defaults: summary.defaults } : null,
+            onDone: afterChange
+        });
+    });
+
+    function afterChange(result) {
+        showMsg(result.message || 'Grade changed.', result.emailStatus === 'failed' ? 'warn' : 'ok');
+        loadSummary();
+        historyLoaded = false;
+        if (activeTab === 'history') loadHistory(1);
+    }
+
+    // ============================================
+    // RECENT GRADE CHANGES
+    // ============================================
+    async function loadHistory(page) {
+        historyPage = page;
+        historyLoaded = true;
+        const body = document.getElementById('historyBody');
+        body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</td></tr>';
+        const p = new URLSearchParams({ action: 'history', page: String(page) });
+        const type = document.getElementById('filterType').value;
+        const from = document.getElementById('filterFrom').value;
+        const to = document.getElementById('filterTo').value;
+        if (type) p.set('type', type);
+        if (from) p.set('from', from);
+        if (to) p.set('to', to);
+        try {
+            const data = await getJson(API + '?' + p.toString());
+            if (!data.success) {
+                body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">' + esc(data.message || 'The grade changes could not be loaded.') + '</td></tr>';
+                return;
+            }
+            renderHistory(data);
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">The grade changes could not be loaded.</td></tr>';
+        }
+    }
+
+    function renderHistory(data) {
+        const body = document.getElementById('historyBody');
+        if (!data.rows.length) {
+            body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">No grade changes match</td></tr>';
+        } else {
+            body.innerHTML = data.rows.map(r => '<tr class="align-top">'
+                + '<td class="px-3 sm:px-4 py-3 text-xs text-gray-300 font-semibold whitespace-nowrap">' + esc(formatDate(r.date)) + '</td>'
+                + '<td class="px-3 sm:px-4 py-3 text-xs sm:text-sm"><span class="block font-black text-white">' + esc(r.player || 'Former member') + '</span><span class="block text-xs text-gray-400 font-semibold">' + esc(r.kbfId) + '</span></td>'
+                + '<td class="px-3 sm:px-4 py-3"><span class="flex items-center gap-2"><span class="gr-sq gr-sq-old">' + esc(r.oldGrade || '-') + '</span>'
+                + '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>'
+                + '<span class="gr-sq gr-sq-new">' + esc(r.newGrade || '-') + '</span></span></td>'
+                + '<td class="px-3 sm:px-4 py-3"><span class="gr-tag gr-tag-' + esc(r.type) + '">' + esc(r.typeLabel) + '</span></td>'
+                + '<td class="px-3 sm:px-4 py-3 text-xs text-gray-300 font-semibold hidden md:table-cell break-words max-w-xs">' + esc(r.reason) + '</td>'
+                + '<td class="px-3 sm:px-4 py-3 text-xs text-gray-300 font-semibold hidden lg:table-cell">' + esc(r.changedBy || '-') + '</td>'
+                + '</tr>').join('');
+        }
+        const pager = document.getElementById('historyPager');
+        pager.classList.toggle('hidden', data.pages <= 1);
+        document.getElementById('pageInfo').textContent = 'Page ' + data.page + ' of ' + data.pages + ' (' + fmt(data.total) + ' changes)';
+        document.getElementById('prevPage').disabled = data.page <= 1;
+        document.getElementById('nextPage').disabled = data.page >= data.pages;
+    }
+
+    document.getElementById('historyFilters').addEventListener('submit', function (e) {
+        e.preventDefault();
+        loadHistory(1);
+    });
+    document.getElementById('filterClear').addEventListener('click', function () {
+        document.getElementById('historyFilters').reset();
+        loadHistory(1);
+    });
+    document.getElementById('prevPage').addEventListener('click', () => loadHistory(Math.max(1, historyPage - 1)));
+    document.getElementById('nextPage').addEventListener('click', () => loadHistory(historyPage + 1));
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

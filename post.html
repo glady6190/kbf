@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-switcher-btn { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 15px currentColor; }
+        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 20px; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        /* ============ Single post (theme colour only via --theme-primary) ============ */
+        [hidden] { display: none !important; }
+        .pp-icon { width: 1em; height: 1em; flex-shrink: 0; }
+        .pp-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .pp-back { display: inline-flex; align-items: center; gap: 8px; color: var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: 14px; letter-spacing: .06em; text-decoration: none; padding: 4px 0; }
+        .pp-back:hover { color: #fff; }
+        .pp-back:focus-visible, .pp-link:focus-visible, .pp-btn:focus-visible, .pp-related-card:focus-visible, .pp-pager a:focus-visible, .pp-fullsize:focus-visible { outline: 3px solid var(--theme-primary); outline-offset: 3px; }
+        .pp-back .pp-icon { width: 18px; height: 18px; }
+
+        .pp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px 0 14px; }
+        .pp-tag { display: inline-block; padding: 5px 10px; background: var(--theme-primary); color: #0F172A; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+        .pp-date { display: inline-flex; align-items: center; gap: 6px; color: #9CA3AF; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+        .pp-date .pp-icon { width: 16px; height: 16px; color: var(--theme-primary); }
+
+        .pp-title { margin: 0 0 28px; color: #fff; font-size: 30px; line-height: 1.08; font-weight: 900; text-transform: uppercase; overflow-wrap: anywhere; }
+        @media (min-width: 640px) { .pp-title { font-size: 40px; } }
+        @media (min-width: 1024px) { .pp-title { font-size: 52px; } }
+
+        .pp-figure { margin: 0 0 28px; }
+        .pp-frame { border: 4px solid #374151; background: #0B1324; }
+        .pp-frame img { display: block; width: 100%; height: auto; max-height: 640px; object-fit: contain; background: #0B1324; }
+        .pp-fullsize { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--theme-primary); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; text-decoration: none; }
+        .pp-fullsize:hover { color: #fff; }
+        .pp-fullsize .pp-icon { width: 16px; height: 16px; }
+
+        .pp-body { color: #D1D5DB; font-size: 18px; line-height: 1.75; white-space: pre-line; overflow-wrap: anywhere; }
+        .pp-body a { color: var(--theme-primary); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+        .pp-body a:hover { color: #fff; }
+        .pp-body a:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+
+        /* Promotion card */
+        .pp-promo { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; margin: 0 0 28px; padding: 24px; background: #0F172A; border: 4px solid #374151; box-shadow: 6px 6px 0 var(--theme-primary); }
+        @media (min-width: 640px) { .pp-promo { flex-direction: row; text-align: left; padding: 28px; } }
+        .pp-avatar { width: 112px; height: 112px; border-radius: 9999px; border: 4px solid var(--theme-primary); box-shadow: 0 0 0 4px #0F172A, 0 0 0 6px #374151; background: #1E293B; color: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; font-size: 36px; font-weight: 900; }
+        .pp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pp-avatar .pp-icon { width: 48px; height: 48px; color: #9CA3AF; }
+        .pp-promo-main { flex: 1; min-width: 0; }
+        .pp-promo-name { margin: 0; color: #fff; font-size: 26px; line-height: 1.1; font-weight: 900; text-transform: uppercase; overflow-wrap: anywhere; }
+        .pp-promo-id { margin: 6px 0 0; color: #9CA3AF; font-size: 14px; font-weight: 800; letter-spacing: .04em; }
+        .pp-grades { display: inline-flex; align-items: center; gap: 12px; margin-top: 16px; }
+        .pp-grade-old, .pp-grade-new { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 52px; padding: 0 8px; font-size: 22px; font-weight: 900; }
+        .pp-grade-old { border: 3px solid #4B5563; color: #D1D5DB; background: #1E293B; }
+        .pp-grade-new { background: var(--theme-primary); color: #0F172A; border: 3px solid var(--theme-primary); }
+        .pp-grades .pp-icon { width: 24px; height: 24px; color: var(--theme-primary); }
+        .pp-promo-actions { margin-top: 18px; }
+
+        /* Buttons and links */
+        .pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; text-decoration: none; cursor: pointer; border: 3px solid var(--theme-primary); transition: background-color .2s ease, color .2s ease; font-family: inherit; }
+        .pp-btn .pp-icon { width: 18px; height: 18px; }
+        .pp-btn-solid { background: var(--theme-primary); color: #0F172A; }
+        .pp-btn-solid:hover { opacity: .9; }
+        .pp-btn-outline { background: transparent; color: var(--theme-primary); }
+        .pp-btn-outline:hover { background: var(--theme-primary); color: #0F172A; }
+        .pp-link { color: var(--theme-primary); font-weight: 900; text-decoration: none; }
+        .pp-link:hover { color: #fff; text-decoration: underline; }
+
+        /* Linked tournament */
+        .pp-tourney { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 36px; padding: 20px; background: #0F172A; border: 4px solid #374151; }
+        .pp-datetile { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 84px; height: 84px; flex-shrink: 0; background: #1E293B; border: 3px solid var(--theme-primary); text-align: center; }
+        .pp-dt-weekday { color: #9CA3AF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+        .pp-dt-day { color: #fff; font-size: 30px; line-height: 1; font-weight: 900; }
+        .pp-dt-month { color: var(--theme-primary); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+        .pp-tourney-main { flex: 1; min-width: 180px; }
+        .pp-tourney-label { margin: 0 0 4px; color: #9CA3AF; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+        .pp-tourney-name { margin: 0; font-size: 20px; line-height: 1.2; font-weight: 900; text-transform: uppercase; overflow-wrap: anywhere; }
+        .pp-tourney-place { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; color: #D1D5DB; font-size: 14px; font-weight: 600; }
+        .pp-tourney-place .pp-icon { width: 16px; height: 16px; margin-top: 3px; color: var(--theme-primary); }
+
+        /* More about this tournament */
+        .pp-related { margin-top: 40px; }
+        .pp-section-title { margin: 0 0 16px; color: #fff; font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+        .pp-related-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+        @media (min-width: 640px) { .pp-related-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .pp-related-card { display: flex; flex-direction: column; background: #0F172A; border: 3px solid #374151; text-decoration: none; transition: border-color .2s ease, transform .2s ease; }
+        .pp-related-card:hover { border-color: var(--theme-primary); transform: translateY(-2px); }
+        .pp-related-media { height: 120px; background: #0B1324; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 3px solid #374151; }
+        .pp-related-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pp-related-media .pp-icon { width: 36px; height: 36px; color: var(--theme-primary); }
+        .pp-related-body { padding: 12px 14px; }
+        .pp-related-title { margin: 0 0 6px; color: #fff; font-size: 15px; line-height: 1.3; font-weight: 900; text-transform: uppercase; }
+        .pp-related-date { color: #9CA3AF; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+
+        /* Post footer: share and previous / next */
+        .pp-foot { margin-top: 44px; padding-top: 24px; border-top: 4px solid #374151; }
+        .pp-share-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+        .pp-share-status { color: var(--theme-primary); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+        .pp-pager { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 22px; }
+        @media (min-width: 640px) { .pp-pager { grid-template-columns: 1fr 1fr; } }
+        .pp-pager a { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: #0F172A; border: 3px solid #374151; text-decoration: none; transition: border-color .2s ease; }
+        .pp-pager a:hover { border-color: var(--theme-primary); }
+        .pp-pager .pp-next { text-align: right; }
+        @media (min-width: 640px) { .pp-pager .pp-next { grid-column: 2; } }
+        .pp-pager-label { display: inline-flex; align-items: center; gap: 6px; color: var(--theme-primary); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+        .pp-next .pp-pager-label { justify-content: flex-end; }
+        .pp-pager-label .pp-icon { width: 16px; height: 16px; }
+        .pp-pager-title { color: #fff; font-size: 14px; line-height: 1.3; font-weight: 800; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pp-related-card, .pp-related-card:hover { transition: none; transform: none; }
+        }
+
+        /* Dropdown Menu Styles */
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #1e293b;
+    border: 4px solid;
+    border-color: var(--theme-primary);
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid #374151;
+}
+
+.dropdown-menu a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu a:hover {
+    background-color: #0f172a;
+    color: var(--theme-primary);
+    padding-left: 30px;
+}
+
+.dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    font-size: 0.6rem;
+    margin-left: 5px;
+    transition: transform 0.3s;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.dropdown:hover .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Mobile Dropdown */
+.mobile-dropdown-menu {
+    display: none;
+    background-color: #0f172a;
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+}
+
+.mobile-dropdown-menu.active {
+    display: block;
+}
+
+.mobile-dropdown-menu a {
+    display: block;
+    padding: 10px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-left: 3px solid #374151;
+    margin: 5px 0;
+    transition: all 0.2s;
+}
+
+.mobile-dropdown-menu a:hover {
+    border-left-color: var(--theme-primary);
+    color: var(--theme-primary);
+    padding-left: 25px;
+}
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+   <!-- Navigation -->
+<nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+                <div class="relative">
+                    <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                    <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                         style="box-shadow: 0 0 12px var(--theme-primary);">
+                        <img src="/assets/images/logo/KBF-Logo.jpeg"
+                             alt="KBF-UK Logo"
+                             class="w-full h-full object-contain">
+                    </div>
+                </div>
+                <div>
+                    <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+                    <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                </div>
+            </a>
+            
+            <div class="hidden md:flex items-center space-x-2">
+                <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
+                <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
+                <a href="/gallery" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                
+                <!-- Dropdown More Menu -->
+                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
+                        More
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="/news">News</a>
+                        <a href="/register">Register</a>
+                    </div>
+                </div>
+                
+                <!-- Theme Switcher -->
+                <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+                
+                <div class="ml-4">
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
+                        Login
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Mobile menu button -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-btn" class="theme-primary-text p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+            <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
+            <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+            <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+            
+            <!-- Mobile Dropdown More -->
+            <div>
+                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                    More
+                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                </button>
+                <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                    <a href="/news">News</a>
+                    <a href="/register">Register</a>
+                </div>
+            </div>
+            
+            <!-- Mobile Theme Switcher -->
+            <div class="px-3 py-4 border-t-2 border-gray-700">
+                <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                <div class="flex items-center space-x-3">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+            </div>
+            
+            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+        </div>
+    </div>
+</nav>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+        <div id="loading" class="text-center py-20" role="status">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 mb-4" style="border-top-color: var(--theme-primary);"></div>
+            <p class="text-gray-400 font-bold uppercase text-lg">Loading post...</p>
+        </div>
+
+        <article id="postContent" hidden>
+            <a href="/news" class="pp-back">
+                <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                All news
+            </a>
+
+            <div class="pp-meta">
+                <span id="postTag" class="pp-tag"></span>
+                <span class="pp-date">
+                    <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                    <time id="postDate"></time>
+                </span>
+            </div>
+
+            <h1 id="postTitle" class="pp-title"></h1>
+
+            <!-- Image (whole, never cropped); no image: no image area -->
+            <figure id="imageBox" class="pp-figure" hidden>
+                <div class="pp-frame"><img id="postImage" alt=""></div>
+                <a id="fullSizeLink" class="pp-fullsize" target="_blank" rel="noopener">
+                    View full size
+                    <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                    <span class="sr-only">(opens in a new tab)</span>
+                </a>
+            </figure>
+
+            <!-- Promotion posts: player card -->
+            <section id="promoCard" class="pp-promo" aria-label="Promotion" hidden></section>
+
+            <div id="postBody" class="pp-body"></div>
+
+            <!-- Linked tournament -->
+            <section id="tournamentBox" class="pp-tourney" aria-label="Tournament" hidden></section>
+
+            <!-- More about this tournament -->
+            <section id="relatedBox" class="pp-related" aria-labelledby="relatedTitle" hidden>
+                <h2 id="relatedTitle" class="pp-section-title">More about this tournament</h2>
+                <div id="relatedGrid" class="pp-related-grid"></div>
+            </section>
+
+            <footer class="pp-foot">
+                <div class="pp-share-row">
+                    <button type="button" id="shareBtn" class="pp-btn pp-btn-outline">
+                        <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></svg>
+                        Share
+                    </button>
+                    <span id="shareStatus" class="pp-share-status" role="status" aria-live="polite"></span>
+                </div>
+                <nav id="pager" class="pp-pager" aria-label="More news">
+                    <a id="prevLink" class="pp-prev" hidden>
+                        <span class="pp-pager-label">
+                            <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                            Previous
+                        </span>
+                        <span id="prevTitle" class="pp-pager-title pp-clamp-2"></span>
+                    </a>
+                    <a id="nextLink" class="pp-next" hidden>
+                        <span class="pp-pager-label">
+                            Next
+                            <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                        </span>
+                        <span id="nextTitle" class="pp-pager-title pp-clamp-2"></span>
+                    </a>
+                </nav>
+            </footer>
+        </article>
+
+        <div id="error" class="hidden text-center py-20">
+            <div class="inline-flex items-center justify-center w-32 h-32 theme-primary-bg border-4 border-gray-700 mb-6">
+                <svg class="w-16 h-16 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-black text-white mb-3 uppercase">Post not found</h1>
+            <p class="text-gray-400 font-bold mb-6">This post may have been removed, or the link is not complete.</p>
+            <a href="/news" class="inline-flex items-center theme-primary-bg text-slate-900 px-6 py-3 font-black uppercase brutal-shadow hover:opacity-90 transition">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                All news
+            </a>
+        </div>
+    </main>
+
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <!-- Shared news and promotion helpers (also used by the home and News pages) -->
+    <script src="/js/news-helpers.js"></script>
+    <script>
+    // ============================================
+    // GLOBAL VARIABLES
+    // ============================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const postId = urlParams.get('id');
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
+        });
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+        }
+    }
+
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    // Every value from a post goes in with textContent (KBFNews.el) or as a
+    // checked attribute; HTML from a post is never parsed.
+    const N = window.KBFNews;
+
+    // Only images on this site (a path) or https images are shown
+    function safeImage(path) {
+        if (typeof path !== 'string') return null;
+        const value = path.trim();
+        if (/^\/(?!\/)[^\s"'<>]*$/.test(value) || /^https:\/\/[^\s"'<>]+$/i.test(value)) return value;
+        return null;
+    }
+
+    // Only http(s) registration links are ever used (same rule as the tournaments pages)
+    function safeHttpUrl(value) {
+        if (typeof value !== 'string') return '';
+        const url = value.trim();
+        return /^https?:\/\/[^\s<>"'`]+$/i.test(url) ? url : '';
+    }
+
+    // Emoji the site added to its own promotion posts (organisers' posts are left as written)
+    function stripSiteEmoji(text) {
+        return String(text || '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t]+/gm, '');
+    }
+
+    function svgIcon(paths, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('class', className || 'pp-icon');
+        svg.innerHTML = paths; // constant markup only
+        return svg;
+    }
+
+    const ICON_PATHS = {
+        external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+        pin: '<path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+        user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+        arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>'
+    };
+
+    // ---------- dates (local calendar dates, never shifted by time zone) ----------
+    const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function toYmd(value) {
+        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : '';
+    }
+    function parseYmd(ymd) {
+        const parts = ymd.split('-').map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    function todayYmd() {
+        const now = new Date();
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    }
+
+    // Registration is open by the same rule as the tournaments pages:
+    // an http(s) link, the tournament not past, and the closing date not passed
+    function registrationOpen(t) {
+        const today = todayYmd();
+        const date = toYmd(t.date || '');
+        const isPast = date !== '' && date < today;
+        const closeDate = toYmd(t.registrationCloseDate || '');
+        const closePassed = closeDate !== '' && today > closeDate;
+        return safeHttpUrl(t.registrationUrl) !== '' && !isPast && !closePassed;
+    }
+
+    // ---------- text with links ----------
+    // "example.com/path/page" from a URL, at most 50 characters
+    function shortUrl(href) {
+        let text = href;
+        try {
+            const u = new URL(href);
+            text = u.hostname.replace(/^www\./i, '') + (u.pathname && u.pathname !== '/' ? u.pathname.replace(/\/$/, '') : '');
+        } catch (e) { /* keep the address as it is */ }
+        return text.length > 50 ? text.slice(0, 49) + '…' : text;
+    }
+
+    // Plain text, line breaks kept (white-space: pre-line); http and https
+    // addresses become links that open in a new tab. Everything else is text.
+    function renderText(container, text) {
+        container.textContent = '';
+        const pattern = /https?:\/\/[^\s<>"'`]+/gi;
+        let last = 0;
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            let href = match[0];
+            // Leave closing punctuation outside the link
+            const trail = href.match(/[.,;:!?)\]}'"]+$/);
+            if (trail) href = href.slice(0, -trail[0].length);
+            if (match.index > last) container.appendChild(document.createTextNode(text.slice(last, match.index)));
+            const a = document.createElement('a');
+            a.href = href;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = shortUrl(href);
+            a.title = href;
+            container.appendChild(a);
+            last = match.index + href.length;
+            pattern.lastIndex = last;
+        }
+        if (last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        changeTheme(savedTheme);
+        loadPost();
+    });
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    // ============================================
+    // DATA LOADING
+    // ============================================
+    async function loadPost() {
+        if (!postId || !/^\d+$/.test(postId)) {
+            showError();
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/announcements.php?id=' + encodeURIComponent(postId), {
+                credentials: 'include'
+            });
+            const data = await response.json();
+
+            document.getElementById('loading').classList.add('hidden');
+
+            if (data.success && data.announcement) {
+                displayPost(data);
+            } else {
+                showError();
+            }
+        } catch (error) {
+            console.error('Error loading post:', error);
+            showError();
+        }
+    }
+
+    // ============================================
+    // DISPLAY FUNCTIONS
+    // ============================================
+    // data: { announcement, tournament, related, previous, next, promotionPlayer }
+    // No author line is shown (the author's name is never displayed here).
+    function displayPost(data) {
+        const post = data.announcement;
+        const isPromotion = N.isPromotion(post);
+
+        // Site-made promotion posts lose the emoji the site added; other
+        // posts keep the text exactly as the organiser wrote it
+        const title = isPromotion ? stripSiteEmoji(post.Title).trim() : String(post.Title || '');
+        const content = isPromotion ? stripSiteEmoji(post.Content) : String(post.Content || '');
+
+        // Tag and date
+        document.getElementById('postTag').textContent = isPromotion
+            ? 'Promotion'
+            : (post.TournamentId ? 'Tournament news' : 'News');
+        const dateEl = document.getElementById('postDate');
+        dateEl.textContent = N.formatDate(post);
+        const postDate = N.postDate(post);
+        if (postDate) dateEl.dateTime = `${postDate.getFullYear()}-${pad2(postDate.getMonth() + 1)}-${pad2(postDate.getDate())}`;
+
+        document.getElementById('postTitle').textContent = title;
+        document.title = title + ' - KBF-UK';
+
+        // Image (promotion posts show the photo in the player card instead)
+        const image = safeImage(post.FeaturedImage);
+        if (image && !isPromotion) {
+            const img = document.getElementById('postImage');
+            img.src = image;
+            img.alt = title;
+            img.addEventListener('error', () => { document.getElementById('imageBox').hidden = true; });
+            document.getElementById('fullSizeLink').href = image;
+            document.getElementById('imageBox').hidden = false;
+        }
+
+        if (isPromotion) renderPromotion(post, data.promotionPlayer || null);
+
+        // Text: plain text, line breaks kept, web addresses as links
+        const body = document.getElementById('postBody');
+        if (content.trim()) {
+            renderText(body, content.trim());
+        } else {
+            body.hidden = true;
+        }
+
+        if (data.tournament) renderTournament(data.tournament);
+        renderRelated(Array.isArray(data.related) ? data.related : []);
+        renderPager(data.previous || null, data.next || null);
+
+        document.getElementById('postContent').hidden = false;
+    }
+
+    // ---------- promotion card ----------
+    function renderPromotion(post, player) {
+        const card = document.getElementById('promoCard');
+        const removed = !!(player && player.removed);
+        const name = removed ? 'Former member' : (player && player.name ? player.name : N.promotionName(post));
+        const photo = removed ? null : safeImage(player ? player.photo : post.FeaturedImage);
+
+        // Photo or initials in a ring (initials only for under 18s: no photo is sent)
+        const avatar = N.el('div', 'pp-avatar');
+        avatar.setAttribute('aria-hidden', 'true');
+        const showInitials = () => {
+            avatar.textContent = '';
+            if (removed) avatar.appendChild(svgIcon(ICON_PATHS.user));
+            else avatar.textContent = N.promotionInitials(name);
+        };
+        if (photo) {
+            const img = document.createElement('img');
+            img.src = photo;
+            img.alt = '';
+            img.addEventListener('error', showInitials);
+            avatar.appendChild(img);
+        } else {
+            showInitials();
+        }
+        card.appendChild(avatar);
+
+        const main = N.el('div', 'pp-promo-main');
+        main.appendChild(N.el('h2', 'pp-promo-name', name));
+        if (!removed && player && player.kbfId) {
+            main.appendChild(N.el('p', 'pp-promo-id', 'KBF ID: ' + player.kbfId));
+        }
+
+        const grades = removed ? null : N.promotionGrades(post);
+        if (grades) {
+            const move = N.el('div', 'pp-grades');
+            move.setAttribute('role', 'img');
+            move.setAttribute('aria-label', 'Grade ' + grades.from + ' to grade ' + grades.to);
+            const oldGrade = N.el('span', 'pp-grade-old', grades.from);
+            oldGrade.setAttribute('aria-hidden', 'true');
+            const newGrade = N.el('span', 'pp-grade-new', grades.to);
+            newGrade.setAttribute('aria-hidden', 'true');
+            move.append(oldGrade, svgIcon(ICON_PATHS.arrow), newGrade);
+            main.appendChild(move);
+        }
+
+        if (!removed && player && player.profileId) {
+            const actions = N.el('div', 'pp-promo-actions');
+            const link = N.el('a', 'pp-btn pp-btn-outline', 'View profile');
+            link.href = '/player-profile?id=' + encodeURIComponent(player.profileId);
+            link.appendChild(svgIcon(ICON_PATHS.arrow));
+            actions.appendChild(link);
+            main.appendChild(actions);
+        }
+
+        card.appendChild(main);
+        card.hidden = false;
+    }
+
+    // ---------- linked tournament ----------
+    function renderTournament(t) {
+        const box = document.getElementById('tournamentBox');
+        const ymd = toYmd(t.date || '');
+
+        const tile = N.el('div', 'pp-datetile');
+        if (ymd) {
+            const d = parseYmd(ymd);
+            tile.appendChild(N.el('span', 'pp-dt-weekday', WEEKDAYS_SHORT[d.getDay()]));
+            tile.appendChild(N.el('span', 'pp-dt-day', String(d.getDate())));
+            tile.appendChild(N.el('span', 'pp-dt-month', MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear()));
+        } else {
+            tile.appendChild(N.el('span', 'pp-dt-weekday', 'Date'));
+            tile.appendChild(N.el('span', 'pp-dt-day', '--'));
+            tile.appendChild(N.el('span', 'pp-dt-month', 'To be confirmed'));
+        }
+        box.appendChild(tile);
+
+        const main = N.el('div', 'pp-tourney-main');
+        main.appendChild(N.el('p', 'pp-tourney-label', 'Tournament'));
+        const nameEl = N.el('h2', 'pp-tourney-name');
+        const nameLink = N.el('a', 'pp-link', t.name || 'Tournament');
+        nameLink.href = '/tournament-details?id=' + encodeURIComponent(t.id);
+        nameEl.appendChild(nameLink);
+        main.appendChild(nameEl);
+
+        const place = [t.venue, t.town].map(v => String(v || '').trim()).filter(Boolean).join(', ');
+        if (place) {
+            const placeEl = N.el('p', 'pp-tourney-place');
+            placeEl.appendChild(svgIcon(ICON_PATHS.pin));
+            placeEl.appendChild(N.el('span', '', place));
+            main.appendChild(placeEl);
+        }
+        box.appendChild(main);
+
+        if (registrationOpen(t)) {
+            const reg = N.el('a', 'pp-btn pp-btn-solid', 'Register');
+            reg.href = safeHttpUrl(t.registrationUrl);
+            reg.target = '_blank';
+            reg.rel = 'noopener';
+            reg.setAttribute('aria-label', 'Register for ' + (t.name || 'this tournament') + ' (opens in a new tab)');
+            reg.appendChild(svgIcon(ICON_PATHS.external));
+            box.appendChild(reg);
+        }
+
+        box.hidden = false;
+    }
+
+    // ---------- more about this tournament ----------
+    function renderRelated(posts) {
+        const grid = document.getElementById('relatedGrid');
+        const list = posts.slice(0, 3);
+        if (list.length === 0) return;
+
+        list.forEach(p => {
+            const promo = N.isPromotion(p);
+            const card = N.el('a', 'pp-related-card');
+            card.href = N.postHref(p);
+
+            const media = N.el('div', 'pp-related-media');
+            const src = safeImage(p.FeaturedImage);
+            const showIcon = () => {
+                media.textContent = '';
+                media.appendChild(N.icon(promo ? 'trophy' : 'newspaper', 'pp-icon'));
+            };
+            if (src) {
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = '';
+                img.loading = 'lazy';
+                img.addEventListener('error', showIcon);
+                media.appendChild(img);
+            } else {
+                showIcon();
+            }
+            card.appendChild(media);
+
+            const body = N.el('div', 'pp-related-body');
+            body.appendChild(N.el('h3', 'pp-related-title pp-clamp-2', promo ? stripSiteEmoji(p.Title).trim() : String(p.Title || '')));
+            body.appendChild(N.el('span', 'pp-related-date', N.formatDate(p)));
+            card.appendChild(body);
+
+            grid.appendChild(card);
+        });
+        document.getElementById('relatedBox').hidden = false;
+    }
+
+    // ---------- previous (older) and next (newer) ----------
+    function renderPager(previous, next) {
+        const pairs = [[previous, 'prevLink', 'prevTitle'], [next, 'nextLink', 'nextTitle']];
+        pairs.forEach(([p, linkId, titleId]) => {
+            if (!p || !p.AnnouncementId) return;
+            const link = document.getElementById(linkId);
+            link.href = N.postHref(p);
+            const t = N.isPromotion(p) ? stripSiteEmoji(p.Title).trim() : String(p.Title || '');
+            document.getElementById(titleId).textContent = t;
+            link.hidden = false;
+        });
+        if (!previous && !next) document.getElementById('pager').hidden = true;
+    }
+
+    // ---------- share ----------
+    document.getElementById('shareBtn').addEventListener('click', async function () {
+        const status = document.getElementById('shareStatus');
+        const url = window.location.href;
+        status.textContent = '';
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: document.getElementById('postTitle').textContent, url: url });
+                return;
+            } catch (e) {
+                if (e && e.name === 'AbortError') return; // closed the share sheet
+            }
+        }
+        let copied = false;
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                copied = true;
+            }
+        } catch (e) { /* try the fallback */ }
+        if (!copied) {
+            const field = document.createElement('textarea');
+            field.value = url;
+            field.setAttribute('readonly', '');
+            field.style.position = 'fixed';
+            field.style.opacity = '0';
+            document.body.appendChild(field);
+            field.select();
+            try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+            document.body.removeChild(field);
+        }
+        status.textContent = copied ? 'Link copied' : 'Copy the address from your browser to share this post';
+        if (copied) setTimeout(() => { if (status.textContent === 'Link copied') status.textContent = ''; }, 4000);
+    });
+
+    function showError() {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+    }
+</script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

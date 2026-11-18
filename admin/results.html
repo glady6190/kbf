@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - KBF-UK Admin</title>
+    <meta name="robots" content="noindex">
+    <!-- The Results list is now the Completed tab of the Tournaments page -->
+    <noscript><meta http-equiv="refresh" content="0; url=/admin/tournaments?tab=completed"></noscript>
+    <script>
+    (function () {
+        var target = '/admin/tournaments?tab=completed';
+        try {
+            var p = new URLSearchParams(window.location.search);
+            var q = (p.get('q') || p.get('search') || '').trim().slice(0, 100);
+            if (q) target += '&q=' + encodeURIComponent(q);
+        } catch (e) { /* go to the tab without a search */ }
+        window.location.replace(target);
+    })();
+    </script>
+    <style>
+        body { background: #020617; color: #e5e7eb; font-family: system-ui, sans-serif; margin: 0; padding: 2rem 1rem; }
+        a { color: #10b981; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <p>Results are now on the <a href="/admin/tournaments?tab=completed">Tournaments page</a>.</p>
+</body>
+</html>

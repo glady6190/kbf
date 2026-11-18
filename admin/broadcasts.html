@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Broadcasts - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .6rem .9rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-sm { padding: .35rem .6rem; font-size: .65rem; }
+        .btn-danger { color: #fca5a5; }
+        .btn-danger:hover:not(:disabled) { border-color: #ef4444; color: #fff; }
+        .btn-solid:focus-visible, .btn-plain:focus-visible, .choice-card:focus-visible, .grade-btn:focus-visible, .when-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field[aria-invalid="true"] { border-color: #ef4444; }
+        .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
+
+        /* Send to: choice cards and grade buttons */
+        .choice-card { display: flex; align-items: flex-start; gap: .65rem; width: 100%; text-align: left; padding: .75rem; background: #1e293b; border: 2px solid #374151; color: #e5e7eb; }
+        .choice-card:hover { border-color: #6b7280; }
+        .choice-card[aria-checked="true"] { border-color: var(--theme-primary); box-shadow: 4px 4px 0 #020617; }
+        .choice-dot { width: 1rem; height: 1rem; border: 2px solid #6b7280; border-radius: 9999px; flex-shrink: 0; margin-top: .1rem; display: flex; align-items: center; justify-content: center; }
+        .choice-card[aria-checked="true"] .choice-dot { border-color: var(--theme-primary); }
+        .choice-card[aria-checked="true"] .choice-dot::after { content: ''; width: .45rem; height: .45rem; border-radius: 9999px; background: var(--theme-primary); }
+        .grade-btn { min-width: 3rem; padding: .45rem .7rem; background: #1e293b; border: 2px solid #374151; color: #d1d5db; font-weight: 900; font-size: .75rem; text-transform: uppercase; }
+        .grade-btn:hover { border-color: #6b7280; color: #fff; }
+        .grade-btn[aria-pressed="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .when-btn { flex: 1; padding: .55rem .75rem; background: #1e293b; border: 2px solid #374151; color: #d1d5db; font-weight: 900; font-size: .75rem; text-transform: uppercase; }
+        .when-btn[aria-checked="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+
+        /* Status tags and progress */
+        .tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .tag-draft { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .tag-scheduled { background: #0f172a; border-color: var(--theme-primary); color: var(--theme-primary); }
+        .tag-sending { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .tag-paused { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
+        .tag-completed { background: #1e293b; border-color: #4b5563; color: #e5e7eb; }
+        .tag-cancelled { background: #374151; border-color: #4b5563; color: #9ca3af; text-decoration: line-through; }
+        .progress-track { background-color: #334155; height: 6px; width: 100%; }
+        .progress-fill { background-color: var(--theme-primary); height: 100%; transition: width .4s ease; }
+
+        /* Dialogs */
+        .dlg-wrap { position: fixed; inset: 0; background: rgba(2, 6, 23, .82); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+        @media (min-width: 640px) { .dlg-wrap { align-items: center; } }
+        .dlg { background: #0f172a; border: 4px solid #374151; width: 100%; max-width: 32rem; margin: 2rem 0; }
+        .dlg-wide { max-width: 44rem; }
+
+        /* Messages */
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Email broadcasts</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Send news to all members or chosen grades</p>
+        </div>
+
+        <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
+        <p id="readOnlyNote" class="hidden msg msg-warn mb-5">Viewing as someone else: you can look, but not save or send.</p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 sm:mb-10">
+            <!-- ============================ -->
+            <!-- COMPOSE -->
+            <!-- ============================ -->
+            <section class="lg:col-span-2 bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="composeHeading">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <h2 id="composeHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Compose</h2>
+                    <div id="editingBar" class="hidden flex items-center gap-2 text-xs font-bold text-gray-300">
+                        <span id="editingText"></span>
+                        <button type="button" id="newBroadcastBtn" class="btn-plain btn-sm">Start a new one</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="subjectInput" class="field-label">Subject</label>
+                    <input type="text" id="subjectInput" class="field" maxlength="255" autocomplete="off" placeholder="For example: Summer tournament entries now open">
+                </div>
+
+                <div>
+                    <span id="bodyLabel" class="field-label">Message</span>
+                    <p class="text-xs text-gray-400 font-semibold mb-2">The KBF-UK header and the unsubscribe footer are added for you. Placeholders such as {first_name} are filled in for each member.</p>
+                    <div id="bodyEditor" aria-labelledby="bodyLabel"></div>
+                </div>
+
+                <!-- Send to -->
+                <fieldset>
+                    <legend class="field-label">Send to</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Send to" id="targetCards">
+                        <button type="button" class="choice-card" role="radio" aria-checked="true" data-target="all">
+                            <span class="choice-dot" aria-hidden="true"></span>
+                            <span><span class="block text-sm font-black uppercase text-white">Everyone</span><span class="block text-xs text-gray-400 font-semibold mt-0.5">All active members</span></span>
+                        </button>
+                        <button type="button" class="choice-card" role="radio" aria-checked="false" data-target="grades">
+                            <span class="choice-dot" aria-hidden="true"></span>
+                            <span><span class="block text-sm font-black uppercase text-white">Chosen grades</span><span class="block text-xs text-gray-400 font-semibold mt-0.5">Pick one or more</span></span>
+                        </button>
+                        <button type="button" class="choice-card" role="radio" aria-checked="false" data-target="staff">
+                            <span class="choice-dot" aria-hidden="true"></span>
+                            <span><span class="block text-sm font-black uppercase text-white">Staff only</span><span class="block text-xs text-gray-400 font-semibold mt-0.5">Admins and organisers</span></span>
+                        </button>
+                    </div>
+                    <div id="gradeRow" class="hidden mt-3">
+                        <p id="gradeRowLabel" class="text-xs font-bold text-gray-400 uppercase mb-2">Grades</p>
+                        <div id="gradeButtons" class="flex flex-wrap gap-2" role="group" aria-labelledby="gradeRowLabel"></div>
+                    </div>
+                </fieldset>
+
+                <!-- Attachment -->
+                <div>
+                    <span class="field-label">Attachment (optional)</span>
+                    <div id="savedAttachment" class="hidden mb-2 flex flex-wrap items-center gap-2 p-3 bg-slate-800 border-2 border-gray-700 text-xs font-bold text-gray-200">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                        <span>Attached to every email: <span id="savedAttachmentName" class="text-white"></span></span>
+                        <button type="button" id="removeSavedAttachment" class="btn-plain btn-sm ml-auto">Remove</button>
+                    </div>
+                    <label class="flex flex-col sm:flex-row sm:items-center gap-2 p-3 bg-slate-800 border-2 border-dashed border-gray-600 cursor-pointer">
+                        <span class="text-xs font-black uppercase text-gray-200">Choose a file</span>
+                        <span id="attachmentName" class="text-xs text-gray-400 font-semibold break-all">PDF, JPG, PNG or Word, up to 5 MB.</span>
+                        <input type="file" id="attachmentInput" class="sr-only" accept=".pdf,.jpg,.jpeg,.png,.docx,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                    </label>
+                    <div id="attachmentOptions" class="hidden mt-3 space-y-2">
+                        <fieldset>
+                            <legend class="sr-only">How to send the file</legend>
+                            <label class="flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                                <input type="radio" name="attachmentMode" value="link" checked class="mt-0.5" style="accent-color: var(--theme-primary)">
+                                <span>
+                                    <span class="block text-xs sm:text-sm font-bold text-white">Include as a download link (recommended)</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-0.5">The file is put on the website under a random name and a link is added to the email.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer mt-2">
+                                <input type="radio" name="attachmentMode" value="attach" class="mt-0.5" style="accent-color: var(--theme-primary)">
+                                <span>
+                                    <span class="block text-xs sm:text-sm font-bold text-white">Attach to every email</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-0.5">Larger emails, and more likely to be filtered as spam.</span>
+                                </span>
+                            </label>
+                        </fieldset>
+                        <button type="button" id="clearFileBtn" class="text-xs font-black uppercase text-gray-400 hover:text-white underline">Remove the file</button>
+                    </div>
+                </div>
+
+                <div id="composeMessage" class="hidden msg" role="alert"></div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- BEFORE YOU SEND -->
+            <!-- ============================ -->
+            <aside class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5 lg:self-start" aria-labelledby="beforeHeading">
+                <h2 id="beforeHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Before you send</h2>
+
+                <div aria-live="polite">
+                    <p class="text-xs font-black uppercase text-gray-400">Recipients</p>
+                    <p id="recipientCount" class="text-4xl sm:text-5xl font-black theme-primary-text leading-tight">-</p>
+                    <dl class="mt-3 divide-y-2 divide-gray-800 border-2 border-gray-700 text-xs font-bold">
+                        <div class="flex justify-between gap-3 p-2"><dt class="text-gray-400">Unsubscribed, will not receive it</dt><dd id="unsubCount" class="text-white">-</dd></div>
+                        <div class="flex justify-between gap-3 p-2"><dt class="text-gray-400">Broadcast emails per day</dt><dd id="perDayCount" class="text-white">-</dd></div>
+                        <div class="flex justify-between gap-3 p-2"><dt class="text-gray-400">Estimated time to send everyone</dt><dd id="estimateText" class="text-white text-right">-</dd></div>
+                    </dl>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2">
+                    <button type="button" id="previewBtn" class="btn-plain">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Preview
+                    </button>
+                    <button type="button" id="testBtn" class="btn-plain">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Send a test to me
+                    </button>
+                    <button type="button" id="draftBtn" class="btn-plain">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                        Save as draft
+                    </button>
+                </div>
+
+                <fieldset>
+                    <legend class="field-label">When</legend>
+                    <div class="flex gap-2" role="radiogroup" aria-label="When">
+                        <button type="button" class="when-btn" role="radio" aria-checked="true" data-when="now">Now</button>
+                        <button type="button" class="when-btn" role="radio" aria-checked="false" data-when="later">Later</button>
+                    </div>
+                    <div id="laterRow" class="hidden mt-3">
+                        <label for="laterInput" class="block text-xs font-bold text-gray-400 mb-1">Date and time (UK time)</label>
+                        <input type="datetime-local" id="laterInput" class="field" step="60">
+                        <p class="text-xs text-gray-500 font-semibold mt-1">At least 10 minutes from now and within 60 days.</p>
+                    </div>
+                </fieldset>
+
+                <button type="button" id="sendBtn" class="btn-solid btn-shadow w-full py-3">Send</button>
+            </aside>
+        </div>
+
+        <!-- ============================ -->
+        <!-- SENT AND SCHEDULED -->
+        <!-- ============================ -->
+        <section class="bg-slate-900 border-2 sm:border-4 border-gray-700" aria-labelledby="historyHeading">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-4 border-gray-700 bg-slate-800 flex items-center justify-between gap-3">
+                <h2 id="historyHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Sent and scheduled</h2>
+                <p id="refreshNote" class="hidden text-xs text-gray-400 font-bold uppercase">Updating while sending</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-800 border-b-2 border-gray-700">
+                        <tr>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Subject</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase hidden sm:table-cell">Sent to</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Status</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Progress</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase hidden md:table-cell">Created</th>
+                            <th scope="col" class="px-3 sm:px-4 py-2 text-right text-xs font-black theme-primary-text uppercase"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody" class="divide-y-2 divide-gray-800">
+                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Confirm -->
+    <div id="confirmDialog" class="dlg-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+        <div class="dlg p-4 sm:p-6 space-y-4">
+            <h2 id="confirmTitle" class="text-lg font-black uppercase theme-primary-text"></h2>
+            <p id="confirmText" class="text-sm text-gray-200 font-semibold leading-relaxed"></p>
+            <div id="confirmMessage" class="hidden msg msg-error" role="alert"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button type="button" id="confirmCancel" class="btn-plain">Go back</button>
+                <button type="button" id="confirmOk" class="btn-solid btn-shadow"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="previewDialog" class="dlg-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="dlg dlg-wide p-4 sm:p-6 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h2 id="previewTitle" class="text-lg font-black uppercase theme-primary-text">Preview</h2>
+                    <p class="text-xs text-gray-400 font-semibold">Shown with your own details in the placeholders.</p>
+                    <p class="text-sm text-white font-bold mt-2 break-words">Subject: <span id="previewSubject"></span></p>
+                </div>
+                <button type="button" id="previewClose" class="btn-plain btn-sm" aria-label="Close preview">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <iframe id="previewFrame" title="Email preview" sandbox="" class="w-full bg-white border-2 border-gray-700" style="height: 60vh;"></iframe>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script src="/js/kbf-editor.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell): content.broadcasts
+    // ============================================
+    KBFShell.start({ anyOf: ['content.broadcasts'], active: 'broadcasts' }).then(function (user) {
+        window.kbfUser = user;
+        init();
+    });
+
+    const API = '/api/broadcasts.php';
+    const STATUS_LABELS = { draft: 'Draft', scheduled: 'Scheduled', sending: 'Sending', paused: 'Paused', completed: 'Completed', cancelled: 'Cancelled' };
+
+    let editor = null;
+    let grades = [];
+    let perDay = 0;
+    let canEdit = true;
+    let target = 'all';
+    let chosenGrades = [];
+    let when = 'now';
+    let editingId = null;
+    let savedAttachment = null;     // name of a file attached to every email on the loaded draft
+    let removeSaved = false;
+    let counts = null;              // { recipients, unsubscribed, perDay, days }
+    let countSeq = 0;
+    let countTimer = null;
+    let pollTimer = null;
+    let lastFocus = null;
+
+    // ---------- helpers ----------
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    async function getJson(url) {
+        const res = await authenticatedFetch(url);
+        return res.json();
+    }
+
+    async function postJson(body) {
+        const res = await authenticatedFetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    }
+
+    async function postForm(form) {
+        const res = await authenticatedFetch(API, { method: 'POST', body: form });
+        return res.json();
+    }
+
+    function esc(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
+
+    function showMsg(id, text, kind) {
+        const box = document.getElementById(id);
+        if (!text) { box.classList.add('hidden'); return; }
+        box.textContent = text;
+        box.className = 'msg ' + (kind === 'ok' ? 'msg-ok' : (kind === 'warn' ? 'msg-warn' : 'msg-error')) + (id === 'pageMessage' ? ' mb-5' : '');
+        box.classList.remove('hidden');
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(String(value).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // UK wall-clock time of a Date as 'YYYY-MM-DDTHH:MM'
+    function ukLocalValue(date) {
+        const parts = {};
+        new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        }).formatToParts(date).forEach(p => { parts[p.type] = p.value; });
+        return parts.year + '-' + parts.month + '-' + parts.day + 'T' + parts.hour + ':' + parts.minute;
+    }
+
+    // 'YYYY-MM-DDTHH:MM' -> 'Sat 5 Dec 2026, 18:30'
+    function laterLabel(value) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value || '');
+        if (!m) return '';
+        const day = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+        return day.toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + m[4] + ':' + m[5];
+    }
+
+    function estimateText(days) {
+        if (days === null || days === undefined) return 'Not possible: the daily allowance for broadcasts is 0';
+        if (days === 0) return 'Nothing to send';
+        if (days === 1) return 'Today';
+        return 'About ' + days + ' days';
+    }
+
+    function attachmentMb() { return KBFShell.uploadLimitMb('emailAttachments', 5); }
+
+    // ============================================
+    // START
+    // ============================================
+    async function init() {
+        document.getElementById('attachmentName').textContent = 'PDF, JPG, PNG or Word, up to ' + attachmentMb() + ' MB.';
+        const data = await loadList();
+        editor = KBFEditor.create(document.getElementById('bodyEditor'), {
+            label: 'Message',
+            placeholders: (data && data.placeholders) || [{ key: 'first_name', description: 'First name' }, { key: 'full_name', description: 'Full name' }]
+        });
+        renderGradeButtons();
+        setTarget('all');
+        setWhen('now');
+    }
+
+    // ============================================
+    // SEND TO
+    // ============================================
+    document.querySelectorAll('#targetCards .choice-card').forEach(card => {
+        card.addEventListener('click', () => setTarget(card.dataset.target));
+        card.addEventListener('keydown', e => {
+            const cards = Array.from(document.querySelectorAll('#targetCards .choice-card'));
+            const i = cards.indexOf(card);
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); cards[(i + 1) % cards.length].focus(); setTarget(cards[(i + 1) % cards.length].dataset.target); }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); cards[(i + cards.length - 1) % cards.length].focus(); setTarget(cards[(i + cards.length - 1) % cards.length].dataset.target); }
+        });
+    });
+
+    function setTarget(value) {
+        target = value;
+        document.querySelectorAll('#targetCards .choice-card').forEach(card => {
+            const on = card.dataset.target === value;
+            card.setAttribute('aria-checked', on ? 'true' : 'false');
+            card.tabIndex = on ? 0 : -1;
+        });
+        document.getElementById('gradeRow').classList.toggle('hidden', value !== 'grades');
+        refreshCount();
+    }
+
+    function renderGradeButtons() {
+        const box = document.getElementById('gradeButtons');
+        box.textContent = '';
+        if (!grades.length) {
+            box.appendChild(Object.assign(document.createElement('p'), { className: 'text-xs text-gray-400 font-semibold', textContent: 'No grades to choose from.' }));
+            return;
+        }
+        grades.forEach(g => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'grade-btn';
+            b.textContent = g.shortName;
+            b.title = g.name;
+            b.dataset.id = String(g.id);
+            b.setAttribute('aria-pressed', chosenGrades.includes(g.id) ? 'true' : 'false');
+            b.addEventListener('click', () => {
+                if (chosenGrades.includes(g.id)) chosenGrades = chosenGrades.filter(x => x !== g.id);
+                else chosenGrades.push(g.id);
+                b.setAttribute('aria-pressed', chosenGrades.includes(g.id) ? 'true' : 'false');
+                refreshCount();
+            });
+            box.appendChild(b);
+        });
+    }
+
+    // ============================================
+    // BEFORE YOU SEND (figures follow the target)
+    // ============================================
+    function refreshCount() {
+        clearTimeout(countTimer);
+        countTimer = setTimeout(loadCount, 200);
+    }
+
+    async function loadCount() {
+        const seq = ++countSeq;
+        if (target === 'grades' && !chosenGrades.length) {
+            counts = { recipients: 0, unsubscribed: 0, perDay: perDay, days: 0 };
+            renderCounts();
+            return;
+        }
+        const p = new URLSearchParams({ action: 'count', target: target });
+        if (target === 'grades') p.set('grades', chosenGrades.join(','));
+        try {
+            const data = await getJson(API + '?' + p.toString());
+            if (seq !== countSeq) return;
+            if (!data.success) { counts = null; renderCounts(); return; }
+            counts = data;
+            perDay = data.perDay;
+            renderCounts();
+        } catch (e) {
+            if (seq === countSeq) { counts = null; renderCounts(); }
+        }
+    }
+
+    function renderCounts() {
+        document.getElementById('recipientCount').textContent = counts ? fmt(counts.recipients) : '-';
+        document.getElementById('unsubCount').textContent = counts ? fmt(counts.unsubscribed) : '-';
+        document.getElementById('perDayCount').textContent = fmt(counts ? counts.perDay : perDay);
+        document.getElementById('estimateText').textContent = counts ? estimateText(counts.days) : '-';
+        renderSendButton();
+    }
+
+    function renderSendButton() {
+        const btn = document.getElementById('sendBtn');
+        if (when === 'later') {
+            const label = laterLabel(document.getElementById('laterInput').value);
+            btn.textContent = label ? 'Schedule for ' + label : 'Schedule';
+        } else {
+            const n = counts ? counts.recipients : 0;
+            btn.textContent = 'Send to ' + fmt(n) + ' member' + (n === 1 ? '' : 's');
+        }
+        btn.disabled = !canEdit || !counts || counts.recipients < 1;
+    }
+
+    // ---------- when ----------
+    document.querySelectorAll('.when-btn').forEach(b => b.addEventListener('click', () => setWhen(b.dataset.when)));
+
+    function setWhen(value) {
+        when = value;
+        document.querySelectorAll('.when-btn').forEach(b => b.setAttribute('aria-checked', b.dataset.when === value ? 'true' : 'false'));
+        const input = document.getElementById('laterInput');
+        document.getElementById('laterRow').classList.toggle('hidden', value !== 'later');
+        if (value === 'later') {
+            const now = Date.now();
+            input.min = ukLocalValue(new Date(now + 10 * 60000));
+            input.max = ukLocalValue(new Date(now + 60 * 86400000));
+            if (!input.value) {
+                const start = new Date(now + 60 * 60000);
+                start.setMinutes(0, 0, 0);
+                input.value = ukLocalValue(new Date(start.getTime() + 60 * 60000));
+            }
+        }
+        renderSendButton();
+    }
+    document.getElementById('laterInput').addEventListener('input', renderSendButton);
+
+    // ============================================
+    // ATTACHMENT
+    // ============================================
+    function selectedFile() {
+        const input = document.getElementById('attachmentInput');
+        return input.files && input.files[0] ? input.files[0] : null;
+    }
+
+    function clearFile() {
+        document.getElementById('attachmentInput').value = '';
+        document.getElementById('attachmentName').textContent = 'PDF, JPG, PNG or Word, up to ' + attachmentMb() + ' MB.';
+        document.getElementById('attachmentOptions').classList.add('hidden');
+        document.querySelector('input[name="attachmentMode"][value="link"]').checked = true;
+    }
+
+    document.getElementById('attachmentInput').addEventListener('change', function () {
+        const file = selectedFile();
+        if (!file) { clearFile(); return; }
+        const sizeText = file.size >= 1048576 ? (file.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(file.size / 1024)) + ' KB';
+        document.getElementById('attachmentName').textContent = file.name + ' (' + sizeText + ')';
+        document.getElementById('attachmentOptions').classList.remove('hidden');
+        if (file.size > attachmentMb() * 1024 * 1024) {
+            showMsg('composeMessage', 'The attachment must be ' + attachmentMb() + ' MB or smaller.', 'error');
+        }
+    });
+    document.getElementById('clearFileBtn').addEventListener('click', clearFile);
+
+    function renderSavedAttachment() {
+        const show = savedAttachment && !removeSaved;
+        document.getElementById('savedAttachment').classList.toggle('hidden', !show);
+        document.getElementById('savedAttachmentName').textContent = savedAttachment || '';
+    }
+    document.getElementById('removeSavedAttachment').addEventListener('click', function () {
+        removeSaved = true;
+        renderSavedAttachment();
+    });
+
+    // ============================================
+    // COLLECT AND CHECK
+    // ============================================
+    function editorText() {
+        return editor ? editor.element.textContent.trim() : '';
+    }
+
+    function checkCompose() {
+        showMsg('composeMessage', '');
+        document.getElementById('subjectInput').removeAttribute('aria-invalid');
+        const subject = document.getElementById('subjectInput').value.trim();
+        if (!subject) {
+            document.getElementById('subjectInput').setAttribute('aria-invalid', 'true');
+            document.getElementById('subjectInput').focus();
+            showMsg('composeMessage', 'Add a subject.', 'error');
+            return false;
+        }
+        if (!editorText()) { showMsg('composeMessage', 'Write the message.', 'error'); editor.focus(); return false; }
+        const file = selectedFile();
+        if (file && file.size > attachmentMb() * 1024 * 1024) { showMsg('composeMessage', 'The attachment must be ' + attachmentMb() + ' MB or smaller.', 'error'); return false; }
+        return true;
+    }
+
+    function checkTarget() {
+        if (target === 'grades' && !chosenGrades.length) {
+            showMsg('composeMessage', 'Pick at least one grade.', 'error');
+            document.getElementById('gradeRow').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+        return true;
+    }
+
+    function buildForm(action, extra) {
+        const form = new FormData();
+        form.append('action', action);
+        if (editingId) form.append('id', String(editingId));
+        form.append('subject', document.getElementById('subjectInput').value.trim());
+        form.append('bodyHtml', editor ? editor.getHtml() : '');
+        form.append('targetType', target);
+        if (target === 'grades') form.append('targetGrades', chosenGrades.join(','));
+        const file = selectedFile();
+        if (file) {
+            form.append('attachment', file);
+            form.append('attachmentMode', document.querySelector('input[name="attachmentMode"]:checked').value);
+        }
+        if (removeSaved) form.append('removeAttachment', '1');
+        Object.keys(extra || {}).forEach(k => form.append(k, extra[k]));
+        return form;
+    }
+
+    function failMessage(data, fallback) {
+        showMsg('composeMessage', (data && data.message) || fallback, 'error');
+        if (data && data.field === 'subject') document.getElementById('subjectInput').setAttribute('aria-invalid', 'true');
+        document.getElementById('composeMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function busy(btn, fn) {
+        btn.disabled = true;
+        try { await fn(); } finally { btn.disabled = false; renderSendButton(); applyReadOnly(); }
+    }
+
+    // ============================================
+    // PREVIEW, TEST, DRAFT
+    // ============================================
+    document.getElementById('previewBtn').addEventListener('click', function () {
+        if (!checkCompose()) return;
+        busy(this, async () => {
+            try {
+                const data = await postJson({ action: 'preview', subject: document.getElementById('subjectInput').value.trim(), bodyHtml: editor.getHtml() });
+                if (!data.success) { failMessage(data, 'The preview could not be shown.'); return; }
+                document.getElementById('previewSubject').textContent = data.subject;
+                document.getElementById('previewFrame').srcdoc = data.html;
+                openDialog('previewDialog', 'previewClose');
+            } catch (e) {
+                failMessage(null, 'The preview could not be shown.');
+            }
+        });
+    });
+    document.getElementById('previewClose').addEventListener('click', () => closeDialog('previewDialog'));
+
+    document.getElementById('testBtn').addEventListener('click', function () {
+        if (!checkCompose()) return;
+        busy(this, async () => {
+            try {
+                const data = await postForm(buildForm('test'));
+                if (!data.success) { failMessage(data, 'The test could not be sent.'); return; }
+                showMsg('composeMessage', data.message, 'ok');
+            } catch (e) {
+                failMessage(null, 'The test could not be sent.');
+            }
+        });
+    });
+
+    document.getElementById('draftBtn').addEventListener('click', function () {
+        if (!checkCompose() || !checkTarget()) return;
+        busy(this, async () => {
+            try {
+                const data = await postForm(buildForm('saveDraft'));
+                if (!data.success) { failMessage(data, 'The draft could not be saved.'); return; }
+                await loadForEdit(data.id, true);
+                showMsg('composeMessage', data.message || 'Draft saved.', 'ok');
+                loadList();
+            } catch (e) {
+                failMessage(null, 'The draft could not be saved.');
+            }
+        });
+    });
+
+    // ============================================
+    // SEND OR SCHEDULE (asks first)
+    // ============================================
+    document.getElementById('sendBtn').addEventListener('click', function () {
+        if (!checkCompose() || !checkTarget() || !counts) return;
+        const n = counts.recipients;
+        const days = counts.days;
+        const how = (days !== null && days > 1)
+            ? 'With your daily limit this takes about ' + days + ' days.'
+            : 'With your daily limit this goes out today.';
+        if (when === 'later') {
+            const value = document.getElementById('laterInput').value;
+            if (!laterLabel(value)) { showMsg('composeMessage', 'Choose a date and time.', 'error'); return; }
+            openConfirm('Schedule this broadcast?',
+                'Send to ' + fmt(n) + ' member' + (n === 1 ? '' : 's') + ' on ' + laterLabel(value) + ' (UK time)? ' + how,
+                'Schedule', async () => {
+                    const data = await postForm(buildForm('schedule', { scheduledFor: value }));
+                    if (!data.success) { confirmError(data.message || 'The broadcast could not be scheduled.'); return false; }
+                    afterSend(data.message);
+                    return true;
+                });
+        } else {
+            openConfirm('Send this broadcast?',
+                'Send to ' + fmt(n) + ' member' + (n === 1 ? '' : 's') + '? ' + how,
+                'Send to ' + fmt(n) + ' member' + (n === 1 ? '' : 's'), async () => {
+                    const data = await postForm(buildForm('sendNow'));
+                    if (!data.success) { confirmError(data.message || 'The broadcast could not be sent.'); return false; }
+                    afterSend(data.message);
+                    return true;
+                });
+        }
+    });
+
+    function afterSend(message) {
+        resetCompose();
+        showMsg('pageMessage', message, 'ok');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        loadList();
+    }
+
+    function resetCompose() {
+        editingId = null;
+        savedAttachment = null;
+        removeSaved = false;
+        document.getElementById('subjectInput').value = '';
+        document.getElementById('subjectInput').removeAttribute('aria-invalid');
+        if (editor) editor.setHtml('');
+        clearFile();
+        chosenGrades = [];
+        renderGradeButtons();
+        setTarget('all');
+        document.getElementById('laterInput').value = '';
+        setWhen('now');
+        renderSavedAttachment();
+        document.getElementById('editingBar').classList.add('hidden');
+        showMsg('composeMessage', '');
+    }
+    document.getElementById('newBroadcastBtn').addEventListener('click', resetCompose);
+
+    // Load a draft or scheduled broadcast into the form
+    async function loadForEdit(id, quiet) {
+        const data = await getJson(API + '?action=get&id=' + encodeURIComponent(id));
+        if (!data.success) {
+            showMsg('pageMessage', data.message || 'The broadcast could not be opened.', 'error');
+            return false;
+        }
+        const b = data.broadcast;
+        editingId = b.id;
+        document.getElementById('subjectInput').value = b.subject;
+        editor.setHtml(b.bodyHtml);
+        chosenGrades = (b.targetGrades || []).map(Number).filter(id => grades.some(g => g.id === id));
+        renderGradeButtons();
+        setTarget(b.targetType);
+        clearFile();
+        savedAttachment = b.attachmentName || null;
+        removeSaved = false;
+        renderSavedAttachment();
+        if (b.status === 'scheduled' && b.scheduledFor) {
+            document.getElementById('laterInput').value = b.scheduledFor;
+            setWhen('later');
+        } else {
+            document.getElementById('laterInput').value = '';
+            setWhen('now');
+        }
+        document.getElementById('editingText').textContent = b.status === 'scheduled'
+            ? 'Editing a scheduled broadcast. Saving it as a draft stops the schedule.'
+            : 'Editing a draft';
+        document.getElementById('editingBar').classList.remove('hidden');
+        if (!quiet) {
+            showMsg('composeMessage', '');
+            document.getElementById('composeHeading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        return true;
+    }
+
+    // ============================================
+    // SENT AND SCHEDULED
+    // ============================================
+    async function loadList() {
+        try {
+            const data = await getJson(API + '?action=list');
+            if (!data.success) {
+                document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">' + esc(data.message || 'The list could not be loaded.') + '</td></tr>';
+                return null;
+            }
+            grades = data.grades || [];
+            perDay = data.perDay;
+            canEdit = data.canEdit !== false;
+            if (!data.schemaReady) {
+                showMsg('pageMessage', 'Drafts and scheduling need database/grading-broadcasts.sql to be run first.', 'warn');
+            }
+            renderList(data.broadcasts || []);
+            applyReadOnly();
+            clearTimeout(pollTimer);
+            document.getElementById('refreshNote').classList.toggle('hidden', !data.anySending);
+            if (data.anySending) pollTimer = setTimeout(loadList, 10000);
+            return data;
+        } catch (e) {
+            document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">The list could not be loaded.</td></tr>';
+            return null;
+        }
+    }
+
+    function applyReadOnly() {
+        document.getElementById('readOnlyNote').classList.toggle('hidden', canEdit);
+        ['testBtn', 'draftBtn'].forEach(id => { document.getElementById(id).disabled = !canEdit; });
+        if (!canEdit) document.getElementById('sendBtn').disabled = true;
+    }
+
+    function actionButton(label, action, id, extraClass) {
+        return '<button type="button" class="btn-plain btn-sm ' + (extraClass || '') + '" data-action="' + action + '" data-id="' + id + '"' + (canEdit ? '' : ' disabled') + '>' + esc(label) + '</button>';
+    }
+
+    function renderList(rows) {
+        const body = document.getElementById('historyBody');
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">No broadcasts yet</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(b => {
+            const total = b.total || 0;
+            const done = b.sent + b.failed;
+            const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+            const status = STATUS_LABELS[b.status] ? b.status : 'draft';
+            const label = STATUS_LABELS[b.status] || b.status;
+            let progress;
+            if (b.status === 'draft' || b.status === 'scheduled') {
+                progress = '<span class="text-gray-400">' + fmt(total) + ' recipient' + (total === 1 ? '' : 's') + ' now</span>';
+            } else {
+                progress = '<div>' + fmt(b.sent) + ' of ' + fmt(total) + ' sent &bull; ' + fmt(b.failed) + ' failed</div>'
+                    + '<div class="progress-track mt-1" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Progress"><div class="progress-fill" style="width: ' + pct + '%;"></div></div>';
+            }
+            const actions = [];
+            if (b.status === 'draft' || b.status === 'scheduled') actions.push(actionButton('Edit', 'edit', b.id));
+            if (b.status === 'sending') actions.push(actionButton('Pause', 'pause', b.id));
+            if (b.status === 'paused') actions.push(actionButton('Resume', 'resume', b.id));
+            if (b.status === 'sending' || b.status === 'scheduled' || b.status === 'paused') actions.push(actionButton('Cancel', 'cancel', b.id, 'btn-danger'));
+            actions.push(actionButton('Duplicate', 'duplicate', b.id));
+            return '<tr class="align-top">'
+                + '<td class="px-3 sm:px-4 py-3 text-xs sm:text-sm text-white font-bold break-words max-w-xs">' + esc(b.subject)
+                + '<div class="sm:hidden text-xs text-gray-400 font-semibold mt-1">' + esc(b.sentTo) + '</div>'
+                + (b.scheduledLabel ? '<div class="text-xs theme-primary-text font-bold mt-1">' + esc(b.scheduledLabel) + ' (UK)</div>' : '')
+                + '</td>'
+                + '<td class="px-3 sm:px-4 py-3 text-xs sm:text-sm text-gray-300 font-semibold hidden sm:table-cell">' + esc(b.sentTo) + '</td>'
+                + '<td class="px-3 sm:px-4 py-3"><span class="tag tag-' + status + '">' + esc(label) + '</span></td>'
+                + '<td class="px-3 sm:px-4 py-3 text-xs text-gray-300 font-semibold min-w-[10rem]">' + progress + '</td>'
+                + '<td class="px-3 sm:px-4 py-3 text-xs text-gray-300 font-semibold hidden md:table-cell whitespace-nowrap">' + esc(formatDate(b.created)) + '</td>'
+                + '<td class="px-3 sm:px-4 py-3"><div class="flex flex-wrap justify-end gap-2">' + actions.join('') + '</div></td>'
+                + '</tr>';
+        }).join('');
+    }
+
+    document.getElementById('historyBody').addEventListener('click', function (e) {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn || btn.disabled) return;
+        const id = parseInt(btn.dataset.id, 10);
+        const action = btn.dataset.action;
+        if (action === 'edit') { loadForEdit(id); return; }
+        if (action === 'cancel') {
+            openConfirm('Cancel this broadcast?', 'Nothing more is sent. Emails already sent stay sent. This cannot be undone.', 'Cancel the broadcast', async () => {
+                const data = await postJson({ action: 'cancel', id: id });
+                if (!data.success) { confirmError(data.message || 'The broadcast could not be cancelled.'); return false; }
+                if (editingId === id) resetCompose();
+                showMsg('pageMessage', data.message, 'ok');
+                loadList();
+                return true;
+            });
+            return;
+        }
+        btn.disabled = true;
+        postJson({ action: action, id: id }).then(data => {
+            showMsg('pageMessage', data.message || (data.success ? 'Done.' : 'That did not work.'), data.success ? 'ok' : 'error');
+            loadList();
+            if (data.success && action === 'duplicate' && data.id) loadForEdit(data.id);
+        }).catch(() => {
+            showMsg('pageMessage', 'That did not work. Please try again.', 'error');
+            btn.disabled = false;
+        });
+    });
+
+    // ============================================
+    // DIALOGS
+    // ============================================
+    let confirmAction = null;
+
+    function openDialog(id, focusId) {
+        lastFocus = document.activeElement;
+        document.getElementById(id).classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        const f = document.getElementById(focusId);
+        if (f) f.focus();
+    }
+
+    function closeDialog(id) {
+        document.getElementById(id).classList.add('hidden');
+        document.body.style.overflow = '';
+        if (id === 'previewDialog') document.getElementById('previewFrame').srcdoc = '';
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    function openConfirm(title, text, okLabel, action) {
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmText').textContent = text;
+        document.getElementById('confirmOk').textContent = okLabel;
+        showMsg('confirmMessage', '');
+        confirmAction = action;
+        openDialog('confirmDialog', 'confirmOk');
+    }
+
+    function confirmError(text) { showMsg('confirmMessage', text, 'error'); }
+
+    document.getElementById('confirmCancel').addEventListener('click', () => closeDialog('confirmDialog'));
+    document.getElementById('confirmOk').addEventListener('click', async function () {
+        if (!confirmAction) return;
+        this.disabled = true;
+        try {
+            const ok = await confirmAction();
+            if (ok) closeDialog('confirmDialog');
+        } catch (e) {
+            confirmError('That did not work. Please try again.');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        ['previewDialog', 'confirmDialog'].forEach(id => {
+            if (!document.getElementById(id).classList.contains('hidden')) closeDialog(id);
+        });
+    });
+    ['previewDialog', 'confirmDialog'].forEach(id => {
+        document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) closeDialog(id); });
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

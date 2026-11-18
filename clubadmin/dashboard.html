@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organiser Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
+        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .stat-box { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border: 4px solid #374151; transition: all 0.3s ease; }
+        .stat-box:hover { border-color: var(--theme-primary); transform: translateY(-5px); }
+        .action-card { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); transition: all 0.3s ease; }
+        .action-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3); }
+        @media (max-width: 768px) {
+            .theme-switcher-btn { width: 24px; height: 24px; }
+            .theme-switcher-btn.active::after { font-size: 10px; }
+            .stat-box { border-width: 2px; }
+            .stat-box:hover { transform: translateY(-2px); }
+            .action-card { border-width: 2px; }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Admin</span> Dashboard</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Welcome, <span id="welcomeName" class="theme-primary-text"></span></p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div class="stat-box p-4 sm:p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 font-black uppercase mb-2">Total Tournaments</p>
+                        <p class="text-3xl sm:text-4xl font-black theme-primary-text" id="totalTournaments">0</p>
+                    </div>
+                    <div class="theme-primary-bg p-3 sm:p-4 border-2 sm:border-4 border-gray-700">
+                        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-box p-4 sm:p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 font-black uppercase mb-2">Pending Approval</p>
+                        <p class="text-3xl sm:text-4xl font-black text-yellow-400" id="pendingTournaments">0</p>
+                    </div>
+                    <div class="bg-yellow-500 p-3 sm:p-4 border-2 sm:border-4 border-gray-700">
+                        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-box p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 font-black uppercase mb-2">Completed</p>
+                        <p class="text-3xl sm:text-4xl font-black text-blue-400" id="completedTournaments">0</p>
+                    </div>
+                    <div class="bg-blue-500 p-3 sm:p-4 border-2 sm:border-4 border-gray-700">
+                        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 class="text-xl sm:text-2xl font-black theme-primary-text uppercase mb-4 sm:mb-6">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <a href="/clubadmin/create-tournament" class="action-card flex items-center p-4 sm:p-6 border-2 sm:border-4 border-gray-700 hover:border-emerald-500">
+                    <div class="theme-primary-bg p-3 sm:p-4 border-2 sm:border-4 border-gray-700 mr-4 sm:mr-6">
+                        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-white uppercase text-base sm:text-lg mb-1">Create Tournament</h3>
+                        <p class="text-xs text-gray-400 uppercase font-bold">Set up a new tournament</p>
+                    </div>
+                </a>
+
+                <a href="/clubadmin/tournaments" class="action-card flex items-center p-4 sm:p-6 border-2 sm:border-4 border-gray-700 hover:border-blue-500">
+                    <div class="bg-blue-500 p-3 sm:p-4 border-2 sm:border-4 border-gray-700 mr-4 sm:mr-6">
+                        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-white uppercase text-base sm:text-lg mb-1">My Tournaments</h3>
+                        <p class="text-xs text-gray-400 uppercase font-bold">Manage & submit results</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-4 border-gray-700 bg-slate-800">
+                <h2 class="text-xl sm:text-2xl font-black theme-primary-text uppercase">Recent Tournaments</h2>
+            </div>
+            <div class="p-4 sm:p-6">
+                <div id="recentTournaments">
+                    <p class="text-gray-400 text-center py-8 font-bold uppercase text-xs sm:text-sm">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // Page guard and shared header
+    // ============================================
+    KBFShell.start({ anyOf: ['tournaments.organise_own'], active: 'my-tournaments' }).then(function (user) {
+        document.getElementById('welcomeName').textContent = user.name;
+        loadDashboardData();
+    });
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getCSRFToken() {
+        return sessionStorage.getItem('csrf_token');
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        
+        if (!options.headers) {
+            options.headers = {};
+        }
+        
+        if (token) {
+            options.headers['X-CSRF-Token'] = token;
+        }
+        
+        options.credentials = 'include';
+        
+        return fetch(url, options);
+    }
+
+    function getStatusColor(status) {
+        const colors = {
+            'Approved': 'bg-green-500 text-slate-900 border-gray-700',
+            'Completed': 'bg-blue-500 text-slate-900 border-gray-700',
+            'Pending': 'bg-yellow-500 text-slate-900 border-gray-700',
+            'Rejected': 'bg-red-500 text-white border-gray-700'
+        };
+        return colors[status] || 'bg-gray-500 text-white border-gray-700';
+    }
+
+    // ============================================
+    // DATA LOADING FUNCTIONS
+    // ============================================
+    async function loadDashboardData() {
+        try {
+            const response = await authenticatedFetch('/api/tournaments.php?mine=1');
+            const data = await response.json();
+            
+            if (data.success) {
+                const tournaments = data.tournaments;
+                document.getElementById('totalTournaments').textContent = tournaments.length;
+                document.getElementById('pendingTournaments').textContent = 
+                    tournaments.filter(t => t.Status === 'Pending').length;
+                document.getElementById('completedTournaments').textContent = 
+                    tournaments.filter(t => t.Status === 'Completed').length;
+                displayRecentTournaments(tournaments.slice(0, 5));
+            }
+        } catch (error) {
+            console.error('Error loading tournaments:', error);
+        }
+    }
+
+    function displayRecentTournaments(tournaments) {
+        const container = document.getElementById('recentTournaments');
+        
+        if (tournaments.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 text-center py-8 font-bold uppercase text-xs sm:text-sm">No tournaments yet</p>';
+            return;
+        }
+
+        // SECURITY: HTML escape function
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        container.innerHTML = `
+            <div class="overflow-x-auto -mx-4 sm:mx-0">
+                <table class="min-w-full">
+                    <thead class="bg-slate-800 border-b-2 sm:border-b-4 border-gray-700">
+                        <tr>
+                            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-black theme-primary-text uppercase">Tournament</th>
+                            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-black theme-primary-text uppercase hidden sm:table-cell">Date</th>
+                            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-black theme-primary-text uppercase">Status</th>
+                            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-black theme-primary-text uppercase hidden md:table-cell">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+    ${tournaments.map(t => {
+        // Check if results have been submitted
+        const hasMatches = (parseInt(t.MatchCount, 10) || 0) > 0 || (parseInt(t.HasMatches, 10) || 0) > 0;
+        
+        return `
+            <tr class="hover:bg-slate-800 transition">
+                <td class="px-3 sm:px-6 py-3 sm:py-4">
+                    <div class="text-xs sm:text-sm font-black text-white uppercase">${escapeHtml(t.Name)}</div>
+                    <div class="text-xs text-gray-400 font-semibold">${escapeHtml(t.Venue)}</div>
+                    ${(t.OrganiserName || t.ClubName) ? `<div class="text-xs text-gray-500 font-semibold">Organiser: ${escapeHtml(t.OrganiserName || t.ClubName)}</div>` : ''}
+                    <div class="text-xs text-gray-500 font-bold sm:hidden mt-1">
+                        ${new Date(t.TournamentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-400 font-bold hidden sm:table-cell">
+                    ${new Date(t.TournamentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4">
+                    <span class="px-2 sm:px-3 py-1 text-xs font-black uppercase border-2 ${getStatusColor(t.Status)}">
+                        ${escapeHtml(t.Status)}
+                    </span>
+                    ${t.Status === 'Approved' && hasMatches ? 
+                        `<div class="mt-2"><span class="px-2 py-1 text-xs font-black uppercase border-2 bg-yellow-500/20 border-yellow-500 text-yellow-400">Results Pending Approval</span></div>` 
+                        : ''
+                    }
+                    <div class="mt-2 md:hidden">
+                        ${t.Status === 'Approved' && !hasMatches ? 
+                            `<a href="/clubadmin/submit-results?id=${t.TournamentId}" class="theme-primary-text font-black uppercase text-xs hover:opacity-80">Submit Results →</a>` :
+                        t.Status === 'Approved' && hasMatches ?
+                            `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase text-xs hover:opacity-80">View Results →</a>` :
+                        t.Status === 'Completed' ?
+                            `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase text-xs hover:opacity-80">View Details →</a>` :
+                            `<span class="text-gray-500 font-bold uppercase text-xs">No Actions</span>`
+                        }
+                    </div>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm hidden md:table-cell">
+                    ${t.Status === 'Approved' && !hasMatches ? 
+                        `<a href="/clubadmin/submit-results?id=${t.TournamentId}" class="theme-primary-text font-black uppercase hover:opacity-80">Submit Results →</a>` :
+                    t.Status === 'Approved' && hasMatches ?
+                        `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase hover:opacity-80">View Results →</a>` :
+                    t.Status === 'Completed' ?
+                        `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase hover:opacity-80">View Details →</a>` :
+                        `<span class="text-gray-500 font-bold uppercase text-xs">No Actions</span>`
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('')}
+</tbody>
+                </table>
+            </div>
+        `;
+    }
+</script>
+<script src="/js/session-manager.js"></script>
+</body>
+</html>

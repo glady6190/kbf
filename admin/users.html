@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People - Admin</title>
+    <meta name="robots" content="noindex">
+    <script>
+    // This page is now part of the People page. Any query string is kept.
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var query = params.toString();
+        window.location.replace('/admin/people' + (query ? '?' + query : '') + window.location.hash);
+    })();
+    </script>
+    <style>body { background: #020617; color: #e5e7eb; font-family: system-ui, sans-serif; padding: 2rem; } a { color: #10b981; font-weight: 700; }</style>
+</head>
+<body>
+    <p>This page has moved to <a href="/admin/people">People</a>.</p>
+</body>
+</html>

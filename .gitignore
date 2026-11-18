@@ -1,0 +1,35 @@
+# Secrets: keep only the example file
+.env
+.env.*
+!.env.example
+
+# Members' photos and files: ignore everything, keep only the folder .htaccess rules
+/uploads/**
+!/uploads/**/
+!/uploads/**/.htaccess
+
+# Runtime files (maintenance.flag, attachments, locks, caches): keep only .htaccess
+/storage/**
+!/storage/**/
+!/storage/**/.htaccess
+
+# Local tools and dependencies
+.claude/
+node_modules/
+
+# Logs
+*.log
+
+# Local database dumps and backups
+*.sql.gz
+*.sql.zip
+*.dump
+*.bak
+*.backup
+*.zip
+*.tar
+*.tar.gz
+*.7z
+/backups/
+/dumps/
+/*.sql

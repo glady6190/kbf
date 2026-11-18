@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        
+        .theme-switcher-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 3px solid transparent; cursor: pointer;
+            transition: all 0.3s ease; position: relative;
+        }
+        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
+        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 15px currentColor; }
+        .theme-switcher-btn.active::after {
+            content: '✓'; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); color: white;
+            font-weight: bold; font-size: 20px;
+        }
+        
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        
+        /* ============================================
+           NEWS PAGE: toolbar, list view, grid view
+           Theme colour only via var(--theme-primary); text on it is #0F172A.
+           ============================================ */
+        .nw-clamp-1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .nw-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .nw-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+        /* Toolbar */
+        .nw-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 28px; }
+        .nw-tabs { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 6px 6px 0; }
+        .nw-tab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #0F172A; border: 4px solid #374151; color: #D1D5DB; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; transition: border-color .2s ease, color .2s ease; }
+        .nw-tab:hover { color: #fff; border-color: #6B7280; }
+        .nw-tab[aria-pressed="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 5px 5px 0 var(--theme-primary); }
+        .nw-tab-count { font-size: 11px; font-weight: 900; opacity: .8; }
+        .nw-tools { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+        .nw-search { position: relative; }
+        .nw-search .nw-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none; }
+        .nw-search input { width: 240px; background: #0F172A; border: 4px solid #374151; color: #fff; font-weight: 700; font-size: 14px; padding: 9px 12px 9px 38px; }
+        .nw-search input::placeholder { color: #6B7280; }
+        .nw-search input:focus { outline: none; border-color: var(--theme-primary); }
+        .nw-views { display: flex; }
+        .nw-view { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; background: #0F172A; border: 4px solid #374151; color: #D1D5DB; font-weight: 900; font-size: 12px; text-transform: uppercase; }
+        .nw-view + .nw-view { border-left-width: 0; }
+        .nw-view:hover { color: #fff; }
+        .nw-view[aria-pressed="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .nw-tab:focus-visible, .nw-view:focus-visible, .nw-btn:focus-visible, .nw-chip button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Tournament filter chip */
+        .nw-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; margin-bottom: 24px; background: #0F172A; border: 4px solid var(--theme-primary); color: #fff; font-weight: 800; font-size: 13px; max-width: 100%; }
+        .nw-chip span { min-width: 0; }
+        .nw-chip button { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: 11px; text-transform: uppercase; flex-shrink: 0; }
+
+        /* Shared item pieces */
+        .nw-panel { border: 4px solid #374151; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); color: inherit; transition: border-color .2s ease; }
+        .nw-panel:hover, .nw-panel:focus-visible { border-color: var(--theme-primary); outline: none; }
+        .nw-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .nw-tag { display: inline-block; padding: 3px 8px; background: var(--theme-primary); color: #0F172A; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+        .nw-date { display: inline-flex; align-items: center; gap: 6px; color: #9CA3AF; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+        .nw-date .nw-icon { width: 14px; height: 14px; }
+        .nw-tourney { display: flex; align-items: center; gap: 6px; color: #D1D5DB; font-size: 13px; font-weight: 700; min-width: 0; margin-top: 6px; }
+        .nw-tourney .nw-icon { color: var(--theme-primary); }
+        .nw-excerpt { color: #9CA3AF; font-size: 14px; line-height: 1.55; font-weight: 500; margin-top: 8px; }
+        .nw-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--theme-primary); font-size: 12px; font-weight: 900; text-transform: uppercase; }
+        .nw-placeholder { color: #4B5563; }
+        .nw-placeholder.nw-icon { width: 44px; height: 44px; }
+
+        /* Thumbnails, stacks and badges */
+        .nw-thumb { width: 132px; height: 176px; flex-shrink: 0; background: #0B1324; border: 3px solid #374151; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .nw-thumb img { width: 100%; height: 100%; object-fit: contain; }
+        .nw-stack { position: relative; width: 142px; height: 186px; flex-shrink: 0; }
+        .nw-stack .nw-thumb { position: absolute; }
+        .nw-stack .nw-thumb-back { top: 0; left: 10px; opacity: .55; }
+        .nw-stack .nw-thumb-front { top: 10px; left: 0; }
+        .nw-badge { position: absolute; right: 0; bottom: 0; min-width: 32px; height: 32px; padding: 0 6px; display: flex; align-items: center; justify-content: center; background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: 14px; border: 3px solid #0F172A; }
+
+        /* Promotions */
+        .nw-avatar { width: 60px; height: 60px; flex-shrink: 0; border-radius: 9999px; border: 3px solid var(--theme-primary); background: #0B1324; color: #fff; font-weight: 900; font-size: 18px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .nw-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .nw-promo-line { color: #fff; font-weight: 900; font-size: 16px; text-transform: uppercase; }
+        .nw-promo-line .nw-promo-mid { color: #9CA3AF; font-weight: 700; text-transform: none; }
+        .nw-promo-line .nw-promo-new { color: var(--theme-primary); }
+        .nw-grades { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .nw-grade-old, .nw-grade-new { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; }
+        .nw-grade-old { border: 3px solid #374151; color: #fff; background: #0F172A; }
+        .nw-grade-new { background: var(--theme-primary); color: #0F172A; box-shadow: 0 0 16px -2px var(--theme-primary); }
+        .nw-grades .nw-icon { color: #9CA3AF; }
+        .nw-chevron { color: #6B7280; flex-shrink: 0; }
+
+        /* List view */
+        .nw-list { display: flex; flex-direction: column; gap: 16px; }
+        .nw-row { display: flex; align-items: stretch; gap: 20px; padding: 16px; }
+        .nw-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+        .nw-row-title { color: #fff; font-size: 22px; font-weight: 900; text-transform: uppercase; line-height: 1.15; }
+        .nw-row.nw-promo { align-items: center; padding: 14px 16px; }
+        .nw-row-titles { color: #9CA3AF; font-size: 14px; font-weight: 600; line-height: 1.5; margin-top: 6px; }
+        .nw-btn { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; margin-top: 12px; padding: 8px 14px; border: 3px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; font-size: 12px; text-transform: uppercase; }
+        .nw-panel:hover .nw-btn, .nw-panel:focus-visible .nw-btn { background: var(--theme-primary); color: #0F172A; }
+
+        /* Grid view */
+        .nw-grid { display: grid; grid-template-columns: 1fr; gap: 26px; }
+        @media (min-width: 768px) { .nw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .nw-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .nw-card { display: flex; flex-direction: column; height: 100%; }
+        .nw-card-media { position: relative; height: 220px; background: #0B1324; border-bottom: 4px solid #374151; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; overflow: hidden; }
+        .nw-card-media > img { width: 100%; height: 100%; object-fit: contain; }
+        .nw-card-media .nw-tag { position: absolute; top: 12px; left: 12px; z-index: 2; }
+        .nw-card-media .nw-avatar { width: 96px; height: 96px; font-size: 28px; }
+        .nw-card-media .nw-stack { transform: scale(.85); }
+        .nw-card-body { flex: 1; display: flex; flex-direction: column; padding: 18px; }
+        .nw-card-title { color: #fff; font-size: 19px; font-weight: 900; text-transform: uppercase; line-height: 1.2; }
+        .nw-card-footer { margin-top: auto; padding-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 2px solid #374151; }
+        .nw-card-body .nw-excerpt { margin-bottom: 14px; }
+        .nw-card-footer .nw-more { margin-top: 0; }
+
+        /* Phones */
+        @media (max-width: 639px) {
+            .nw-toolbar { gap: 12px; }
+            .nw-tabs { flex-wrap: nowrap; overflow-x: auto; width: 100%; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+            .nw-tools { width: 100%; margin-left: 0; }
+            .nw-search { flex: 1; }
+            .nw-search input { width: 100%; }
+            .nw-view-label { display: none; }
+            .nw-list { gap: 12px; }
+            .nw-row { gap: 12px; padding: 12px; }
+            .nw-thumb { width: 86px; height: 116px; }
+            .nw-stack { width: 94px; height: 124px; }
+            .nw-stack .nw-thumb-back { left: 8px; }
+            .nw-stack .nw-thumb-front { top: 8px; }
+            .nw-badge { min-width: 26px; height: 26px; font-size: 12px; }
+            .nw-row-title { font-size: 14px; }
+            .nw-row .nw-tourney, .nw-row .nw-more { display: none; }
+            .nw-row .nw-excerpt, .nw-row-titles { font-size: 13px; }
+            .nw-avatar { width: 46px; height: 46px; font-size: 15px; }
+            .nw-promo-line { font-size: 14px; }
+            .nw-promo-mid, .nw-promo-new { display: none; }
+            .nw-grade-old, .nw-grade-new { width: 32px; height: 32px; font-size: 13px; }
+            .nw-row .nw-btn { padding: 6px 10px; font-size: 11px; }
+        }
+        
+        /* Dropdown Menu Styles */
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #1e293b;
+    border: 4px solid;
+    border-color: var(--theme-primary);
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid #374151;
+}
+
+.dropdown-menu a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu a:hover {
+    background-color: #0f172a;
+    color: var(--theme-primary);
+    padding-left: 30px;
+}
+
+.dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    font-size: 0.6rem;
+    margin-left: 5px;
+    transition: transform 0.3s;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.dropdown:hover .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Mobile Dropdown */
+.mobile-dropdown-menu {
+    display: none;
+    background-color: #0f172a;
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+}
+
+.mobile-dropdown-menu.active {
+    display: block;
+}
+
+.mobile-dropdown-menu a {
+    display: block;
+    padding: 10px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-left: 3px solid #374151;
+    margin: 5px 0;
+    transition: all 0.2s;
+}
+
+.mobile-dropdown-menu a:hover {
+    border-left-color: var(--theme-primary);
+    color: var(--theme-primary);
+    padding-left: 25px;
+}
+
+
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <!-- Navigation -->
+<nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+                <div class="relative">
+                    <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                    <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                         style="box-shadow: 0 0 12px var(--theme-primary);">
+                        <img src="/assets/images/logo/KBF-Logo.jpeg"
+                             alt="KBF-UK Logo"
+                             class="w-full h-full object-contain">
+                    </div>
+                </div>
+                <div>
+                    <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+                    <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                </div>
+            </a>
+            
+            <div class="hidden md:flex items-center space-x-2">
+                <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Rankings</a>
+                <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
+                <a href="/gallery" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                
+                <!-- Dropdown More Menu -->
+                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
+                        More
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="/news">News</a>
+                        <a href="/register">Register</a>
+                    </div>
+                </div>
+                
+                <!-- Theme Switcher -->
+                <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+                
+                <div class="ml-4">
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
+                        Login
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Mobile menu button -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-btn" class="theme-primary-text p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+            <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Rankings</a>
+            <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+            <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+            
+            <!-- Mobile Dropdown More -->
+            <div>
+                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                    More
+                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                </button>
+                <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                    <a href="/news">News</a>
+                    <a href="/register">Register</a>
+                </div>
+            </div>
+            
+            <!-- Mobile Theme Switcher -->
+            <div class="px-3 py-4 border-t-2 border-gray-700">
+                <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                <div class="flex items-center space-x-3">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+            </div>
+            
+            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+        </div>
+    </div>
+</nav>
+
+    <!-- Page Header -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-4 theme-primary-border py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-5xl font-black uppercase mb-3"><span class="theme-primary-text">Latest</span> News</h1>
+            <div class="h-2 w-32 theme-primary-bg mb-4"></div>
+            <p class="text-xl text-gray-300 font-bold uppercase">Tournament Highlights & Announcements</p>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Toolbar: tabs, search, view -->
+        <div class="nw-toolbar">
+            <div class="nw-tabs" role="group" aria-label="Filter news">
+                <button type="button" class="nw-tab" data-tab="all" aria-pressed="true">All <span class="nw-tab-count" data-count="all">0</span></button>
+                <button type="button" class="nw-tab" data-tab="tournament" aria-pressed="false">Tournament news <span class="nw-tab-count" data-count="tournament">0</span></button>
+                <button type="button" class="nw-tab" data-tab="promotions" aria-pressed="false">Promotions <span class="nw-tab-count" data-count="promotions">0</span></button>
+            </div>
+            <div class="nw-tools">
+                <div class="nw-search">
+                    <label for="newsSearch" class="sr-only">Search news</label>
+                    <svg class="nw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="search" id="newsSearch" placeholder="Search news" autocomplete="off">
+                </div>
+                <div class="nw-views" role="group" aria-label="View">
+                    <button type="button" class="nw-view" data-view="list" aria-pressed="true" aria-label="List view">
+                        <svg class="nw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+                        <span class="nw-view-label">List</span>
+                    </button>
+                    <button type="button" class="nw-view" data-view="grid" aria-pressed="false" aria-label="Grid view">
+                        <svg class="nw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3"/><rect width="7" height="7" x="14" y="3"/><rect width="7" height="7" x="14" y="14"/><rect width="7" height="7" x="3" y="14"/></svg>
+                        <span class="nw-view-label">Grid</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tournament filter (?tournament={id}) -->
+        <div id="tournamentChip" class="nw-chip" hidden>
+            <span id="tournamentChipText" class="nw-clamp-1"></span>
+            <button type="button" id="tournamentClear" aria-label="Clear the tournament filter">
+                <svg class="nw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                Clear
+            </button>
+        </div>
+
+        <div id="loading" class="text-center py-16" role="status">
+            <p class="text-gray-400 font-bold uppercase text-lg">Loading news...</p>
+        </div>
+
+        <div id="newsItems" aria-live="polite"></div>
+
+        <!-- Empty states -->
+        <div id="noPosts" class="hidden text-center py-16">
+            <p class="text-2xl font-black text-white uppercase">No posts yet.</p>
+        </div>
+        <div id="noResults" class="hidden text-center py-16">
+            <p class="text-2xl font-black text-white uppercase mb-5">No posts match your search.</p>
+            <button type="button" id="clearSearch" class="nw-tab" aria-pressed="false">Clear search</button>
+        </div>
+
+        <!-- Paging -->
+        <div id="pager" class="hidden mt-10 flex flex-col items-center gap-4">
+            <p id="pagerText" class="text-gray-400 font-bold uppercase text-sm"></p>
+            <button type="button" id="showMore" class="theme-primary-bg px-8 py-4 font-black uppercase text-sm brutal-shadow transition-all" style="color:#0F172A">Show more posts</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <!-- Shared news and promotion helpers (also used by the home page) -->
+    <script src="/js/news-helpers.js"></script>
+   <script>
+    // ============================================
+    // NEWS PAGE
+    // All published posts are loaded once, sorted newest first and shown as
+    // a list (default) or a grid. Two or more non-promotion posts about the
+    // same tournament become one group item, except while searching or while
+    // a tournament filter (?tournament={id}) is set. 10 items at a time.
+    // Every post value is written with textContent, never as HTML.
+    // ============================================
+    const N = KBFNews;
+    const PAGE_SIZE = 10;
+    const VIEW_KEY = 'kbf-news-view';
+
+    let allPosts = [];
+    const state = { tab: 'all', q: '', tournament: null, view: 'list', shown: PAGE_SIZE };
+    let searchTimer = null;
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
+        });
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+        }
+    }
+
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    // Only site paths or https addresses are used as image sources
+    function safeImage(path) {
+        if (typeof path !== 'string') return null;
+        const value = path.trim();
+        if (/^\/(?!\/)[^\s"'<>]*$/.test(value) || /^https:\/\/[^\s"'<>]+$/i.test(value)) return value;
+        return null;
+    }
+
+    // Post text from the database may carry HTML entities: shown as plain text
+    function text(value) {
+        return N.plainText(value).replace(/\s+/g, ' ').trim();
+    }
+
+    function hasTournament(post) {
+        return Number(post.TournamentId) > 0;
+    }
+
+    function sortTime(post) {
+        const d = N.postDate(post);
+        return d ? d.getTime() : 0;
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        changeTheme(savedTheme);
+        readUrl(true);
+        wireToolbar();
+        loadNews();
+    });
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    // ?view=grid and ?tournament={id}; the view otherwise comes from this device
+    function readUrl(first) {
+        const params = new URLSearchParams(window.location.search);
+        const t = parseInt(params.get('tournament'), 10);
+        state.tournament = t > 0 ? t : null;
+        let view = params.get('view');
+        if (view !== 'list' && view !== 'grid' && first) {
+            try { view = localStorage.getItem(VIEW_KEY); } catch (e) { view = null; }
+        }
+        if (view === 'list' || view === 'grid') state.view = view;
+    }
+
+    function writeUrl(push) {
+        const params = new URLSearchParams(window.location.search);
+        if (state.tournament) params.set('tournament', String(state.tournament)); else params.delete('tournament');
+        if (params.has('view')) params.set('view', state.view);
+        const query = params.toString();
+        const url = window.location.pathname + (query ? '?' + query : '');
+        if (push) history.pushState(null, '', url); else history.replaceState(null, '', url);
+    }
+
+    window.addEventListener('popstate', function () {
+        readUrl(false);
+        state.shown = PAGE_SIZE;
+        render();
+    });
+
+    // ============================================
+    // TOOLBAR
+    // ============================================
+    function wireToolbar() {
+        document.querySelectorAll('.nw-tab[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.tab = btn.dataset.tab;
+                state.shown = PAGE_SIZE;
+                render();
+            });
+        });
+        document.querySelectorAll('.nw-view').forEach(btn => {
+            btn.addEventListener('click', () => setView(btn.dataset.view));
+        });
+        const search = document.getElementById('newsSearch');
+        search.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                state.q = search.value.trim().toLowerCase();
+                state.shown = PAGE_SIZE;
+                render();
+            }, 150);
+        });
+        document.getElementById('clearSearch').addEventListener('click', () => {
+            search.value = '';
+            state.q = '';
+            state.shown = PAGE_SIZE;
+            render();
+            search.focus();
+        });
+        document.getElementById('tournamentClear').addEventListener('click', () => {
+            state.tournament = null;
+            state.shown = PAGE_SIZE;
+            writeUrl(true);
+            render();
+        });
+        document.getElementById('showMore').addEventListener('click', () => {
+            state.shown += PAGE_SIZE;
+            render();
+        });
+    }
+
+    function setView(view) {
+        if (view !== 'list' && view !== 'grid') return;
+        state.view = view;
+        try { localStorage.setItem(VIEW_KEY, view); } catch (e) { /* ignore */ }
+        writeUrl(false);
+        render();
+    }
+
+    // Filter to one tournament's posts, ungrouped (shareable address)
+    function showTournament(id) {
+        state.tournament = id;
+        state.shown = PAGE_SIZE;
+        writeUrl(true);
+        render();
+        document.getElementById('tournamentChip').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ============================================
+    // DATA
+    // ============================================
+    async function loadNews() {
+        try {
+            const response = await fetch('/api/announcements.php?limit=500', { credentials: 'include' });
+            const data = await response.json();
+            document.getElementById('loading').classList.add('hidden');
+            if (!data.success) throw new Error('not loaded');
+
+            allPosts = (data.announcements || []).slice();
+            allPosts.forEach(p => {
+                p._promotion = N.isPromotion(p);
+                p._title = text(p.Title);
+                p._tournament = text(p.TournamentName);
+                p._excerpt = N.excerpt(p);
+                p._search = (p._title + ' ' + p._tournament + ' ' + p._excerpt).toLowerCase();
+            });
+            // Newest first by PublishedDate (falling back to CreatedDate)
+            allPosts.sort((a, b) => (sortTime(b) - sortTime(a)) || (Number(b.AnnouncementId) - Number(a.AnnouncementId)));
+
+            // Tab counts are numbers of posts, not items
+            document.querySelector('[data-count="all"]').textContent = allPosts.length;
+            document.querySelector('[data-count="tournament"]').textContent = allPosts.filter(p => !p._promotion && hasTournament(p)).length;
+            document.querySelector('[data-count="promotions"]').textContent = allPosts.filter(p => p._promotion).length;
+
+            render();
+        } catch (error) {
+            console.error('Error loading news:', error);
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+            loading.textContent = '';
+            loading.appendChild(N.el('p', 'text-red-400 font-bold uppercase text-lg', 'The news could not be loaded. Please try again later.'));
+        }
+    }
+
+    function filteredPosts() {
+        let list = allPosts;
+        if (state.tab === 'tournament') list = list.filter(p => !p._promotion && hasTournament(p));
+        if (state.tab === 'promotions') list = list.filter(p => p._promotion);
+        if (state.tournament) list = list.filter(p => Number(p.TournamentId) === state.tournament);
+        if (state.q) list = list.filter(p => p._search.indexOf(state.q) !== -1);
+        return list;
+    }
+
+    // Items to show: posts, promotions and (when not searching or filtering
+    // by tournament) groups of 2+ non-promotion posts about one tournament,
+    // placed at the date of their newest post
+    function buildItems(list) {
+        const groupable = !state.q && !state.tournament;
+        const byTournament = {};
+        if (groupable) {
+            list.forEach(p => {
+                if (!p._promotion && hasTournament(p)) {
+                    const key = Number(p.TournamentId);
+                    (byTournament[key] = byTournament[key] || []).push(p);
+                }
+            });
+        }
+        const items = [];
+        const placed = {};
+        list.forEach(p => {
+            const key = Number(p.TournamentId);
+            if (groupable && !p._promotion && hasTournament(p) && byTournament[key].length >= 2) {
+                if (placed[key]) return;
+                placed[key] = true;
+                items.push({ type: 'group', tournamentId: key, posts: byTournament[key] });
+                return;
+            }
+            items.push({ type: p._promotion ? 'promotion' : 'post', post: p });
+        });
+        return items;
+    }
+
+    // ============================================
+    // RENDER
+    // ============================================
+    function render() {
+        document.querySelectorAll('.nw-tab[data-tab]').forEach(btn => {
+            btn.setAttribute('aria-pressed', btn.dataset.tab === state.tab ? 'true' : 'false');
+        });
+        document.querySelectorAll('.nw-view').forEach(btn => {
+            btn.setAttribute('aria-pressed', btn.dataset.view === state.view ? 'true' : 'false');
+        });
+
+        // Tournament chip
+        const chip = document.getElementById('tournamentChip');
+        if (state.tournament) {
+            const match = allPosts.find(p => Number(p.TournamentId) === state.tournament && p._tournament);
+            document.getElementById('tournamentChipText').textContent =
+                'Showing posts about ' + (match ? match._tournament : 'this tournament');
+            chip.hidden = false;
+        } else {
+            chip.hidden = true;
+        }
+
+        const list = filteredPosts();
+        const items = buildItems(list);
+        const container = document.getElementById('newsItems');
+        container.textContent = '';
+        container.className = state.view === 'grid' ? 'nw-grid' : 'nw-list';
+
+        document.getElementById('noPosts').classList.toggle('hidden', !(list.length === 0 && !state.q));
+        document.getElementById('noResults').classList.toggle('hidden', !(list.length === 0 && state.q));
+
+        const visible = items.slice(0, state.shown);
+        visible.forEach(item => {
+            container.appendChild(state.view === 'grid' ? gridItem(item) : listItem(item));
+        });
+
+        const postsShown = visible.reduce((n, item) => n + (item.type === 'group' ? item.posts.length : 1), 0);
+        const pager = document.getElementById('pager');
+        pager.classList.toggle('hidden', list.length === 0);
+        document.getElementById('pagerText').textContent = 'Showing ' + postsShown + ' of ' + list.length + ' post' + (list.length === 1 ? '' : 's');
+        document.getElementById('showMore').classList.toggle('hidden', items.length <= state.shown);
+    }
+
+    // ---------- shared pieces ----------
+    function meta(tagText, dateText) {
+        const row = N.el('div', 'nw-meta');
+        row.appendChild(N.el('span', 'nw-tag', tagText));
+        const date = N.el('span', 'nw-date');
+        date.appendChild(N.icon('calendar', 'nw-icon'));
+        date.appendChild(N.el('span', '', dateText));
+        row.appendChild(date);
+        return row;
+    }
+
+    function thumb(post, extraClass) {
+        const box = N.el('span', 'nw-thumb' + (extraClass ? ' ' + extraClass : ''));
+        const placeholder = () => { box.textContent = ''; box.appendChild(N.icon('newspaper', 'nw-icon nw-placeholder')); };
+        const src = post ? safeImage(post.FeaturedImage) : null;
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.addEventListener('error', placeholder);
+            box.appendChild(img);
+        } else {
+            placeholder();
+        }
+        return box;
+    }
+
+    // Two thumbnails, the newest post with an image in front, and the count
+    function stack(group) {
+        const withImage = group.posts.filter(p => safeImage(p.FeaturedImage));
+        const front = withImage[0] || group.posts[0];
+        const back = withImage[1] || group.posts.find(p => p !== front) || null;
+        const box = N.el('span', 'nw-stack');
+        box.appendChild(thumb(back && back !== front ? back : null, 'nw-thumb-back'));
+        box.appendChild(thumb(withImage[0] || null, 'nw-thumb-front'));
+        const badge = N.el('span', 'nw-badge', String(group.posts.length));
+        badge.setAttribute('aria-hidden', 'true');
+        box.appendChild(badge);
+        return box;
+    }
+
+    function avatar(post, name) {
+        const box = N.el('span', 'nw-avatar');
+        box.setAttribute('aria-hidden', 'true');
+        const initials = () => { box.textContent = N.promotionInitials(name); };
+        const src = safeImage(post.FeaturedImage);
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.addEventListener('error', initials);
+            box.appendChild(img);
+        } else {
+            initials();
+        }
+        return box;
+    }
+
+    function gradeBoxes(grades) {
+        const box = N.el('span', 'nw-grades');
+        box.setAttribute('aria-label', 'Grade ' + grades.from + ' to ' + grades.to);
+        const oldGrade = N.el('span', 'nw-grade-old', grades.from);
+        oldGrade.setAttribute('aria-hidden', 'true');
+        const newGrade = N.el('span', 'nw-grade-new', grades.to);
+        newGrade.setAttribute('aria-hidden', 'true');
+        box.appendChild(oldGrade);
+        box.appendChild(N.icon('arrow', 'nw-icon'));
+        box.appendChild(newGrade);
+        return box;
+    }
+
+    function tournamentLine(name) {
+        const line = N.el('div', 'nw-tourney');
+        line.appendChild(N.icon('trophy', 'nw-icon'));
+        line.appendChild(N.el('span', 'nw-clamp-1', name));
+        return line;
+    }
+
+    function moreLabel(label) {
+        const more = N.el('span', 'nw-more', label);
+        more.appendChild(N.icon('arrow', 'nw-icon'));
+        return more;
+    }
+
+    // "Title one, Title two, Title three, Title four and 3 more"
+    function groupTitles(group) {
+        const titles = group.posts.slice(0, 4).map(p => p._title).join(', ');
+        const rest = group.posts.length - 4;
+        return rest > 0 ? titles + ' and ' + rest + ' more' : titles;
+    }
+
+    function groupLink(group, className) {
+        const a = N.el('a', className);
+        a.href = '/news?tournament=' + encodeURIComponent(group.tournamentId);
+        a.addEventListener('click', e => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+            e.preventDefault();
+            showTournament(group.tournamentId);
+        });
+        return a;
+    }
+
+    function groupName(group) {
+        const named = group.posts.find(p => p._tournament);
+        return named ? named._tournament : 'Tournament';
+    }
+
+    // ---------- list view ----------
+    function listItem(item) {
+        if (item.type === 'group') {
+            const g = item;
+            const a = groupLink(g, 'nw-panel nw-row');
+            a.appendChild(stack(g));
+            const body = N.el('div', 'nw-row-body');
+            body.appendChild(meta(g.posts.length + ' posts', 'Latest ' + N.formatDate(g.posts[0])));
+            body.appendChild(N.el('h3', 'nw-row-title nw-clamp-2', groupName(g)));
+            body.appendChild(N.el('p', 'nw-row-titles nw-clamp-2', groupTitles(g)));
+            const btn = N.el('span', 'nw-btn', 'View all ' + g.posts.length + ' posts');
+            btn.appendChild(N.icon('arrow', 'nw-icon'));
+            body.appendChild(btn);
+            a.appendChild(body);
+            return a;
+        }
+
+        const p = item.post;
+        if (item.type === 'promotion') {
+            const name = N.promotionName(p);
+            const grades = N.promotionGrades(p);
+            const a = N.el('a', 'nw-panel nw-row nw-promo');
+            a.href = N.postHref(p);
+            a.appendChild(avatar(p, name));
+            const body = N.el('div', 'nw-row-body');
+            body.appendChild(meta('Promotion', N.formatDate(p)));
+            const line = N.el('p', 'nw-promo-line nw-clamp-2');
+            line.appendChild(document.createTextNode(name));
+            if (grades) {
+                line.appendChild(N.el('span', 'nw-promo-mid', ' moves up to grade '));
+                line.appendChild(N.el('span', 'nw-promo-new', grades.to));
+            }
+            body.appendChild(line);
+            a.appendChild(body);
+            if (grades) a.appendChild(gradeBoxes(grades));
+            a.appendChild(N.icon('chevron', 'nw-icon nw-chevron'));
+            return a;
+        }
+
+        const a = N.el('a', 'nw-panel nw-row');
+        a.href = N.postHref(p);
+        a.appendChild(thumb(p));
+        const body = N.el('div', 'nw-row-body');
+        body.appendChild(meta(hasTournament(p) ? 'Tournament news' : 'News', N.formatDate(p)));
+        body.appendChild(N.el('h3', 'nw-row-title nw-clamp-2', p._title));
+        if (p._tournament) body.appendChild(tournamentLine(p._tournament));
+        if (p._excerpt) body.appendChild(N.el('p', 'nw-excerpt nw-clamp-2', p._excerpt));
+        body.appendChild(moreLabel('Read more'));
+        a.appendChild(body);
+        return a;
+    }
+
+    // ---------- grid view ----------
+    function gridItem(item) {
+        let a;
+        const media = N.el('div', 'nw-card-media');
+        const body = N.el('div', 'nw-card-body');
+        const footer = N.el('div', 'nw-card-footer');
+        const date = N.el('span', 'nw-date');
+        date.appendChild(N.icon('calendar', 'nw-icon'));
+
+        if (item.type === 'group') {
+            const g = item;
+            a = groupLink(g, 'nw-panel nw-card');
+            media.appendChild(N.el('span', 'nw-tag', g.posts.length + ' posts'));
+            media.appendChild(stack(g));
+            body.appendChild(N.el('h3', 'nw-card-title nw-clamp-2', groupName(g)));
+            body.appendChild(N.el('p', 'nw-excerpt nw-clamp-2', groupTitles(g)));
+            date.appendChild(N.el('span', '', 'Latest ' + N.formatDate(g.posts[0])));
+            footer.appendChild(date);
+            footer.appendChild(moreLabel('View all ' + g.posts.length));
+        } else if (item.type === 'promotion') {
+            const p = item.post;
+            const name = N.promotionName(p);
+            const grades = N.promotionGrades(p);
+            a = N.el('a', 'nw-panel nw-card');
+            a.href = N.postHref(p);
+            media.appendChild(N.el('span', 'nw-tag', 'Promotion'));
+            media.appendChild(avatar(p, name));
+            if (grades) media.appendChild(gradeBoxes(grades));
+            const title = N.el('h3', 'nw-card-title nw-promo-line nw-clamp-2');
+            title.appendChild(document.createTextNode(name));
+            if (grades) {
+                title.appendChild(N.el('span', 'nw-promo-mid', ' moves up to grade '));
+                title.appendChild(N.el('span', 'nw-promo-new', grades.to));
+            }
+            body.appendChild(title);
+            date.appendChild(N.el('span', '', N.formatDate(p)));
+            footer.appendChild(date);
+            footer.appendChild(moreLabel('Read more'));
+        } else {
+            const p = item.post;
+            a = N.el('a', 'nw-panel nw-card');
+            a.href = N.postHref(p);
+            media.appendChild(N.el('span', 'nw-tag', hasTournament(p) ? 'Tournament news' : 'News'));
+            const src = safeImage(p.FeaturedImage);
+            if (src) {
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = '';
+                img.loading = 'lazy';
+                img.addEventListener('error', () => img.replaceWith(N.icon('newspaper', 'nw-icon nw-placeholder')));
+                media.appendChild(img);
+            } else {
+                media.appendChild(N.icon('newspaper', 'nw-icon nw-placeholder'));
+            }
+            body.appendChild(N.el('h3', 'nw-card-title nw-clamp-2', p._title));
+            if (p._tournament) body.appendChild(tournamentLine(p._tournament));
+            if (p._excerpt) body.appendChild(N.el('p', 'nw-excerpt nw-clamp-2', p._excerpt));
+            date.appendChild(N.el('span', '', N.formatDate(p)));
+            footer.appendChild(date);
+            footer.appendChild(moreLabel('Read more'));
+        }
+
+        a.appendChild(media);
+        body.appendChild(footer);
+        a.appendChild(body);
+        return a;
+    }
+</script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

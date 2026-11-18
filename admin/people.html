@@ -1,0 +1,2533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: var(--theme-primary); border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; transition: background-color .15s, color .15s; }
+        .btn-outline:hover:not(:disabled) { background: var(--theme-primary); color: #0F172A; }
+        .btn-outline:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: #f87171; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; }
+        .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, .15); }
+        .btn-danger:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-amber { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: #fbbf24; border: 2px solid #f59e0b; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; }
+        .btn-amber:hover:not(:disabled) { background: rgba(245, 158, 11, .12); }
+        .btn-solid:focus-visible, .btn-outline:focus-visible, .btn-plain:focus-visible, .btn-danger:focus-visible, .btn-amber:focus-visible,
+        .pp-tab:focus-visible, .pp-ptab:focus-visible, .pp-row:focus-visible, .pp-open:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Tabs */
+        .pp-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .pp-tab:hover { color: #fff; }
+        .pp-tab .pp-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
+        .pp-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
+        .pp-tab.is-active .pp-count { background: #0F172A; color: var(--theme-primary); }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field:disabled { opacity: .6; cursor: not-allowed; }
+        .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
+        .field-hint { font-size: .7rem; font-weight: 600; color: #6b7280; margin-top: .3rem; }
+        .field-error { font-size: .7rem; font-weight: 700; color: #f87171; margin-top: .3rem; }
+
+        /* People */
+        .pp-avatar { border-radius: 9999px; border: 2px solid var(--theme-primary); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: #e5e7eb; font-weight: 900; }
+        .pp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .pp-chip { display: inline-block; padding: .15rem .45rem; border: 2px solid #4b5563; background: #1e293b; color: #e5e7eb; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .pp-chip.is-super { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .pp-chip.is-off { border-color: #4b5563; color: #9ca3af; }
+        .pp-grade { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; font-size: .8rem; flex-shrink: 0; }
+        .pp-grade.is-none { border-color: #374151; color: #6b7280; }
+        .pp-row { cursor: pointer; transition: background-color .15s; }
+        .pp-row:hover { background: #1e293b; }
+        .pp-row.is-open { background: #1e293b; box-shadow: inset 4px 0 0 var(--theme-primary); }
+
+        /* Slide-in panels */
+        .pp-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, .78); z-index: 40; }
+        .pp-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 44rem; background: #0f172a; border-left: 4px solid var(--theme-primary); z-index: 50; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .22s ease; }
+        .pp-panel.is-open { transform: translateX(0); }
+        @media (max-width: 640px) { .pp-panel { border-left-width: 0; } }
+        @media (prefers-reduced-motion: reduce) { .pp-panel { transition: none; } }
+        .pp-ptab { padding: .65rem .8rem; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: #9ca3af; border-bottom: 4px solid transparent; white-space: nowrap; }
+        .pp-ptab:hover { color: #fff; }
+        .pp-ptab.is-active { color: #fff; border-bottom-color: var(--theme-primary); }
+
+        /* Dialogs (above the panels) */
+        .pp-dialog-wrap { position: fixed; inset: 0; background: rgba(2, 6, 23, .82); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+        @media (min-width: 640px) { .pp-dialog-wrap { align-items: center; } }
+        .pp-dialog { background: #0f172a; border: 4px solid #374151; width: 100%; max-width: 32rem; margin: 2rem 0; }
+
+        /* Access: role tiles, permission ticks and switches (from the old staff page) */
+        .role-tile { border: 4px solid #374151; }
+        .role-tile:has(input:checked) { border-color: var(--theme-primary); }
+        .role-tile:has(input:focus-visible) { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+        .perm-check { width: 18px; height: 18px; accent-color: var(--theme-primary); flex-shrink: 0; }
+        .switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .switch-track { width: 44px; height: 24px; background: #475569; border: 2px solid #374151; position: relative; transition: background .2s; flex-shrink: 0; }
+        .switch-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #e5e7eb; transition: transform .2s; }
+        .switch-input:checked + .switch-track { background: var(--theme-primary); }
+        .switch-input:checked + .switch-track::after { transform: translateX(20px); background: #0F172A; }
+        .switch-input:focus-visible + .switch-track { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+        .switch-input:disabled + .switch-track { opacity: .5; cursor: not-allowed; }
+        .result-row.selected { border-color: var(--theme-primary); }
+
+        /* Messages */
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">People</h1>
+                <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+                <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Everyone at KBF: players, and staff who may also play</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button type="button" id="addStaffBtn" class="btn-outline hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Add staff member
+                </button>
+                <button type="button" id="addPlayerBtn" class="btn-solid btn-shadow hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                    Add player
+                </button>
+            </div>
+        </div>
+
+        <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
+
+        <!-- Tabs -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+            <div class="flex gap-3 overflow-x-auto pb-2 pt-1 pl-1" role="tablist" aria-label="Who to show" id="listTabs">
+                <button type="button" class="pp-tab" role="tab" data-tab="everyone">Everyone <span class="pp-count" data-count="everyone">0</span></button>
+                <button type="button" class="pp-tab" role="tab" data-tab="players">Players <span class="pp-count" data-count="players">0</span></button>
+                <button type="button" class="pp-tab" role="tab" data-tab="staff">Staff <span class="pp-count" data-count="staff">0</span></button>
+                <button type="button" class="pp-tab" role="tab" data-tab="deactivated">Deactivated <span class="pp-count" data-count="deactivated">0</span></button>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <button type="button" id="exportBtn" class="btn-plain hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export
+                </button>
+                <a id="recentChangesLink" href="/admin/activity-log?about=people" class="btn-plain hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Recent changes
+                </a>
+            </div>
+        </div>
+
+        <!-- Search, grade and sort -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <div class="md:col-span-2 relative">
+                <label for="searchInput" class="sr-only">Search everyone</label>
+                <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="search" id="searchInput" class="field pl-9" placeholder="Search everyone by name, KBF ID, email or city" autocomplete="off" maxlength="100">
+            </div>
+            <div>
+                <label for="gradeFilter" class="sr-only">Grade</label>
+                <select id="gradeFilter" class="field"><option value="">All grades</option></select>
+            </div>
+            <div>
+                <label for="sortSelect" class="sr-only">Sort</label>
+                <select id="sortSelect" class="field">
+                    <option value="grade">Sort: grade, then season points</option>
+                    <option value="name">Sort: name</option>
+                    <option value="kbfId">Sort: KBF ID</option>
+                    <option value="newest">Sort: newest</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <div class="hidden lg:block overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-800 border-b-2 border-gray-700">
+                        <tr id="tableHead">
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Person</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">City</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Staff role</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Grade</th>
+                            <th scope="col" class="px-4 py-3 text-right text-xs font-black theme-primary-text uppercase">Season</th>
+                            <th scope="col" class="px-4 py-3 text-right text-xs font-black theme-primary-text uppercase">Career</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase hidden" id="contactHead">Contact</th>
+                            <th scope="col" class="px-4 py-3"><span class="sr-only">Open</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y-2 divide-gray-800"></tbody>
+                </table>
+            </div>
+            <div id="compactList" class="lg:hidden divide-y-2 divide-gray-800"></div>
+            <p id="listEmpty" class="hidden px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm"></p>
+        </div>
+
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p id="listCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite">Loading...</p>
+            <button type="button" id="moreBtn" class="btn-plain hidden">Show more</button>
+        </div>
+    </main>
+
+    <!-- ============================ -->
+    <!-- PERSON PANEL -->
+    <!-- ============================ -->
+    <div id="personBackdrop" class="pp-backdrop hidden"></div>
+    <aside id="personPanel" class="pp-panel hidden" role="dialog" aria-modal="true" aria-labelledby="ppName">
+        <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 pt-4">
+            <div class="flex items-start gap-4">
+                <div id="ppAvatar" class="pp-avatar w-16 h-16 text-lg" aria-hidden="true"></div>
+                <div class="min-w-0 flex-1">
+                    <h2 id="ppName" class="text-lg sm:text-xl font-black uppercase text-white break-words"></h2>
+                    <p id="ppMeta" class="text-xs font-bold text-gray-400 mt-0.5"></p>
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                        <span id="ppChip"></span>
+                        <span id="ppPlays" class="text-xs font-black uppercase text-gray-300"></span>
+                    </div>
+                </div>
+                <button type="button" id="ppClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="flex overflow-x-auto mt-4 -mb-1" role="tablist" id="ppTabs">
+                <button type="button" class="pp-ptab" role="tab" data-panel="details">Details</button>
+                <button type="button" class="pp-ptab" role="tab" data-panel="results">Results</button>
+                <button type="button" class="pp-ptab" role="tab" data-panel="grades">Grade history</button>
+                <button type="button" class="pp-ptab hidden" role="tab" data-panel="access">Access</button>
+                <button type="button" class="pp-ptab" role="tab" data-panel="activity">Activity</button>
+            </div>
+        </div>
+
+        <div id="ppBody" class="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+            <div id="ppMessage" class="hidden msg mb-4" role="status" aria-live="polite"></div>
+            <div id="ppLoading" class="py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+
+            <!-- Details -->
+            <section id="paneDetails" class="hidden space-y-5" role="tabpanel">
+                <form id="detailsForm" class="space-y-4" novalidate>
+                    <div class="flex items-center gap-4">
+                        <div id="dPhotoPreview" class="pp-avatar w-20 h-20 text-xl" aria-hidden="true"></div>
+                        <div>
+                            <span class="field-label">Photo</span>
+                            <label id="dPhotoChange" class="btn-plain cursor-pointer">
+                                Change
+                                <input type="file" id="dPhotoInput" accept="image/jpeg,image/png,image/webp" class="sr-only">
+                            </label>
+                            <p id="dPhotoNote" class="field-hint"></p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="dFirstName" class="field-label">First name *</label>
+                            <input type="text" id="dFirstName" class="field" maxlength="50" autocomplete="off" required>
+                        </div>
+                        <div>
+                            <label for="dLastName" class="field-label">Surname *</label>
+                            <input type="text" id="dLastName" class="field" maxlength="50" autocomplete="off" required>
+                        </div>
+                        <div id="dEmailWrap">
+                            <label for="dEmail" class="field-label">Email *</label>
+                            <input type="email" id="dEmail" class="field" maxlength="255" autocomplete="off" required>
+                        </div>
+                        <div id="dMobileWrap">
+                            <label for="dMobile" class="field-label">Mobile *</label>
+                            <input type="tel" id="dMobile" class="field" maxlength="25" autocomplete="off" placeholder="+44 7700 900123" required>
+                        </div>
+                        <div>
+                            <label for="dCity" class="field-label">City *</label>
+                            <input type="text" id="dCity" class="field" maxlength="100" autocomplete="off" required>
+                        </div>
+                        <div>
+                            <label for="dPostCode" class="field-label">Post code</label>
+                            <input type="text" id="dPostCode" class="field" maxlength="12" autocomplete="off">
+                            <p class="field-hint">Never shown publicly.</p>
+                        </div>
+                        <div>
+                            <label for="dYear" class="field-label">Year of birth</label>
+                            <input type="number" id="dYear" class="field" min="1940" max="2100" inputmode="numeric">
+                            <p class="field-hint">Never shown publicly.</p>
+                        </div>
+                    </div>
+                    <p id="dContactNote" class="hidden field-hint">Email and mobile are shown only to people allowed to see contact details.</p>
+                </form>
+
+                <div class="bg-slate-800 border-2 border-gray-700 p-4">
+                    <div class="flex items-center gap-4">
+                        <span id="dGradeBox" class="pp-grade w-12 h-12 text-base"></span>
+                        <div class="flex-1 grid grid-cols-2 gap-3">
+                            <div>
+                                <p class="text-xs font-black uppercase text-gray-400">Season points</p>
+                                <p id="dSeason" class="text-xl font-black theme-primary-text"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-black uppercase text-gray-400">Career points</p>
+                                <p id="dCareer" class="text-xl font-black text-white"></p>
+                            </div>
+                        </div>
+                        <button type="button" id="dChangeGrade" class="btn-outline hidden">Change grade</button>
+                    </div>
+                </div>
+
+                <p id="dTerms" class="text-xs font-semibold text-gray-400"></p>
+                <p id="dNotStaff" class="hidden text-xs font-semibold text-gray-400">Not staff. A Super Admin can give access in the Access tab.</p>
+            </section>
+
+            <!-- Results -->
+            <section id="paneResults" class="hidden" role="tabpanel">
+                <ul id="resultsList" class="divide-y-2 divide-gray-800"></ul>
+            </section>
+
+            <!-- Grade history -->
+            <section id="paneGrades" class="hidden" role="tabpanel">
+                <ul id="gradesList" class="divide-y-2 divide-gray-800"></ul>
+            </section>
+
+            <!-- Access (Super Admins) -->
+            <section id="paneAccess" class="hidden space-y-6" role="tabpanel">
+                <div id="tempPasswordPanel" class="hidden bg-slate-800 border-4 theme-primary-border p-4">
+                    <h3 class="text-sm font-black theme-primary-text uppercase mb-2">Temporary password</h3>
+                    <p class="text-xs text-gray-300 font-semibold mb-3">Give this to the person. They will be asked to choose their own password when they first sign in.</p>
+                    <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                        <code id="tempPasswordValue" class="px-4 py-3 bg-slate-900 border-2 border-gray-700 text-white font-mono text-base tracking-wider select-all break-all"></code>
+                        <button type="button" id="copyTempPasswordBtn" class="btn-solid">Copy</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black theme-primary-text uppercase mb-1">Roles</h3>
+                    <p class="text-xs text-gray-400 font-semibold mb-3">Choosing a role ticks its usual permissions below. You can then add or remove individual ticks.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="roleTiles">
+                        <label class="role-tile block p-3 bg-slate-800 cursor-pointer">
+                            <span class="flex items-start gap-3">
+                                <input type="checkbox" class="perm-check mt-0.5" data-role="MainAdmin">
+                                <span><span class="block text-sm font-black uppercase text-white">Main Admin</span><span class="block text-xs text-gray-400 font-semibold mt-1">Runs the federation day to day</span></span>
+                            </span>
+                        </label>
+                        <label class="role-tile block p-3 bg-slate-800 cursor-pointer">
+                            <span class="flex items-start gap-3">
+                                <input type="checkbox" class="perm-check mt-0.5" data-role="ZonalAdmin">
+                                <span><span class="block text-sm font-black uppercase text-white">Zonal Admin</span><span class="block text-xs text-gray-400 font-semibold mt-1">Approves and looks after players</span></span>
+                            </span>
+                        </label>
+                        <label class="role-tile block p-3 bg-slate-800 cursor-pointer">
+                            <span class="flex items-start gap-3">
+                                <input type="checkbox" class="perm-check mt-0.5" data-role="Organiser">
+                                <span><span class="block text-sm font-black uppercase text-white">Organiser</span><span class="block text-xs text-gray-400 font-semibold mt-1">Runs their own tournaments</span></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black theme-primary-text uppercase mb-1">Permissions</h3>
+                    <p id="superAdminPermNote" class="hidden text-xs font-bold uppercase theme-primary-text mb-3">Super Admins have every permission</p>
+                    <div id="permissionGroups" class="space-y-5"></div>
+                    <button type="button" id="permToggle" class="btn-plain mt-3"></button>
+                </div>
+
+                <div id="accountSection" class="bg-slate-800 border-2 border-gray-700 p-4 space-y-4">
+                    <h3 class="text-sm font-black theme-primary-text uppercase">Sign-in</h3>
+                    <p id="accountAddNote" class="hidden text-xs text-gray-400 font-semibold">Sign-in, password and Super Admin settings are available once you save.</p>
+                    <div id="accountControls" class="space-y-4">
+                        <div>
+                            <label class="flex items-center justify-between gap-4 cursor-pointer">
+                                <span class="text-sm font-black uppercase text-white">Can sign in</span>
+                                <span class="relative inline-flex items-center">
+                                    <input type="checkbox" id="loginSwitch" class="switch-input" role="switch">
+                                    <span class="switch-track" aria-hidden="true"></span>
+                                </span>
+                            </label>
+                            <p id="loginSwitchNote" class="hidden field-hint">You cannot turn off your own sign-in.</p>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="text-sm font-black uppercase text-white">2-step verification</span>
+                            <span id="twoStepStatus"></span>
+                        </div>
+                        <div>
+                            <label class="flex items-center justify-between gap-4 cursor-pointer">
+                                <span class="text-sm font-black uppercase text-white">Require 2-step for this person</span>
+                                <span class="relative inline-flex items-center">
+                                    <input type="checkbox" id="twoStepRequiredSwitch" class="switch-input" role="switch">
+                                    <span class="switch-track" aria-hidden="true"></span>
+                                </span>
+                            </label>
+                            <p class="field-hint">They will set it up at their next sign-in, whatever the site-wide setting.</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button type="button" id="resetTwoStepBtn" class="btn-plain hidden">Reset 2-step</button>
+                            <button type="button" id="passwordHelpBtn" class="btn-plain">Set temporary password</button>
+                            <button type="button" id="superAdminBtn" class="btn-plain">Make Super Admin</button>
+                            <button type="button" id="impersonateBtn" class="btn-amber hidden">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                Impersonate
+                            </button>
+                        </div>
+                        <p id="superAdminNote" class="hidden field-hint">You cannot remove your own Super Admin status.</p>
+                        <p id="impersonateNote" class="hidden field-hint">Impersonate shows the site exactly as this person sees it, for up to <span id="impersonationMinutes">30</span> minutes.</p>
+                    </div>
+                </div>
+
+                <p id="accessKeepNote" class="text-xs font-semibold text-gray-400"></p>
+                <div id="accessMessage" class="hidden msg" role="status" aria-live="polite"></div>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                    <button type="button" id="removeAccessBtn" class="btn-plain">Remove all access</button>
+                    <button type="button" id="saveAccessBtn" class="btn-solid btn-shadow">Save access</button>
+                </div>
+            </section>
+
+            <!-- Activity -->
+            <section id="paneActivity" class="hidden space-y-4" role="tabpanel">
+                <div class="flex flex-wrap gap-2" role="group" aria-label="Which activity">
+                    <button type="button" class="pp-tab" id="actAbout" data-view="about"></button>
+                    <button type="button" class="pp-tab hidden" id="actBy" data-view="by"></button>
+                </div>
+                <ul id="activityList" class="divide-y-2 divide-gray-800"></ul>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <button type="button" id="activityMore" class="btn-plain hidden">Show more</button>
+                    <a id="activityLogLink" href="#" class="btn-plain hidden">Open in the activity log</a>
+                </div>
+                <p class="field-hint">Includes the older player activity records kept before the upgrade.</p>
+            </section>
+        </div>
+
+        <!-- Details footer -->
+        <div id="ppFooter" class="hidden border-t-4 border-gray-700 bg-slate-800 px-4 sm:px-6 py-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button type="button" id="activeBtn" class="btn-plain hidden">Deactivate</button>
+                <button type="button" id="removeBtn" class="btn-danger hidden">Remove at their request</button>
+            </div>
+            <button type="button" id="saveDetailsBtn" class="btn-solid btn-shadow hidden">Save</button>
+        </div>
+    </aside>
+
+    <!-- ============================ -->
+    <!-- ADD PLAYER PANEL -->
+    <!-- ============================ -->
+    <div id="addBackdrop" class="pp-backdrop hidden"></div>
+    <aside id="addPanel" class="pp-panel hidden" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+        <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 py-4 flex items-start justify-between gap-4">
+            <div>
+                <h2 id="addTitle" class="text-lg sm:text-xl font-black uppercase theme-primary-text">Add player</h2>
+                <p class="text-xs font-semibold text-gray-400 mt-1">For staff, use Add staff member instead.</p>
+            </div>
+            <button type="button" id="addClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="addForm" class="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4" novalidate>
+            <div class="flex items-center gap-4">
+                <div id="aPhotoPreview" class="pp-avatar w-20 h-20 text-xl" aria-hidden="true"></div>
+                <div>
+                    <span class="field-label">Photo</span>
+                    <label class="btn-plain cursor-pointer">
+                        Choose photo
+                        <input type="file" id="aPhotoInput" accept="image/jpeg,image/png,image/webp" class="sr-only">
+                    </label>
+                    <p class="field-hint">Optional. JPG, PNG or WEBP.</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="aFirstName" class="field-label">First name *</label>
+                    <input type="text" id="aFirstName" class="field" maxlength="50" autocomplete="off" required>
+                    <p class="field-error hidden" data-error="firstName"></p>
+                </div>
+                <div>
+                    <label for="aLastName" class="field-label">Surname *</label>
+                    <input type="text" id="aLastName" class="field" maxlength="50" autocomplete="off" required>
+                    <p class="field-error hidden" data-error="lastName"></p>
+                </div>
+                <div>
+                    <label for="aEmail" class="field-label">Email *</label>
+                    <input type="email" id="aEmail" class="field" maxlength="255" autocomplete="off" required>
+                    <p class="field-error hidden" data-error="email"></p>
+                </div>
+                <div>
+                    <label for="aMobile" class="field-label">Mobile *</label>
+                    <input type="tel" id="aMobile" class="field" maxlength="25" autocomplete="off" placeholder="+44 7700 900123" required>
+                    <p class="field-error hidden" data-error="mobile"></p>
+                </div>
+                <div>
+                    <label for="aCity" class="field-label">City *</label>
+                    <input type="text" id="aCity" class="field" maxlength="100" autocomplete="off" required>
+                    <p class="field-error hidden" data-error="city"></p>
+                </div>
+                <div>
+                    <label for="aPostCode" class="field-label">Post code</label>
+                    <input type="text" id="aPostCode" class="field" maxlength="12" autocomplete="off">
+                    <p class="field-hint">Never shown publicly.</p>
+                    <p class="field-error hidden" data-error="postCode"></p>
+                </div>
+                <div>
+                    <label for="aYear" class="field-label">Year of birth</label>
+                    <input type="number" id="aYear" class="field" min="1940" max="2100" inputmode="numeric">
+                    <p class="field-hint">Never shown publicly.</p>
+                    <p class="field-error hidden" data-error="yearOfBirth"></p>
+                </div>
+                <div>
+                    <label for="aGrade" class="field-label">Grade</label>
+                    <select id="aGrade" class="field"></select>
+                    <p class="field-hint">The default comes from Site settings.</p>
+                    <p class="field-error hidden" data-error="gradeId"></p>
+                </div>
+            </div>
+            <label class="flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                <input type="checkbox" id="aSendId" class="perm-check mt-0.5" checked>
+                <span>
+                    <span class="block text-sm font-bold text-white">Email them their KBF ID</span>
+                    <span class="block text-xs text-gray-400 font-semibold mt-0.5">Uses the 'Player added by an admin' email.</span>
+                </span>
+            </label>
+
+            <div id="dupeBox" class="hidden msg-warn border-2 p-4 space-y-3" role="alert">
+                <p id="dupeText" class="text-sm font-bold"></p>
+                <ul id="dupeList" class="space-y-2"></ul>
+            </div>
+            <div id="addMessage" class="hidden msg" role="status" aria-live="polite"></div>
+        </form>
+        <div class="border-t-4 border-gray-700 bg-slate-800 px-4 sm:px-6 py-3 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <button type="button" id="addCancel" class="btn-plain">Cancel</button>
+            <button type="button" id="addAnyway" class="btn-amber hidden">Add anyway</button>
+            <button type="button" id="addSubmit" class="btn-solid btn-shadow">Add player</button>
+        </div>
+    </aside>
+
+    <!-- ============================ -->
+    <!-- ADD STAFF MEMBER (moved from the old Staff page) -->
+    <!-- ============================ -->
+    <div id="addStaffDialog" class="pp-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="addStaffTitle">
+        <div class="pp-dialog" style="max-width: 42rem;">
+            <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b-4 border-gray-700 bg-slate-800">
+                <h2 id="addStaffTitle" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Add staff member</h2>
+                <button type="button" data-close="addStaffDialog" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="flex border-b-4 border-gray-700 bg-slate-800" role="tablist">
+                <button type="button" id="addTabPlays" class="pp-ptab flex-1" role="tab">Someone who plays</button>
+                <button type="button" id="addTabNew" class="pp-ptab flex-1" role="tab">Someone who does not play</button>
+            </div>
+            <div id="addPanelPlays" class="p-4 sm:p-6 space-y-4">
+                <p class="text-xs sm:text-sm text-gray-300 font-semibold">Most staff already play. Find them here so they keep one account, their grade and their points.</p>
+                <div>
+                    <label for="memberSearch" class="field-label">Find a member</label>
+                    <input type="search" id="memberSearch" class="field" placeholder="Name, KBF ID, email or location" autocomplete="off">
+                </div>
+                <div id="memberResults" class="space-y-2 max-h-80 overflow-y-auto"></div>
+                <div id="addPlaysMessage" class="hidden msg msg-error"></div>
+                <div class="flex justify-end">
+                    <button type="button" id="choosePlaysBtn" class="btn-solid btn-shadow w-full sm:w-auto" disabled>Choose access</button>
+                </div>
+            </div>
+            <form id="addPanelNew" class="hidden p-4 sm:p-6 space-y-4" novalidate>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="newFirstName" class="field-label">First name *</label>
+                        <input type="text" id="newFirstName" class="field" maxlength="100" required autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="newLastName" class="field-label">Last name *</label>
+                        <input type="text" id="newLastName" class="field" maxlength="100" required autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="newEmail" class="field-label">Email *</label>
+                        <input type="email" id="newEmail" class="field" maxlength="255" required autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="newLocation" class="field-label">Location *</label>
+                        <input type="text" id="newLocation" class="field" maxlength="100" required autocomplete="off">
+                    </div>
+                </div>
+                <div id="addNewMessage" class="hidden msg msg-error"></div>
+                <div class="flex justify-end">
+                    <button type="submit" class="btn-solid btn-shadow w-full sm:w-auto">Choose access</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change grade: the shared dialog in js/grade-change.js -->
+
+    <!-- Remove at their request -->
+    <div id="removeDialog" class="pp-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="removeTitle" aria-describedby="removeText">
+        <form id="removeForm" class="pp-dialog p-4 sm:p-6 space-y-4" style="border-color: #ef4444;" novalidate>
+            <h2 id="removeTitle" class="text-lg sm:text-xl font-black uppercase text-red-400">Remove at their request?</h2>
+            <p id="removeText" class="text-sm text-gray-200 font-semibold leading-relaxed">Their contact details and photo are deleted, their name is replaced with Former member, and they disappear from the website. Past results stay, shown as Former member. This cannot be undone.</p>
+            <div>
+                <label for="removeConfirmInput" class="field-label" style="color: #f87171;">Type REMOVE to confirm</label>
+                <input type="text" id="removeConfirmInput" class="field" autocomplete="off" spellcheck="false">
+            </div>
+            <div id="removeMessage" class="hidden msg msg-error"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button type="button" data-close="removeDialog" class="btn-plain">Cancel</button>
+                <button type="submit" id="removeConfirmBtn" class="btn-danger" disabled>Remove permanently</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Simple confirmation (deactivate, remove all access, 2-step, password, Super Admin) -->
+    <div id="confirmDialog" class="pp-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+        <div class="pp-dialog p-4 sm:p-6 space-y-4">
+            <h2 id="confirmTitle" class="text-lg sm:text-xl font-black theme-primary-text uppercase"></h2>
+            <p id="confirmText" class="text-sm text-gray-300 font-semibold leading-relaxed"></p>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button type="button" id="confirmNo" class="btn-plain">Cancel</button>
+                <button type="button" id="confirmYes" class="btn-solid"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export (moved from the old Users page) -->
+    <div id="exportDialog" class="pp-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+        <form id="exportForm" class="pp-dialog p-4 sm:p-6 space-y-4" style="max-width: 40rem;" novalidate>
+            <div class="flex items-center justify-between">
+                <h2 id="exportTitle" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Export players</h2>
+                <button type="button" data-close="exportDialog" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div>
+                <span class="field-label">Locations</span>
+                <label class="flex items-center gap-2 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer mb-2">
+                    <input type="checkbox" id="exportAll" class="perm-check">
+                    <span class="text-sm font-bold uppercase text-white">All locations</span>
+                </label>
+                <div id="exportLocations" class="max-h-64 overflow-y-auto space-y-1 bg-slate-800 border-2 border-gray-700 p-3"></div>
+            </div>
+            <div>
+                <span class="field-label">Format</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-2 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                        <input type="radio" name="exportFormat" value="csv" class="perm-check" checked>
+                        <span class="text-sm font-bold uppercase">CSV</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                        <input type="radio" name="exportFormat" value="pdf" class="perm-check">
+                        <span class="text-sm font-bold uppercase">Printable page</span>
+                    </label>
+                </div>
+            </div>
+            <div id="exportMessage" class="hidden msg"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button type="button" data-close="exportDialog" class="btn-plain">Cancel</button>
+                <button type="submit" id="exportSubmit" class="btn-solid btn-shadow">Download</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script src="/js/grade-change.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell): players.view_export, players.edit_details
+    // or a Super Admin
+    // ============================================
+    const START_PARAMS = new URLSearchParams(window.location.search);
+    KBFShell.start({
+        anyOf: ['players.view_export', 'players.edit_details'],
+        active: START_PARAMS.get('tab') === 'staff' ? 'staff' : 'people'
+    }).then(function (user) {
+        window.kbfUser = user;
+        me = user;
+        initPage();
+    });
+
+    // ============================================
+    // PERMISSIONS AND PRESETS (from the old staff page; must match
+    // api/permissions.php and the Permissions table seed)
+    // ============================================
+    const PERMISSION_GROUPS = [
+        { name: 'Players', items: [
+            { key: 'players.approve_registrations', label: 'Approve player registrations' },
+            { key: 'players.view_export', label: 'View and export the player list' },
+            { key: 'players.edit_details', label: 'Edit player details (not grade)', note: 'Name, location and photo. Not grade.' },
+            { key: 'players.change_grades', label: 'Change player grades' },
+            { key: 'players.contact_details', label: 'See player emails and phone numbers', note: 'Includes the contacts download.' }
+        ]},
+        { name: 'Tournaments', items: [
+            { key: 'tournaments.organise_own', label: 'Organise their own tournaments', note: 'Create, edit details and submit results.' },
+            { key: 'tournaments.approve', label: 'Approve tournaments and results' },
+            { key: 'tournaments.manage_all', label: 'Manage all tournaments and results' }
+        ]},
+        { name: 'Content', items: [
+            { key: 'content.own_news_gallery', label: 'News and gallery for their own tournaments' },
+            { key: 'content.all_news_gallery', label: 'All news and gallery' },
+            { key: 'content.sponsors', label: 'Sponsors' },
+            { key: 'content.broadcasts', label: 'Email broadcasts' }
+        ]},
+        { name: 'Control centre', items: [
+            { key: 'control.email', label: 'Email and limits', note: 'Daily email limit, email log and resending.' },
+            { key: 'control.grading', label: 'Grading and seasons' },
+            { key: 'control.notifications', label: 'Notifications and emails' },
+            { key: 'control.reports', label: 'Reports and exports' },
+            { key: 'control.site_settings', label: 'Site settings' },
+            { key: 'control.activity_log', label: 'Activity log' }
+        ]}
+    ];
+    const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap(g => g.items.map(i => i.key));
+    // Presets never tick the Control centre group: those are ticked one by one
+    const ROLE_PRESETS = {
+        MainAdmin: ALL_PERMISSION_KEYS.filter(k => k.indexOf('control.') !== 0),
+        ZonalAdmin: ['players.approve_registrations', 'players.view_export', 'players.edit_details'],
+        Organiser: ['tournaments.organise_own', 'content.own_news_gallery']
+    };
+    const PERMS_SHOWN_FIRST = 6;
+
+    // ============================================
+    // STATE
+    // ============================================
+    let me = null;
+    const list = { tab: 'everyone', q: '', grade: '', sort: 'grade', page: 1, rows: [], total: 0, loading: false, seq: 0 };
+    let grades = [];
+    let personId = null;
+    let person = null;           // from api/people.php?action=person
+    let panelName = 'details';
+    let pendingPhoto = undefined; // a newly uploaded photo path (undefined = unchanged)
+    let accessMode = 'edit';     // 'edit' | 'member' | 'new' (Add staff member)
+    let accessDraft = null;      // { member } or { person } while adding staff
+    let accessData = null;       // from api/staff.php?action=get
+    let permsExpanded = false;
+    let activity = { view: 'about', page: 1 };
+    const layers = [];           // open panels and dialogs, top last
+
+    // ============================================
+    // HELPERS
+    // ============================================
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    async function getJson(url) {
+        const res = await authenticatedFetch(url);
+        return res.json();
+    }
+
+    async function postJson(url, payload) {
+        const res = await authenticatedFetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return res.json();
+    }
+
+    const postPeople = payload => postJson('/api/people.php', payload);
+    const postStaff = payload => postJson('/api/staff.php', payload);
+
+    // Every value reaches the page with textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+    }
+
+    // Constant icon markup only (never data)
+    const ICONS = {
+        pin: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>',
+        mail: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>',
+        phone: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>',
+        arrow: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>',
+        chevron: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>'
+    };
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('class', className || 'w-4 h-4');
+        svg.innerHTML = ICONS[name] || '';
+        return svg;
+    }
+
+    function safePhoto(path) {
+        return (typeof path === 'string' && /^\/uploads\/(profiles|registrations)\/[A-Za-z0-9_]+\.(jpg|jpeg|png|webp)$/i.test(path)) ? path : null;
+    }
+
+    function initialsOf(name) {
+        const words = String(name || '').split(/\s+/).filter(Boolean);
+        if (!words.length) return '?';
+        return (words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '')).toUpperCase();
+    }
+
+    function fillAvatar(box, photo, name) {
+        box.textContent = '';
+        const src = safePhoto(photo);
+        if (src) {
+            const img = el('img');
+            img.src = src;
+            img.alt = '';
+            img.loading = 'lazy';
+            box.appendChild(img);
+        } else {
+            box.textContent = initialsOf(name);
+        }
+    }
+
+    function avatar(photo, name, sizeClass) {
+        const box = el('div', 'pp-avatar ' + sizeClass);
+        box.setAttribute('aria-hidden', 'true');
+        fillAvatar(box, photo, name);
+        return box;
+    }
+
+    function staffChip(label) {
+        if (!label) return el('span', 'text-gray-500 font-bold', '-');
+        return el('span', 'pp-chip' + (label === 'Super Admin' ? ' is-super' : ''), label);
+    }
+
+    function gradeBox(grade, extra) {
+        return el('span', 'pp-grade' + (grade ? '' : ' is-none') + (extra ? ' ' + extra : ''), grade || '-');
+    }
+
+    function formatDate(value) {
+        if (!value) return '';
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return String(value);
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' });
+    }
+
+    function formatDateTime(value) {
+        if (!value) return '';
+        const d = new Date(String(value).indexOf('T') === -1 ? String(value).replace(' ', 'T') : value);
+        if (isNaN(d.getTime())) return String(value);
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' }) + ', ' +
+            d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+    }
+
+    function showMsg(id, text, kind) {
+        const box = document.getElementById(id);
+        if (!text) { box.classList.add('hidden'); return; }
+        box.textContent = text;
+        box.classList.remove('hidden', 'msg-ok', 'msg-error', 'msg-warn');
+        box.classList.add(kind === 'error' ? 'msg-error' : (kind === 'warn' ? 'msg-warn' : 'msg-ok'));
+    }
+
+    function firstNameOf() {
+        if (person && person.firstName) return person.firstName;
+        if (accessDraft) {
+            const p = accessDraft.member || accessDraft.person || {};
+            return p.firstName || 'this person';
+        }
+        return 'this person';
+    }
+
+    function canAddPlayer() { return me.has('players.approve_registrations') && me.has('players.edit_details'); }
+    function canSeeActivityLog() { return me.isSuperAdmin || me.has('control.activity_log'); }
+
+    // ============================================
+    // LAYERS: focus, Escape and the Tab key
+    // ============================================
+    function focusables(root) {
+        return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+            .filter(n => n.offsetParent !== null || n === document.activeElement);
+    }
+
+    function pushLayer(node, close, returnFocus) {
+        layers.push({ node: node, close: close, returnFocus: returnFocus || document.activeElement });
+        document.body.style.overflow = 'hidden';
+    }
+
+    function popLayer(node) {
+        const i = layers.findIndex(l => l.node === node);
+        if (i === -1) return null;
+        const layer = layers.splice(i, 1)[0];
+        if (!layers.length) document.body.style.overflow = '';
+        return layer;
+    }
+
+    document.addEventListener('keydown', function (e) {
+        const top = layers[layers.length - 1];
+        if (!top) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            top.close();
+            return;
+        }
+        if (e.key === 'Tab') {
+            const items = focusables(top.node);
+            if (!items.length) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (e.shiftKey && (document.activeElement === first || !top.node.contains(document.activeElement))) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && (document.activeElement === last || !top.node.contains(document.activeElement))) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    });
+
+    function openDialog(id, focusId) {
+        const wrap = document.getElementById(id);
+        wrap.classList.remove('hidden');
+        pushLayer(wrap, () => closeDialog(id));
+        const target = focusId ? document.getElementById(focusId) : focusables(wrap)[0];
+        if (target) target.focus();
+    }
+
+    function closeDialog(id) {
+        const wrap = document.getElementById(id);
+        wrap.classList.add('hidden');
+        const layer = popLayer(wrap);
+        if (layer && layer.returnFocus && document.contains(layer.returnFocus)) layer.returnFocus.focus();
+    }
+
+    document.querySelectorAll('[data-close]').forEach(btn => {
+        btn.addEventListener('click', () => closeDialog(btn.getAttribute('data-close')));
+    });
+    document.querySelectorAll('.pp-dialog-wrap').forEach(wrap => {
+        wrap.addEventListener('click', e => { if (e.target === wrap) closeDialog(wrap.id); });
+    });
+
+    // A small yes/no dialog; resolves true or false
+    function askConfirm(title, text, yesText, danger) {
+        return new Promise(resolve => {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmText').textContent = text;
+            const yes = document.getElementById('confirmYes');
+            const no = document.getElementById('confirmNo');
+            yes.textContent = yesText;
+            yes.className = danger ? 'btn-danger' : 'btn-solid';
+            const wrap = document.getElementById('confirmDialog');
+            let done = false;
+            function finish(answer) {
+                if (done) return;
+                done = true;
+                yes.onclick = null;
+                no.onclick = null;
+                closeDialog('confirmDialog');
+                resolve(answer);
+            }
+            yes.onclick = () => finish(true);
+            no.onclick = () => finish(false);
+            wrap.classList.remove('hidden');
+            pushLayer(wrap, () => finish(false));
+            no.focus();
+        });
+    }
+
+    // ============================================
+    // ADDRESS (tab, q, grade, sort, person, panel)
+    // ============================================
+    function stateFromUrl() {
+        const p = new URLSearchParams(window.location.search);
+        const tab = p.get('tab');
+        const sort = p.get('sort');
+        const pid = parseInt(p.get('person') || '', 10);
+        const panel = p.get('panel');
+        return {
+            tab: ['everyone', 'players', 'staff', 'deactivated'].includes(tab) ? tab : 'everyone',
+            q: (p.get('q') || '').slice(0, 100),
+            grade: /^[1-9][0-9]*$/.test(p.get('grade') || '') ? p.get('grade') : '',
+            sort: ['grade', 'name', 'kbfId', 'newest'].includes(sort) ? sort : 'grade',
+            person: pid > 0 ? pid : null,
+            panel: ['details', 'results', 'grades', 'access', 'activity'].includes(panel) ? panel : 'details',
+            add: p.get('add') || ''
+        };
+    }
+
+    function buildUrl() {
+        const p = new URLSearchParams();
+        if (list.tab !== 'everyone') p.set('tab', list.tab);
+        if (list.q) p.set('q', list.q);
+        if (list.grade) p.set('grade', list.grade);
+        if (list.sort !== 'grade') p.set('sort', list.sort);
+        if (personId) {
+            p.set('person', String(personId));
+            if (panelName !== 'details') p.set('panel', panelName);
+        }
+        const s = p.toString();
+        return window.location.pathname + (s ? '?' + s : '');
+    }
+
+    function writeUrl(push) {
+        const url = buildUrl();
+        if (url === window.location.pathname + window.location.search) return;
+        try {
+            if (push) history.pushState(null, '', url); else history.replaceState(null, '', url);
+        } catch (e) { /* ignore */ }
+    }
+
+    window.addEventListener('popstate', function () {
+        const s = stateFromUrl();
+        const listChanged = s.tab !== list.tab || s.q !== list.q || s.grade !== list.grade || s.sort !== list.sort;
+        list.tab = s.tab; list.q = s.q; list.grade = s.grade; list.sort = s.sort;
+        syncControls();
+        if (listChanged) loadList(true);
+        if (s.person && s.person !== personId) {
+            openPerson(s.person, s.panel, { fromHistory: true });
+        } else if (s.person && s.person === personId) {
+            showPane(s.panel, true);
+        } else if (!s.person && personId) {
+            closePerson(true);
+        }
+    });
+
+    // ============================================
+    // INITIALISE
+    // ============================================
+    function initPage() {
+        document.getElementById('impersonationMinutes').textContent = String(KBFShell.impersonationMinutes ? KBFShell.impersonationMinutes() : 30);
+        document.getElementById('addStaffBtn').classList.toggle('hidden', !me.isSuperAdmin);
+        document.getElementById('addPlayerBtn').classList.toggle('hidden', !canAddPlayer());
+        document.getElementById('recentChangesLink').classList.toggle('hidden', !canSeeActivityLog());
+        document.getElementById('exportBtn').classList.toggle('hidden', !me.has('players.view_export'));
+        document.querySelector('.pp-ptab[data-panel="access"]').classList.toggle('hidden', !me.isSuperAdmin);
+
+        renderPermissionGroups();
+        bindRoleTiles();
+
+        const s = stateFromUrl();
+        list.tab = s.tab; list.q = s.q; list.grade = s.grade; list.sort = s.sort;
+        syncControls();
+        loadList(true);
+
+        if (s.person) openPerson(s.person, s.panel, { fromHistory: true });
+
+        // ?add=player or ?add=staff (dashboard quick actions); not kept in the address
+        if (s.add === 'player' && canAddPlayer()) openAddPlayer();
+        if (s.add === 'staff' && me.isSuperAdmin) openAddStaff();
+        if (s.add) writeUrl(false);
+    }
+
+    function syncControls() {
+        document.querySelectorAll('#listTabs .pp-tab').forEach(btn => {
+            const on = btn.getAttribute('data-tab') === list.tab;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        document.getElementById('searchInput').value = list.q;
+        document.getElementById('sortSelect').value = list.sort;
+        const gradeSelect = document.getElementById('gradeFilter');
+        gradeSelect.value = list.grade;
+        if (gradeSelect.value !== list.grade) gradeSelect.dataset.pending = list.grade;
+    }
+
+    // ============================================
+    // LIST
+    // ============================================
+    document.querySelectorAll('#listTabs .pp-tab').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const tab = this.getAttribute('data-tab');
+            if (tab === list.tab) return;
+            list.tab = tab;
+            syncControls();
+            writeUrl(true);
+            loadList(true);
+        });
+    });
+
+    let searchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        const value = this.value.trim().slice(0, 100);
+        searchTimer = setTimeout(() => {
+            if (value === list.q) return;
+            list.q = value;
+            writeUrl(false);
+            loadList(true);
+        }, 300);
+    });
+
+    document.getElementById('gradeFilter').addEventListener('change', function () {
+        list.grade = this.value;
+        writeUrl(true);
+        loadList(true);
+    });
+
+    document.getElementById('sortSelect').addEventListener('change', function () {
+        list.sort = this.value;
+        writeUrl(true);
+        loadList(true);
+    });
+
+    document.getElementById('moreBtn').addEventListener('click', () => loadList(false));
+
+    async function loadList(reset) {
+        const seq = ++list.seq;
+        if (reset) list.page = 1; else list.page += 1;
+        const more = document.getElementById('moreBtn');
+        more.disabled = true;
+        const p = new URLSearchParams({ action: 'list', tab: list.tab, sort: list.sort, page: String(list.page) });
+        if (list.q) p.set('q', list.q);
+        if (list.grade) p.set('grade', list.grade);
+        try {
+            const data = await getJson('/api/people.php?' + p.toString());
+            if (seq !== list.seq) return; // a newer request has started
+            if (!data.success) {
+                showMsg('pageMessage', data.message || 'The list could not be loaded.', 'error');
+                return;
+            }
+            Object.keys(data.counts || {}).forEach(key => {
+                const badge = document.querySelector(`[data-count="${key}"]`);
+                if (badge) badge.textContent = Number(data.counts[key]).toLocaleString('en-GB');
+            });
+            if (!grades.length && Array.isArray(data.grades)) setGrades(data.grades, data.defaultGrade);
+            list.rows = reset ? data.people : list.rows.concat(data.people);
+            list.total = Number(data.total) || 0;
+            renderList();
+            more.classList.toggle('hidden', list.rows.length >= list.total);
+        } catch (e) {
+            console.error('People list error:', e);
+            if (seq === list.seq) showMsg('pageMessage', 'The list could not be loaded.', 'error');
+        } finally {
+            more.disabled = false;
+        }
+    }
+
+    function setGrades(items, defaultGrade) {
+        grades = items;
+        const filter = document.getElementById('gradeFilter');
+        const addSelect = document.getElementById('aGrade');
+        const defaultId = defaultGrade && defaultGrade.id ? Number(defaultGrade.id) : null;
+        items.forEach(g => {
+            const label = g.shortName + (g.name && g.name !== g.shortName ? ' (' + g.name + ')' : '');
+            const o1 = el('option', '', label); o1.value = String(g.id); filter.appendChild(o1);
+            // Add player: grades by their full name, starting on the default
+            const o2 = el('option', '', g.name || g.shortName);
+            o2.value = String(g.id);
+            if (Number(g.id) === defaultId) { o2.defaultSelected = true; o2.selected = true; }
+            addSelect.appendChild(o2);
+        });
+        const pending = filter.dataset.pending || list.grade;
+        if (pending) filter.value = pending;
+        delete filter.dataset.pending;
+    }
+
+    function renderList() {
+        const body = document.getElementById('tableBody');
+        const compact = document.getElementById('compactList');
+        body.textContent = '';
+        compact.textContent = '';
+        const rows = list.rows;
+        const showContacts = rows.some(r => Object.prototype.hasOwnProperty.call(r, 'email'));
+        document.getElementById('contactHead').classList.toggle('hidden', !showContacts);
+
+        const empty = document.getElementById('listEmpty');
+        if (!rows.length) {
+            empty.textContent = list.q || list.grade ? 'Nobody matches this search' : 'Nobody here yet';
+            empty.classList.remove('hidden');
+        } else {
+            empty.classList.add('hidden');
+        }
+
+        rows.forEach(r => {
+            body.appendChild(tableRow(r, showContacts));
+            compact.appendChild(compactRow(r));
+        });
+
+        const to = rows.length;
+        document.getElementById('listCount').textContent = to
+            ? 'Showing 1 to ' + to.toLocaleString('en-GB') + ' of ' + list.total.toLocaleString('en-GB') + ' people'
+            : 'Showing 0 people';
+        markOpenRow();
+    }
+
+    function nameBlock(r) {
+        const wrap = el('div', 'min-w-0');
+        const line = el('div', 'flex items-center gap-2 flex-wrap');
+        line.appendChild(el('span', 'text-sm font-black text-white break-words', r.name));
+        if (!r.active) line.appendChild(el('span', 'pp-chip is-off', 'Deactivated'));
+        wrap.appendChild(line);
+        if (r.kbfId) wrap.appendChild(el('div', 'text-xs font-bold theme-primary-text', 'ID: ' + r.kbfId));
+        return wrap;
+    }
+
+    function cityLine(city) {
+        const span = el('span', 'inline-flex items-center gap-1 text-sm text-gray-300 font-semibold');
+        span.appendChild(icon('pin', 'w-4 h-4 flex-shrink-0 text-gray-500'));
+        span.appendChild(document.createTextNode(city || '-'));
+        return span;
+    }
+
+    function tableRow(r, showContacts) {
+        const tr = el('tr', 'pp-row');
+        tr.dataset.personId = String(r.id);
+        tr.addEventListener('click', e => {
+            if (e.target.closest('a')) return;
+            openPerson(r.id, 'details', { returnFocus: tr.querySelector('.pp-open') });
+        });
+
+        const tdPerson = el('td', 'px-4 py-3');
+        const pwrap = el('div', 'flex items-center gap-3');
+        pwrap.appendChild(avatar(r.photo, r.name, 'w-10 h-10 text-xs'));
+        pwrap.appendChild(nameBlock(r));
+        tdPerson.appendChild(pwrap);
+        tr.appendChild(tdPerson);
+
+        const tdCity = el('td', 'px-4 py-3');
+        tdCity.appendChild(cityLine(r.city));
+        tr.appendChild(tdCity);
+
+        const tdRole = el('td', 'px-4 py-3');
+        tdRole.appendChild(r.noAccess ? el('span', 'pp-chip is-off', 'No access') : staffChip(r.staffLabel));
+        tr.appendChild(tdRole);
+
+        const tdGrade = el('td', 'px-4 py-3');
+        tdGrade.appendChild(gradeBox(r.grade));
+        tr.appendChild(tdGrade);
+
+        tr.appendChild(el('td', 'px-4 py-3 text-right text-sm font-black theme-primary-text', r.grade ? Number(r.seasonPoints).toLocaleString('en-GB') : '-'));
+        tr.appendChild(el('td', 'px-4 py-3 text-right text-sm font-bold text-gray-300', r.grade ? Number(r.careerPoints).toLocaleString('en-GB') : '-'));
+
+        if (showContacts) {
+            const tdContact = el('td', 'px-4 py-3 text-xs text-gray-300 font-semibold');
+            if (r.email) {
+                const a = el('a', 'flex items-center gap-1 hover:text-white break-all');
+                a.href = 'mailto:' + r.email;
+                a.appendChild(icon('mail', 'w-3.5 h-3.5 flex-shrink-0 text-gray-500'));
+                a.appendChild(document.createTextNode(r.email));
+                tdContact.appendChild(a);
+            }
+            if (r.phone) {
+                const line = el('div', 'flex items-center gap-1 mt-1');
+                line.appendChild(icon('phone', 'w-3.5 h-3.5 flex-shrink-0 text-gray-500'));
+                line.appendChild(document.createTextNode(r.phone));
+                tdContact.appendChild(line);
+            }
+            tr.appendChild(tdContact);
+        }
+
+        const tdOpen = el('td', 'px-4 py-3 text-right');
+        const btn = el('button', 'pp-open btn-plain', 'Open');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Open ' + r.name);
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openPerson(r.id, 'details', { returnFocus: btn });
+        });
+        tdOpen.appendChild(btn);
+        tr.appendChild(tdOpen);
+        return tr;
+    }
+
+    function compactRow(r) {
+        const btn = el('button', 'pp-row pp-open w-full text-left px-4 py-3 flex items-start gap-3');
+        btn.type = 'button';
+        btn.dataset.personId = String(r.id);
+        btn.appendChild(avatar(r.photo, r.name, 'w-11 h-11 text-xs'));
+        const mid = el('div', 'min-w-0 flex-1');
+        mid.appendChild(nameBlock(r));
+        const city = el('div', 'mt-0.5');
+        city.appendChild(cityLine(r.city));
+        mid.appendChild(city);
+        if (r.staffLabel || r.noAccess) {
+            const chip = el('div', 'mt-1.5');
+            chip.appendChild(r.noAccess ? el('span', 'pp-chip is-off', 'No access') : staffChip(r.staffLabel));
+            mid.appendChild(chip);
+        }
+        btn.appendChild(mid);
+        const right = el('div', 'flex flex-col items-end gap-1 flex-shrink-0');
+        right.appendChild(gradeBox(r.grade));
+        if (r.grade) right.appendChild(el('span', 'text-xs font-black theme-primary-text', Number(r.seasonPoints).toLocaleString('en-GB') + ' pts'));
+        btn.appendChild(right);
+        btn.addEventListener('click', () => openPerson(r.id, 'details', { returnFocus: btn }));
+        return btn;
+    }
+
+    function markOpenRow() {
+        document.querySelectorAll('[data-person-id]').forEach(row => {
+            row.classList.toggle('is-open', personId !== null && row.dataset.personId === String(personId));
+        });
+    }
+
+    // ============================================
+    // PERSON PANEL
+    // ============================================
+    const panelEl = document.getElementById('personPanel');
+    const backdropEl = document.getElementById('personBackdrop');
+
+    function panelIsOpen() {
+        return layers.some(l => l.node === panelEl);
+    }
+
+    function showPanelShell() {
+        backdropEl.classList.remove('hidden');
+        panelEl.classList.remove('hidden');
+        requestAnimationFrame(() => panelEl.classList.add('is-open'));
+    }
+
+    async function openPerson(id, panel, opts) {
+        opts = opts || {};
+        if (accessMode !== 'edit') closePerson(true);   // leave an unsaved Add staff member
+        const wasOpen = panelIsOpen();
+        accessMode = 'edit';
+        accessDraft = null;
+        personId = id;
+        person = null;
+        accessData = null;
+        pendingPhoto = undefined;
+        panelName = panel || 'details';
+        if (!me.isSuperAdmin && panelName === 'access') panelName = 'details';
+
+        if (!wasOpen) {
+            pushLayer(panelEl, () => closePerson(false), opts.returnFocus || document.activeElement);
+        }
+        showPanelShell();
+        if (!opts.fromHistory) writeUrl(true);
+        markOpenRow();
+        resetPanelView();
+        document.getElementById('ppClose').focus();
+
+        try {
+            const data = await getJson('/api/people.php?action=person&id=' + encodeURIComponent(id));
+            if (personId !== id) return;
+            if (!data.success) {
+                document.getElementById('ppLoading').textContent = data.message || 'This person could not be loaded.';
+                return;
+            }
+            person = data.person;
+            renderPersonHeader();
+            showPane(panelName, true);
+        } catch (e) {
+            console.error('Person load error:', e);
+            document.getElementById('ppLoading').textContent = 'This person could not be loaded.';
+        }
+    }
+
+    function resetPanelView() {
+        document.getElementById('ppLoading').classList.remove('hidden');
+        document.getElementById('ppLoading').textContent = 'Loading...';
+        ['paneDetails', 'paneResults', 'paneGrades', 'paneAccess', 'paneActivity'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById('ppFooter').classList.add('hidden');
+        document.getElementById('tempPasswordPanel').classList.add('hidden');
+        showMsg('ppMessage', '');
+        document.getElementById('ppName').textContent = '';
+        document.getElementById('ppMeta').textContent = '';
+        document.getElementById('ppChip').textContent = '';
+        document.getElementById('ppPlays').textContent = '';
+        document.getElementById('ppAvatar').textContent = '';
+        document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => {
+            const name = t.getAttribute('data-panel');
+            t.classList.toggle('hidden', name === 'access' && !me.isSuperAdmin);
+        });
+    }
+
+    function closePerson(fromHistory) {
+        if (!panelIsOpen()) return;
+        panelEl.classList.remove('is-open');
+        backdropEl.classList.add('hidden');
+        setTimeout(() => { if (!panelEl.classList.contains('is-open')) panelEl.classList.add('hidden'); }, 230);
+        const oldId = personId;
+        personId = null;
+        person = null;
+        accessData = null;
+        accessDraft = null;
+        accessMode = 'edit';
+        const layer = popLayer(panelEl);
+        if (!fromHistory) writeUrl(true);
+        markOpenRow();
+        // Focus back on the row it came from
+        let target = layer && layer.returnFocus && document.contains(layer.returnFocus) ? layer.returnFocus : null;
+        if (!target && oldId) {
+            target = document.querySelector(`[data-person-id="${oldId}"] .pp-open`) || document.querySelector(`button[data-person-id="${oldId}"]`);
+        }
+        if (target) target.focus();
+    }
+
+    document.getElementById('ppClose').addEventListener('click', () => closePerson(false));
+    backdropEl.addEventListener('click', () => closePerson(false));
+
+    function renderPersonHeader() {
+        const p = person;
+        fillAvatar(document.getElementById('ppAvatar'), p.photo, p.name);
+        document.getElementById('ppName').textContent = p.name;
+        document.getElementById('ppMeta').textContent = [p.kbfId ? 'ID: ' + p.kbfId : '', p.city || ''].filter(Boolean).join(' · ');
+        const chip = document.getElementById('ppChip');
+        chip.textContent = '';
+        if (p.staffLabel) chip.appendChild(staffChip(p.staffLabel));
+        if (!p.active) chip.appendChild(el('span', 'pp-chip is-off ml-1', 'Deactivated'));
+        document.getElementById('ppPlays').textContent = p.grade ? 'Plays: Grade ' + p.grade : 'Does not play';
+        document.getElementById('actAbout').textContent = 'Changes to ' + p.firstName;
+        document.getElementById('actBy').textContent = 'Done by ' + p.firstName;
+    }
+
+    // Draft header while adding a staff member (nothing saved yet)
+    function renderDraftHeader() {
+        const d = accessDraft.member || accessDraft.person;
+        const name = ((d.firstName || '') + ' ' + (d.lastName || '')).trim();
+        fillAvatar(document.getElementById('ppAvatar'), accessDraft.member ? d.profilePhoto : null, name);
+        document.getElementById('ppName').textContent = name;
+        document.getElementById('ppMeta').textContent = d.location || '';
+        const chip = document.getElementById('ppChip');
+        chip.textContent = '';
+        chip.appendChild(el('span', 'pp-chip', 'New staff member'));
+        document.getElementById('ppPlays').textContent = accessDraft.member && d.grade ? 'Plays: Grade ' + d.grade : 'Does not play';
+    }
+
+    document.querySelectorAll('#ppTabs .pp-ptab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            if (accessMode !== 'edit') return;
+            showPane(this.getAttribute('data-panel'), false);
+        });
+    });
+
+    function showPane(name, fromLoad) {
+        if (name === 'access' && !me.isSuperAdmin) name = 'details';
+        panelName = name;
+        if (!fromLoad) writeUrl(false);
+        document.getElementById('ppLoading').classList.add('hidden');
+        const map = { details: 'paneDetails', results: 'paneResults', grades: 'paneGrades', access: 'paneAccess', activity: 'paneActivity' };
+        Object.keys(map).forEach(k => document.getElementById(map[k]).classList.toggle('hidden', k !== name));
+        document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => {
+            const on = t.getAttribute('data-panel') === name;
+            t.classList.toggle('is-active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        document.getElementById('ppFooter').classList.toggle('hidden', name !== 'details' || accessMode !== 'edit');
+        if (accessMode !== 'edit') return;
+        if (name === 'details') renderDetails();
+        if (name === 'results') loadResults();
+        if (name === 'grades') loadGrades();
+        if (name === 'access') loadAccess();
+        if (name === 'activity') { activity = { view: 'about', page: 1 }; loadActivity(true); }
+    }
+
+    // ---------- DETAILS ----------
+    function renderDetails() {
+        const p = person;
+        const can = p.can || {};
+        const hasContacts = Object.prototype.hasOwnProperty.call(p, 'email');
+        document.getElementById('dFirstName').value = p.firstName || '';
+        document.getElementById('dLastName').value = p.lastName || '';
+        document.getElementById('dCity').value = p.city || '';
+        document.getElementById('dPostCode').value = p.postCode || '';
+        document.getElementById('dYear').value = p.yearOfBirth || '';
+        document.getElementById('dEmailWrap').classList.toggle('hidden', !hasContacts);
+        document.getElementById('dMobileWrap').classList.toggle('hidden', !hasContacts);
+        document.getElementById('dContactNote').classList.toggle('hidden', hasContacts);
+        if (hasContacts) {
+            document.getElementById('dEmail').value = p.email || '';
+            document.getElementById('dMobile').value = p.phone || '';
+        }
+        ['dFirstName', 'dLastName', 'dCity', 'dPostCode', 'dYear'].forEach(id => { document.getElementById(id).disabled = !can.edit; });
+        ['dEmail', 'dMobile'].forEach(id => { document.getElementById(id).disabled = !can.editContacts; });
+        document.getElementById('dPhotoChange').classList.toggle('hidden', !can.edit);
+        fillAvatar(document.getElementById('dPhotoPreview'), pendingPhoto !== undefined ? pendingPhoto : p.photo, p.name);
+        document.getElementById('dPhotoNote').textContent = pendingPhoto !== undefined ? 'New photo, not saved yet.' : '';
+
+        const box = document.getElementById('dGradeBox');
+        box.textContent = p.grade || '-';
+        box.classList.toggle('is-none', !p.grade);
+        document.getElementById('dSeason').textContent = p.grade ? Number(p.seasonPoints).toLocaleString('en-GB') : '-';
+        document.getElementById('dCareer').textContent = p.grade ? Number(p.careerPoints).toLocaleString('en-GB') : '-';
+        document.getElementById('dChangeGrade').classList.toggle('hidden', !can.changeGrade);
+
+        document.getElementById('dTerms').textContent = p.termsVersion
+            ? 'Agreed to the terms (version ' + p.termsVersion + ')' + (p.termsAcceptedDate ? ' on ' + formatDate(p.termsAcceptedDate) : '')
+            : 'Agreed to an earlier version';
+        document.getElementById('dNotStaff').classList.toggle('hidden', !(me.isSuperAdmin && !p.isStaff));
+
+        const activeBtn = document.getElementById('activeBtn');
+        activeBtn.classList.toggle('hidden', !can.setActive);
+        activeBtn.textContent = p.active ? 'Deactivate' : 'Reactivate';
+        document.getElementById('removeBtn').classList.toggle('hidden', !can.remove);
+        document.getElementById('saveDetailsBtn').classList.toggle('hidden', !can.edit);
+        const footerUsed = can.setActive || can.remove || can.edit;
+        document.getElementById('ppFooter').classList.toggle('hidden', !footerUsed);
+    }
+
+    async function uploadPhoto(file) {
+        if (!file) return null;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            throw new Error('Only JPG, PNG and WEBP photos are allowed.');
+        }
+        const form = new FormData();
+        form.append('profilePhoto', file);
+        const res = await authenticatedFetch('/api/upload-profile-photo.php', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!data.success || !safePhoto(data.photoPath)) throw new Error(data.message || 'The photo could not be uploaded.');
+        return data.photoPath;
+    }
+
+    document.getElementById('dPhotoInput').addEventListener('change', async function () {
+        const file = this.files && this.files[0];
+        this.value = '';
+        if (!file || !person) return;
+        showMsg('ppMessage', 'Uploading the photo...', 'ok');
+        try {
+            pendingPhoto = await uploadPhoto(file);
+            showMsg('ppMessage', 'Photo uploaded. Press Save to keep it.', 'ok');
+            renderDetails();
+        } catch (e) {
+            showMsg('ppMessage', e.message || 'The photo could not be uploaded.', 'error');
+        }
+    });
+
+    document.getElementById('saveDetailsBtn').addEventListener('click', saveDetails);
+    document.getElementById('detailsForm').addEventListener('submit', e => { e.preventDefault(); saveDetails(); });
+
+    async function saveDetails() {
+        if (!person || !(person.can || {}).edit) return;
+        const p = person;
+        const payload = { action: 'edit', id: p.id };
+        const pick = (key, inputId, old) => {
+            const value = document.getElementById(inputId).value.trim();
+            if (value !== String(old === null || old === undefined ? '' : old)) payload[key] = value;
+        };
+        pick('firstName', 'dFirstName', p.firstName);
+        pick('lastName', 'dLastName', p.lastName);
+        pick('city', 'dCity', p.city);
+        pick('postCode', 'dPostCode', p.postCode);
+        pick('yearOfBirth', 'dYear', p.yearOfBirth);
+        if (p.can.editContacts && Object.prototype.hasOwnProperty.call(p, 'email')) {
+            pick('email', 'dEmail', p.email);
+            pick('mobile', 'dMobile', p.phone);
+        }
+        if (pendingPhoto !== undefined) payload.photo = pendingPhoto;
+        if (Object.keys(payload).length === 2) {
+            showMsg('ppMessage', 'Nothing has changed.', 'ok');
+            return;
+        }
+        const btn = document.getElementById('saveDetailsBtn');
+        btn.disabled = true;
+        try {
+            const data = await postPeople(payload);
+            if (!data.success) {
+                showMsg('ppMessage', data.message || 'The details could not be saved.', 'error');
+                return;
+            }
+            pendingPhoto = undefined;
+            await reloadPerson('details');
+            showMsg('ppMessage', data.message || 'Details saved.', 'ok');
+            loadList(true);
+        } catch (e) {
+            console.error('Save details error:', e);
+            showMsg('ppMessage', 'The details could not be saved.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function reloadPerson(pane) {
+        if (!personId) return;
+        const data = await getJson('/api/people.php?action=person&id=' + encodeURIComponent(personId));
+        if (data.success) {
+            person = data.person;
+            renderPersonHeader();
+            showPane(pane || panelName, true);
+        }
+    }
+
+    // Deactivate (with a confirmation) or reactivate
+    document.getElementById('activeBtn').addEventListener('click', async function () {
+        if (!person) return;
+        const deactivate = person.active;
+        if (deactivate) {
+            const text = 'This hides ' + person.name + ' from the website: the Grading pages, results lists and their profile.'
+                + (person.isStaff ? ' They will also not be able to sign in.' : '')
+                + ' Their grade and points are kept, and you can reactivate them at any time.';
+            const ok = await askConfirm('Deactivate ' + person.name + '?', text, 'Deactivate', false);
+            if (!ok) return;
+        }
+        this.disabled = true;
+        try {
+            const data = await postPeople({ action: 'setActive', id: person.id, active: !deactivate });
+            if (!data.success) {
+                showMsg('ppMessage', data.message || 'This could not be changed.', 'error');
+                return;
+            }
+            await reloadPerson('details');
+            showMsg('ppMessage', data.message || 'Saved.', 'ok');
+            loadList(true);
+        } catch (e) {
+            showMsg('ppMessage', 'This could not be changed.', 'error');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    // ---------- REMOVE AT THEIR REQUEST ----------
+    document.getElementById('removeBtn').addEventListener('click', function () {
+        if (!person) return;
+        document.getElementById('removeConfirmInput').value = '';
+        document.getElementById('removeConfirmBtn').disabled = true;
+        showMsg('removeMessage', '');
+        openDialog('removeDialog', 'removeConfirmInput');
+    });
+
+    document.getElementById('removeConfirmInput').addEventListener('input', function () {
+        document.getElementById('removeConfirmBtn').disabled = this.value.trim() !== 'REMOVE';
+    });
+
+    document.getElementById('removeForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!person || document.getElementById('removeConfirmInput').value.trim() !== 'REMOVE') return;
+        const btn = document.getElementById('removeConfirmBtn');
+        btn.disabled = true;
+        try {
+            const data = await postPeople({ action: 'remove', id: person.id, confirm: true });
+            if (!data.success) {
+                showMsg('removeMessage', data.message || 'The player could not be removed.', 'error');
+                btn.disabled = false;
+                return;
+            }
+            closeDialog('removeDialog');
+            closePerson(false);
+            showMsg('pageMessage', data.message || 'The player was removed.', 'ok');
+            loadList(true);
+        } catch (err) {
+            showMsg('removeMessage', 'The player could not be removed.', 'error');
+            btn.disabled = false;
+        }
+    });
+
+    // ---------- CHANGE GRADE (shared dialog js/grade-change.js, api/rankings.php) ----------
+    document.getElementById('dChangeGrade').addEventListener('click', function () {
+        if (!person) return;
+        KBFGradeChange.open({
+            userId: person.id,
+            onDone: async function (result) {
+                await reloadPerson('details');
+                showMsg('ppMessage', result.message || 'Grade changed.', result.emailStatus === 'failed' ? 'warn' : 'ok');
+                loadList(true);
+            }
+        });
+    });
+
+    // ---------- RESULTS ----------
+    async function loadResults() {
+        const ul = document.getElementById('resultsList');
+        ul.textContent = '';
+        ul.appendChild(el('li', 'py-6 text-center text-gray-400 font-bold uppercase text-xs', 'Loading...'));
+        const id = personId;
+        try {
+            const data = await getJson('/api/people.php?action=results&id=' + encodeURIComponent(id));
+            if (personId !== id) return;
+            ul.textContent = '';
+            const rows = data.success ? data.results : [];
+            if (!data.success) {
+                ul.appendChild(el('li', 'py-6 text-center text-red-400 font-bold text-xs', data.message || 'Results could not be loaded.'));
+                return;
+            }
+            if (!rows.length) {
+                ul.appendChild(el('li', 'py-6 text-center text-gray-400 font-bold uppercase text-xs', 'No results yet'));
+                return;
+            }
+            rows.forEach(r => {
+                const li = el('li', 'py-3 flex items-start justify-between gap-3');
+                const left = el('div', 'min-w-0');
+                left.appendChild(el('p', 'text-xs font-bold text-gray-400', formatDate(r.date)));
+                if (r.tournamentId) {
+                    const a = el('a', 'text-sm font-black text-white hover:underline break-words', r.tournament || 'Tournament');
+                    a.href = '/tournament-details?id=' + encodeURIComponent(r.tournamentId);
+                    a.target = '_blank';
+                    a.rel = 'noopener';
+                    left.appendChild(a);
+                } else {
+                    left.appendChild(el('p', 'text-sm font-black text-white', r.tournament || 'Tournament'));
+                }
+                const placing = el('p', 'text-xs font-semibold text-gray-300', r.placing || '');
+                // Tournament before their latest grade change or this season
+                if (r.careerOnly) {
+                    placing.appendChild(document.createTextNode(' '));
+                    placing.appendChild(el('span', 'pp-chip is-off', 'Career points only'));
+                }
+                left.appendChild(placing);
+                li.appendChild(left);
+                li.appendChild(el('span', 'text-sm font-black theme-primary-text whitespace-nowrap', (r.points > 0 ? '+' : '') + r.points + ' pts'));
+                ul.appendChild(li);
+            });
+        } catch (e) {
+            if (personId === id) {
+                ul.textContent = '';
+                ul.appendChild(el('li', 'py-6 text-center text-red-400 font-bold text-xs', 'Results could not be loaded.'));
+            }
+        }
+    }
+
+    // ---------- GRADE HISTORY ----------
+    async function loadGrades() {
+        const ul = document.getElementById('gradesList');
+        ul.textContent = '';
+        ul.appendChild(el('li', 'py-6 text-center text-gray-400 font-bold uppercase text-xs', 'Loading...'));
+        const id = personId;
+        try {
+            const data = await getJson('/api/people.php?action=grades&id=' + encodeURIComponent(id));
+            if (personId !== id) return;
+            ul.textContent = '';
+            if (!data.success) {
+                ul.appendChild(el('li', 'py-6 text-center text-red-400 font-bold text-xs', data.message || 'Grade history could not be loaded.'));
+                return;
+            }
+            if (!data.grades.length) {
+                ul.appendChild(el('li', 'py-6 text-center text-gray-400 font-bold uppercase text-xs', 'No grade changes yet'));
+                return;
+            }
+            data.grades.forEach(g => {
+                const li = el('li', 'py-3 space-y-1');
+                const top = el('div', 'flex items-center justify-between gap-3');
+                top.appendChild(el('span', 'text-xs font-bold text-gray-400', formatDate(g.date)));
+                const move = el('span', 'flex items-center gap-2');
+                move.appendChild(gradeBox(g.oldGrade, 'w-8 h-8'));
+                move.appendChild(icon('arrow', 'w-4 h-4 text-gray-400'));
+                move.appendChild(gradeBox(g.newGrade, 'w-8 h-8'));
+                top.appendChild(move);
+                li.appendChild(top);
+                if (g.reason) li.appendChild(el('p', 'text-sm font-semibold text-gray-200 break-words', g.reason));
+                if (g.changedBy) li.appendChild(el('p', 'text-xs font-semibold text-gray-500', 'By ' + g.changedBy));
+                ul.appendChild(li);
+            });
+        } catch (e) {
+            if (personId === id) {
+                ul.textContent = '';
+                ul.appendChild(el('li', 'py-6 text-center text-red-400 font-bold text-xs', 'Grade history could not be loaded.'));
+            }
+        }
+    }
+
+    // ---------- ACTIVITY ----------
+    document.getElementById('actAbout').addEventListener('click', () => { activity = { view: 'about', page: 1 }; loadActivity(true); });
+    document.getElementById('actBy').addEventListener('click', () => { activity = { view: 'by', page: 1 }; loadActivity(true); });
+    document.getElementById('activityMore').addEventListener('click', () => { activity.page += 1; loadActivity(false); });
+
+    async function loadActivity(reset) {
+        const canBy = !!(person && person.can && person.can.activityBy);
+        if (activity.view === 'by' && !canBy) activity.view = 'about';
+        document.getElementById('actBy').classList.toggle('hidden', !canBy);
+        ['actAbout', 'actBy'].forEach(id => {
+            const on = document.getElementById(id).getAttribute('data-view') === activity.view;
+            document.getElementById(id).classList.toggle('is-active', on);
+            document.getElementById(id).setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+
+        const link = document.getElementById('activityLogLink');
+        link.classList.toggle('hidden', !canSeeActivityLog());
+        link.href = '/admin/activity-log?' + (activity.view === 'by' ? 'person=' : 'about=') + encodeURIComponent(personId);
+
+        const ul = document.getElementById('activityList');
+        if (reset) ul.textContent = '';
+        const more = document.getElementById('activityMore');
+        more.disabled = true;
+        const id = personId;
+        try {
+            const data = await getJson('/api/people.php?action=activity&id=' + encodeURIComponent(id) + '&view=' + activity.view + '&page=' + activity.page);
+            if (personId !== id) return;
+            if (!data.success) {
+                ul.appendChild(el('li', 'py-6 text-center text-red-400 font-bold text-xs', data.message || 'Activity could not be loaded.'));
+                more.classList.add('hidden');
+                return;
+            }
+            if (reset && !data.entries.length) {
+                ul.appendChild(el('li', 'py-6 text-center text-gray-400 font-bold uppercase text-xs', 'Nothing recorded yet'));
+            }
+            data.entries.forEach(entry => {
+                const li = el('li', 'py-3');
+                li.appendChild(el('p', 'text-xs font-bold text-gray-400', formatDateTime(entry.date)));
+                li.appendChild(el('p', 'text-sm font-semibold text-gray-100 break-words', entry.description));
+                if (entry.by) li.appendChild(el('p', 'text-xs font-semibold text-gray-500', 'By ' + entry.by));
+                ul.appendChild(li);
+            });
+            more.classList.toggle('hidden', activity.page * data.pageSize >= data.total);
+        } catch (e) {
+            if (personId === id) ul.appendChild(el('li', 'py-6 text-center text-red-400 font-bold text-xs', 'Activity could not be loaded.'));
+        } finally {
+            more.disabled = false;
+        }
+    }
+
+    // ============================================
+    // ACCESS (Super Admins) - the old staff page logic on api/staff.php
+    // ============================================
+    function renderPermissionGroups() {
+        const box = document.getElementById('permissionGroups');
+        box.textContent = '';
+        let index = 0;
+        PERMISSION_GROUPS.forEach(group => {
+            const fs = el('fieldset', 'perm-group');
+            fs.appendChild(el('legend', 'text-xs font-black uppercase text-gray-400 mb-2', group.name));
+            const items = el('div', 'space-y-2');
+            group.items.forEach(item => {
+                const label = el('label', 'perm-row flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer');
+                if (index >= PERMS_SHOWN_FIRST) label.classList.add('perm-extra');
+                const input = el('input', 'perm-check mt-0.5');
+                input.type = 'checkbox';
+                input.setAttribute('data-perm', item.key);
+                label.appendChild(input);
+                const text = el('span', 'min-w-0');
+                text.appendChild(el('span', 'block text-sm font-bold text-white', item.label));
+                if (item.note) text.appendChild(el('span', 'block text-xs text-gray-400 font-semibold mt-0.5', item.note));
+                label.appendChild(text);
+                items.appendChild(label);
+                index++;
+            });
+            fs.appendChild(items);
+            box.appendChild(fs);
+        });
+        applyPermsExpanded();
+    }
+
+    function applyPermsExpanded() {
+        document.querySelectorAll('#permissionGroups .perm-extra').forEach(row => row.classList.toggle('hidden', !permsExpanded));
+        document.querySelectorAll('#permissionGroups .perm-group').forEach(fs => {
+            const visible = Array.from(fs.querySelectorAll('.perm-row')).some(r => !r.classList.contains('hidden'));
+            fs.classList.toggle('hidden', !visible);
+        });
+        document.getElementById('permToggle').textContent = permsExpanded
+            ? 'Show fewer permissions'
+            : 'Show all ' + ALL_PERMISSION_KEYS.length + ' permissions';
+    }
+
+    document.getElementById('permToggle').addEventListener('click', function () {
+        permsExpanded = !permsExpanded;
+        applyPermsExpanded();
+    });
+
+    function roleInputs() { return Array.from(document.querySelectorAll('#roleTiles input[data-role]')); }
+    function permInputs() { return Array.from(document.querySelectorAll('#permissionGroups input[data-perm]')); }
+    function checkedRoles() { return roleInputs().filter(i => i.checked).map(i => i.getAttribute('data-role')); }
+    function checkedPermissions() { return permInputs().filter(i => i.checked).map(i => i.getAttribute('data-perm')); }
+
+    function setChecks(labels, keys) {
+        roleInputs().forEach(i => { i.checked = labels.includes(i.getAttribute('data-role')); });
+        permInputs().forEach(i => { i.checked = keys.includes(i.getAttribute('data-perm')); });
+    }
+
+    // A Super Admin has every permission: shown all ticked and locked
+    function setPermissionsLocked(isSuper) {
+        permInputs().forEach(i => {
+            if (isSuper) i.checked = true;
+            i.disabled = isSuper;
+            i.closest('label').classList.toggle('cursor-not-allowed', isSuper);
+            i.closest('label').classList.toggle('cursor-pointer', !isSuper);
+        });
+        document.getElementById('superAdminPermNote').classList.toggle('hidden', !isSuper);
+    }
+
+    function bindRoleTiles() {
+        roleInputs().forEach(input => {
+            input.addEventListener('change', function () {
+                const preset = ROLE_PRESETS[this.getAttribute('data-role')] || [];
+                if (accessData && accessData.isSuperAdmin) return; // ticks locked; only labels change
+                if (this.checked) {
+                    permInputs().forEach(i => { if (preset.includes(i.getAttribute('data-perm'))) i.checked = true; });
+                } else {
+                    const keep = new Set();
+                    checkedRoles().forEach(r => (ROLE_PRESETS[r] || []).forEach(k => keep.add(k)));
+                    permInputs().forEach(i => {
+                        const key = i.getAttribute('data-perm');
+                        if (preset.includes(key) && !keep.has(key)) i.checked = false;
+                    });
+                }
+            });
+        });
+    }
+
+    async function loadAccess() {
+        if (!me.isSuperAdmin || !personId) return;
+        showMsg('accessMessage', '');
+        const id = personId;
+        try {
+            const data = await getJson('/api/staff.php?action=get&id=' + encodeURIComponent(id));
+            if (personId !== id) return;
+            if (!data.success) {
+                showMsg('accessMessage', data.message || 'Access could not be loaded.', 'error');
+                return;
+            }
+            accessData = data.person;
+            renderAccess();
+        } catch (e) {
+            showMsg('accessMessage', 'Access could not be loaded.', 'error');
+        }
+    }
+
+    function isOwnAccount() {
+        return accessData && String(accessData.userId) === String(me.id);
+    }
+
+    function renderAccess() {
+        const draft = accessMode !== 'edit';
+        document.getElementById('accountAddNote').classList.toggle('hidden', !draft);
+        document.getElementById('accountControls').classList.toggle('hidden', draft);
+        document.getElementById('removeAccessBtn').classList.toggle('hidden', draft);
+
+        let plays;
+        if (draft) {
+            setChecks([], []);
+            setPermissionsLocked(false);
+            plays = accessDraft.member && accessDraft.member.grade;
+        } else {
+            const a = accessData;
+            setChecks(a.labels || [], a.permissions || []);
+            setPermissionsLocked(a.isSuperAdmin);
+
+            const loginSwitch = document.getElementById('loginSwitch');
+            loginSwitch.checked = !!a.loginEnabled;
+            const lockOwnLogin = isOwnAccount() && a.loginEnabled;
+            loginSwitch.disabled = lockOwnLogin;
+            document.getElementById('loginSwitchNote').classList.toggle('hidden', !lockOwnLogin);
+
+            const status = document.getElementById('twoStepStatus');
+            if (a.twoStep === 'on') {
+                status.className = 'pp-chip is-super';
+                status.textContent = a.twoStepEnabledDate ? 'On since ' + formatDate(String(a.twoStepEnabledDate).replace(' ', 'T')) : 'On';
+            } else if (a.twoStep === 'required') {
+                status.className = 'pp-chip';
+                status.style.borderColor = '#f59e0b';
+                status.style.color = '#fbbf24';
+                status.textContent = 'Required, not set up';
+            } else {
+                status.className = 'pp-chip is-off';
+                status.removeAttribute('style');
+                status.textContent = 'Off';
+            }
+            if (a.twoStep !== 'required') status.removeAttribute('style');
+            document.getElementById('twoStepRequiredSwitch').checked = !!a.twoStepRequired;
+            document.getElementById('twoStepRequiredSwitch').disabled = false;
+            document.getElementById('resetTwoStepBtn').classList.toggle('hidden', a.twoStep !== 'on');
+
+            const pw = document.getElementById('passwordHelpBtn');
+            pw.textContent = (a.hasPassword && a.hasEmail) ? 'Send password reset email' : 'Set temporary password';
+            pw.disabled = !a.isActive;
+
+            const sa = document.getElementById('superAdminBtn');
+            sa.textContent = a.isSuperAdmin ? 'Remove Super Admin' : 'Make Super Admin';
+            const lockOwnSuper = a.isSuperAdmin && isOwnAccount();
+            sa.disabled = lockOwnSuper || (!a.isSuperAdmin && !a.isActive);
+            document.getElementById('superAdminNote').classList.toggle('hidden', !lockOwnSuper);
+
+            document.getElementById('impersonateBtn').classList.toggle('hidden', !a.canImpersonate);
+            document.getElementById('impersonateNote').classList.toggle('hidden', !a.canImpersonate);
+            document.getElementById('removeAccessBtn').disabled = !a.isStaff || isOwnAccount();
+            plays = !!a.grade;
+        }
+
+        document.getElementById('accessKeepNote').textContent = plays
+            ? 'Removing all access keeps ' + firstNameOf() + ' as a player, with their grade and points.'
+            : 'Does not play.';
+        document.getElementById('saveAccessBtn').textContent = 'Save access';
+    }
+
+    document.getElementById('saveAccessBtn').addEventListener('click', async function () {
+        showMsg('accessMessage', '');
+        const labels = checkedRoles();
+        const permissions = (accessData && accessData.isSuperAdmin) ? (accessData.permissions || []) : checkedPermissions();
+        let payload;
+        if (accessMode === 'edit') {
+            if (!accessData) return;
+            if (accessData.isStaff) {
+                payload = { action: 'update', userId: accessData.userId, labels: labels, permissions: permissions };
+            } else {
+                // Not staff yet (a player, or someone whose access was removed):
+                // giving access sets a temporary password when they have none
+                if (!labels.length && !permissions.length) {
+                    showMsg('accessMessage', 'Choose at least one role or permission.', 'error');
+                    return;
+                }
+                payload = { action: 'grant', userId: accessData.userId, labels: labels, permissions: permissions };
+            }
+        } else {
+            if (!labels.length && !permissions.length) {
+                showMsg('accessMessage', 'Choose at least one role or permission.', 'error');
+                return;
+            }
+            payload = accessMode === 'member'
+                ? { action: 'grant', userId: accessDraft.member.userId, labels: labels, permissions: permissions }
+                : { action: 'create', labels: labels, permissions: permissions,
+                    firstName: accessDraft.person.firstName, lastName: accessDraft.person.lastName,
+                    email: accessDraft.person.email, location: accessDraft.person.location };
+        }
+        this.disabled = true;
+        try {
+            const data = await postStaff(payload);
+            if (!data.success) {
+                showMsg('accessMessage', data.message || 'Access could not be saved.', 'error');
+                return;
+            }
+            if (accessMode !== 'edit') {
+                // The new staff member now exists: show them like anyone else
+                const newId = Number(data.userId);
+                accessMode = 'edit';
+                accessDraft = null;
+                personId = newId;
+                writeUrl(false);
+                panelName = 'access';
+                document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => t.classList.remove('hidden'));
+                await reloadPerson('access');
+                if (data.temporaryPassword) showTemporaryPassword(data.temporaryPassword);
+                showMsg('accessMessage', data.message || 'Access saved.', 'ok');
+                loadList(true);
+                return;
+            }
+            await reloadPerson('access');
+            if (data.temporaryPassword) showTemporaryPassword(data.temporaryPassword);
+            showMsg('accessMessage', data.message || 'Access saved.', 'ok');
+            loadList(true);
+        } catch (e) {
+            console.error('Save access error:', e);
+            showMsg('accessMessage', 'Access could not be saved.', 'error');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    document.getElementById('removeAccessBtn').addEventListener('click', async function () {
+        if (!accessData) return;
+        const name = firstNameOf();
+        const text = (accessData.grade
+            ? 'Removing all access keeps ' + name + ' as a player, with their grade and points.'
+            : name + ' does not play, so they will have no access and no grade. You can give them access again or deactivate them.')
+            + ' They will not be able to sign in.' + (accessData.isSuperAdmin ? ' Their Super Admin status is removed too.' : '');
+        const ok = await askConfirm('Remove all access?', text, 'Remove all access', false);
+        if (!ok) return;
+        this.disabled = true;
+        try {
+            if (accessData.isSuperAdmin) {
+                const s = await postStaff({ action: 'setSuperAdmin', userId: accessData.userId, superAdmin: false });
+                if (!s.success) {
+                    showMsg('accessMessage', s.message || 'Super Admin could not be removed.', 'error');
+                    return;
+                }
+            }
+            const data = await postStaff({ action: 'update', userId: accessData.userId, labels: [], permissions: [] });
+            if (!data.success) {
+                showMsg('accessMessage', data.message || 'Access could not be removed.', 'error');
+                return;
+            }
+            loadList(true);
+            const playsNow = !!accessData.grade;
+            const fullName = person ? person.name : name;
+            await reloadPerson('access');
+            showMsg('accessMessage', playsNow
+                ? 'All access removed.'
+                : fullName + ' no longer has access and does not play. Give them access again or deactivate them.', playsNow ? 'ok' : 'warn');
+        } catch (e) {
+            showMsg('accessMessage', 'Access could not be removed.', 'error');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    document.getElementById('loginSwitch').addEventListener('change', async function () {
+        const enabled = this.checked;
+        this.disabled = true;
+        try {
+            const data = await postStaff({ action: 'setLogin', userId: accessData.userId, enabled: enabled });
+            if (!data.success) {
+                this.checked = !enabled;
+                showMsg('accessMessage', data.message || 'Sign-in could not be changed.', 'error');
+                return;
+            }
+            await loadAccess();
+            showMsg('accessMessage', data.message || 'Saved.', 'ok');
+        } catch (e) {
+            this.checked = !enabled;
+            showMsg('accessMessage', 'Sign-in could not be changed.', 'error');
+        } finally {
+            this.disabled = isOwnAccount() && accessData && accessData.loginEnabled;
+        }
+    });
+
+    document.getElementById('twoStepRequiredSwitch').addEventListener('change', async function () {
+        const required = this.checked;
+        this.disabled = true;
+        try {
+            const data = await postStaff({ action: 'setTwoStepRequired', userId: accessData.userId, required: required });
+            if (!data.success) {
+                this.checked = !required;
+                showMsg('accessMessage', data.message || 'This setting could not be changed.', 'error');
+                return;
+            }
+            await loadAccess();
+            showMsg('accessMessage', data.message || 'Saved.', 'ok');
+        } catch (e) {
+            this.checked = !required;
+            showMsg('accessMessage', 'This setting could not be changed.', 'error');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    document.getElementById('resetTwoStepBtn').addEventListener('click', async function () {
+        const ok = await askConfirm('Reset 2-step verification?',
+            'This turns off 2-step verification for ' + firstNameOf() + ' and deletes their backup codes. They will need to set it up again.',
+            'Reset', true);
+        if (!ok) return;
+        try {
+            const data = await postStaff({ action: 'resetTwoStep', userId: accessData.userId });
+            await loadAccess();
+            showMsg('accessMessage', data.message || (data.success ? '2-step verification reset.' : '2-step could not be reset.'), data.success ? 'ok' : 'error');
+        } catch (e) {
+            showMsg('accessMessage', '2-step could not be reset.', 'error');
+        }
+    });
+
+    document.getElementById('passwordHelpBtn').addEventListener('click', async function () {
+        const sendEmail = accessData.hasPassword && accessData.hasEmail;
+        const ok = await askConfirm(sendEmail ? 'Send a password reset email?' : 'Set a temporary password?',
+            sendEmail ? 'A password reset email goes to ' + firstNameOf() + '.'
+                : 'A new temporary password is made for ' + firstNameOf() + '. Any current password stops working.',
+            sendEmail ? 'Send email' : 'Set password', false);
+        if (!ok) return;
+        this.disabled = true;
+        try {
+            const data = await postStaff({ action: 'passwordHelp', userId: accessData.userId });
+            if (!data.success) {
+                showMsg('accessMessage', data.message || 'The password could not be helped with.', 'error');
+                return;
+            }
+            if (data.temporaryPassword) showTemporaryPassword(data.temporaryPassword);
+            await loadAccess();
+            showMsg('accessMessage', data.message || 'Done.', 'ok');
+        } catch (e) {
+            showMsg('accessMessage', 'The password could not be helped with.', 'error');
+        } finally {
+            this.disabled = !(accessData && accessData.isActive);
+        }
+    });
+
+    document.getElementById('superAdminBtn').addEventListener('click', async function () {
+        const makeSuper = !accessData.isSuperAdmin;
+        const ok = await askConfirm(makeSuper ? 'Make a Super Admin?' : 'Remove Super Admin?',
+            makeSuper ? firstNameOf() + ' will have every permission and can add staff and change access.'
+                : firstNameOf() + ' keeps the permissions ticked for them.',
+            makeSuper ? 'Make Super Admin' : 'Remove Super Admin', false);
+        if (!ok) return;
+        this.disabled = true;
+        try {
+            const data = await postStaff({ action: 'setSuperAdmin', userId: accessData.userId, superAdmin: makeSuper });
+            if (!data.success) {
+                showMsg('accessMessage', data.message || 'Super Admin could not be changed.', 'error');
+                this.disabled = false;
+                return;
+            }
+            await reloadPerson('access');
+            showMsg('accessMessage', data.message || 'Saved.', 'ok');
+            loadList(true);
+        } catch (e) {
+            showMsg('accessMessage', 'Super Admin could not be changed.', 'error');
+            this.disabled = false;
+        }
+    });
+
+    document.getElementById('impersonateBtn').addEventListener('click', function () {
+        if (accessData && accessData.canImpersonate) {
+            KBFShell.openImpersonateDialog({
+                userId: accessData.userId,
+                name: ((accessData.firstName || '') + ' ' + (accessData.lastName || '')).trim()
+            });
+        }
+    });
+
+    // Temporary password: shown once, never stored
+    function showTemporaryPassword(value) {
+        document.getElementById('tempPasswordValue').textContent = value;
+        document.getElementById('copyTempPasswordBtn').textContent = 'Copy';
+        document.getElementById('tempPasswordPanel').classList.remove('hidden');
+    }
+
+    document.getElementById('copyTempPasswordBtn').addEventListener('click', async function () {
+        const value = document.getElementById('tempPasswordValue').textContent;
+        try {
+            await navigator.clipboard.writeText(value);
+            this.textContent = 'Copied';
+        } catch (e) {
+            const range = document.createRange();
+            range.selectNodeContents(document.getElementById('tempPasswordValue'));
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            this.textContent = 'Press Ctrl+C';
+        }
+    });
+
+    // ============================================
+    // ADD STAFF MEMBER (moved from the old Staff page)
+    // ============================================
+    let selectedMember = null;
+    let memberResults = [];
+    let memberTimer = null;
+    let memberSeq = 0;
+
+    document.getElementById('addStaffBtn').addEventListener('click', openAddStaff);
+
+    function openAddStaff() {
+        selectedMember = null;
+        memberResults = [];
+        document.getElementById('memberSearch').value = '';
+        setMemberHint('Type at least 2 characters');
+        document.getElementById('choosePlaysBtn').disabled = true;
+        document.getElementById('addPanelNew').reset();
+        setAddTab('plays');
+        openDialog('addStaffDialog', 'memberSearch');
+    }
+
+    function setMemberHint(text, isError) {
+        const box = document.getElementById('memberResults');
+        box.textContent = '';
+        box.appendChild(el('p', 'text-xs font-bold uppercase ' + (isError ? 'text-red-400' : 'text-gray-500'), text));
+    }
+
+    function setAddTab(tab) {
+        const plays = tab === 'plays';
+        document.getElementById('addTabPlays').classList.toggle('is-active', plays);
+        document.getElementById('addTabNew').classList.toggle('is-active', !plays);
+        document.getElementById('addPanelPlays').classList.toggle('hidden', !plays);
+        document.getElementById('addPanelNew').classList.toggle('hidden', plays);
+        showMsg('addPlaysMessage', '');
+        showMsg('addNewMessage', '');
+    }
+    document.getElementById('addTabPlays').addEventListener('click', () => setAddTab('plays'));
+    document.getElementById('addTabNew').addEventListener('click', () => setAddTab('new'));
+
+    document.getElementById('memberSearch').addEventListener('input', function () {
+        const q = this.value.trim();
+        clearTimeout(memberTimer);
+        selectedMember = null;
+        document.getElementById('choosePlaysBtn').disabled = true;
+        if (q.length < 2) {
+            memberResults = [];
+            setMemberHint('Type at least 2 characters');
+            return;
+        }
+        memberTimer = setTimeout(() => searchMembers(q), 300);
+    });
+
+    async function searchMembers(q) {
+        const seq = ++memberSeq;
+        setMemberHint('Searching...');
+        try {
+            const data = await getJson('/api/staff.php?action=search&q=' + encodeURIComponent(q));
+            if (seq !== memberSeq) return;
+            if (!data.success) { setMemberHint(data.message || 'Search failed', true); return; }
+            memberResults = data.results || [];
+            renderMemberResults();
+        } catch (e) {
+            if (seq === memberSeq) setMemberHint('Search failed', true);
+        }
+    }
+
+    function renderMemberResults() {
+        const box = document.getElementById('memberResults');
+        box.textContent = '';
+        if (!memberResults.length) {
+            setMemberHint('No members found who are not already staff');
+            return;
+        }
+        memberResults.forEach((m, i) => {
+            const selected = selectedMember && selectedMember.userId === m.userId;
+            const name = ((m.firstName || '') + ' ' + (m.lastName || '')).trim();
+            const row = el('div', 'result-row flex items-center gap-3 p-3 bg-slate-800 border-2 border-gray-700' + (selected ? ' selected' : ''));
+            row.appendChild(avatar(m.profilePhoto, name, 'w-10 h-10 text-xs'));
+            const mid = el('div', 'min-w-0 flex-1');
+            mid.appendChild(el('div', 'text-sm text-white font-black truncate', name));
+            mid.appendChild(cityLine(m.location));
+            mid.appendChild(el('div', 'text-xs text-gray-400 font-bold uppercase', m.grade ? 'Grade ' + m.grade : 'No grade'));
+            row.appendChild(mid);
+            const btn = el('button', selected ? 'btn-solid' : 'btn-plain', selected ? 'Selected' : 'Select');
+            btn.type = 'button';
+            btn.addEventListener('click', () => {
+                selectedMember = memberResults[i] || null;
+                document.getElementById('choosePlaysBtn').disabled = !selectedMember;
+                renderMemberResults();
+            });
+            row.appendChild(btn);
+            box.appendChild(row);
+        });
+    }
+
+    // Nothing is saved yet: the person's Access tab saves on "Save access"
+    document.getElementById('choosePlaysBtn').addEventListener('click', function () {
+        if (!selectedMember) { showMsg('addPlaysMessage', 'Select a member first', 'error'); return; }
+        // A member who plays already exists: open them with the Access tab
+        closeDialog('addStaffDialog');
+        startAccessDraft({ member: selectedMember }, 'member');
+    });
+
+    document.getElementById('addPanelNew').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const p = {
+            firstName: document.getElementById('newFirstName').value.trim(),
+            lastName: document.getElementById('newLastName').value.trim(),
+            email: document.getElementById('newEmail').value.trim(),
+            location: document.getElementById('newLocation').value.trim()
+        };
+        if (!p.firstName || !p.lastName || !p.email || !p.location) { showMsg('addNewMessage', 'Please fill in every field', 'error'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) { showMsg('addNewMessage', 'Please enter a valid email', 'error'); return; }
+        closeDialog('addStaffDialog');
+        startAccessDraft({ person: p }, 'new');
+    });
+
+    // The person panel with only the Access tab, until access is saved
+    function startAccessDraft(draft, mode) {
+        closePerson(true);
+        accessDraft = draft;
+        accessMode = mode;
+        personId = null;
+        person = null;
+        accessData = null;
+        panelName = 'access';
+        pushLayer(panelEl, () => closePerson(false), document.getElementById('addStaffBtn'));
+        showPanelShell();
+        resetPanelView();
+        document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => t.classList.toggle('hidden', t.getAttribute('data-panel') !== 'access'));
+        renderDraftHeader();
+        showPane('access', true);
+        renderAccess();
+        markOpenRow();
+        document.getElementById('ppClose').focus();
+    }
+
+    // ============================================
+    // ADD PLAYER
+    // ============================================
+    const addPanelEl = document.getElementById('addPanel');
+    const addBackdropEl = document.getElementById('addBackdrop');
+    let addPhoto = null;
+
+    document.getElementById('addPlayerBtn').addEventListener('click', openAddPlayer);
+
+    function openAddPlayer() {
+        document.getElementById('addForm').reset();
+        document.getElementById('aSendId').checked = true;
+        addPhoto = null;
+        fillAvatar(document.getElementById('aPhotoPreview'), null, '');
+        clearAddErrors();
+        document.getElementById('dupeBox').classList.add('hidden');
+        document.getElementById('addAnyway').classList.add('hidden');
+        showMsg('addMessage', '');
+        addBackdropEl.classList.remove('hidden');
+        addPanelEl.classList.remove('hidden');
+        requestAnimationFrame(() => addPanelEl.classList.add('is-open'));
+        pushLayer(addPanelEl, closeAddPlayer, document.getElementById('addPlayerBtn'));
+        document.getElementById('aFirstName').focus();
+    }
+
+    function closeAddPlayer() {
+        addPanelEl.classList.remove('is-open');
+        addBackdropEl.classList.add('hidden');
+        setTimeout(() => { if (!addPanelEl.classList.contains('is-open')) addPanelEl.classList.add('hidden'); }, 230);
+        const layer = popLayer(addPanelEl);
+        if (layer && layer.returnFocus && document.contains(layer.returnFocus)) layer.returnFocus.focus();
+    }
+
+    document.getElementById('addClose').addEventListener('click', closeAddPlayer);
+    document.getElementById('addCancel').addEventListener('click', closeAddPlayer);
+    addBackdropEl.addEventListener('click', closeAddPlayer);
+
+    function clearAddErrors() {
+        document.querySelectorAll('#addForm [data-error]').forEach(p => { p.textContent = ''; p.classList.add('hidden'); });
+    }
+
+    document.getElementById('aPhotoInput').addEventListener('change', async function () {
+        const file = this.files && this.files[0];
+        this.value = '';
+        if (!file) return;
+        showMsg('addMessage', 'Uploading the photo...', 'ok');
+        try {
+            addPhoto = await uploadPhoto(file);
+            fillAvatar(document.getElementById('aPhotoPreview'), addPhoto, '');
+            showMsg('addMessage', '');
+        } catch (e) {
+            showMsg('addMessage', e.message || 'The photo could not be uploaded.', 'error');
+        }
+    });
+
+    document.getElementById('addSubmit').addEventListener('click', () => submitAdd(false));
+    document.getElementById('addAnyway').addEventListener('click', () => submitAdd(true));
+    document.getElementById('addForm').addEventListener('submit', e => { e.preventDefault(); submitAdd(false); });
+
+    async function submitAdd(confirmDuplicates) {
+        clearAddErrors();
+        showMsg('addMessage', '');
+        const payload = {
+            action: 'add',
+            firstName: document.getElementById('aFirstName').value.trim(),
+            lastName: document.getElementById('aLastName').value.trim(),
+            email: document.getElementById('aEmail').value.trim(),
+            mobile: document.getElementById('aMobile').value.trim(),
+            city: document.getElementById('aCity').value.trim(),
+            postCode: document.getElementById('aPostCode').value.trim(),
+            yearOfBirth: document.getElementById('aYear').value.trim(),
+            photo: addPhoto,
+            gradeId: document.getElementById('aGrade').value || null,
+            sendKbfId: document.getElementById('aSendId').checked,
+            confirmDuplicates: confirmDuplicates
+        };
+        const missing = [['firstName', 'First name'], ['lastName', 'Surname'], ['email', 'Email'], ['mobile', 'Mobile'], ['city', 'City']]
+            .filter(f => !payload[f[0]]);
+        if (missing.length) {
+            missing.forEach(f => showAddError(f[0], f[1] + ' is required'));
+            showMsg('addMessage', 'Fill in the required fields.', 'error');
+            return;
+        }
+        const submit = document.getElementById('addSubmit');
+        const anyway = document.getElementById('addAnyway');
+        submit.disabled = true;
+        anyway.disabled = true;
+        try {
+            const data = await postPeople(payload);
+            if (data.needsConfirmation) {
+                showDuplicates(data);
+                return;
+            }
+            if (!data.success) {
+                Object.keys(data.errors || {}).forEach(k => showAddError(k, data.errors[k]));
+                showMsg('addMessage', data.message || 'The player could not be added.', 'error');
+                return;
+            }
+            closeAddPlayer();
+            showMsg('pageMessage', data.message || 'Player added.', 'ok');
+            loadList(true);
+            if (data.id) openPerson(Number(data.id), 'details', { returnFocus: document.getElementById('addPlayerBtn') });
+        } catch (e) {
+            console.error('Add player error:', e);
+            showMsg('addMessage', 'The player could not be added.', 'error');
+        } finally {
+            submit.disabled = false;
+            anyway.disabled = false;
+        }
+    }
+
+    function showAddError(key, text) {
+        const p = document.querySelector(`#addForm [data-error="${key}"]`);
+        if (p) { p.textContent = text; p.classList.remove('hidden'); }
+    }
+
+    function showDuplicates(data) {
+        document.getElementById('dupeText').textContent = data.message || 'This might be someone who is already on the system.';
+        const ul = document.getElementById('dupeList');
+        ul.textContent = '';
+        (data.duplicates || []).forEach(d => {
+            const li = el('li', 'flex items-center justify-between gap-3 p-2 bg-slate-900 border-2 border-gray-700');
+            const info = el('div', 'min-w-0');
+            info.appendChild(el('p', 'text-sm font-black text-white break-words', d.name + (d.kbfId ? ' (' + d.kbfId + ')' : '')));
+            info.appendChild(el('p', 'text-xs font-semibold text-gray-400', [d.city, d.reason, d.active ? '' : 'Deactivated'].filter(Boolean).join(' · ')));
+            li.appendChild(info);
+            const open = el('button', 'btn-plain', 'Open');
+            open.type = 'button';
+            open.addEventListener('click', () => {
+                closeAddPlayer();
+                openPerson(Number(d.id), 'details', { returnFocus: document.getElementById('addPlayerBtn') });
+            });
+            li.appendChild(open);
+            ul.appendChild(li);
+        });
+        document.getElementById('dupeBox').classList.remove('hidden');
+        document.getElementById('addAnyway').classList.remove('hidden');
+        document.getElementById('dupeBox').scrollIntoView({ block: 'nearest' });
+    }
+
+    // ============================================
+    // EXPORT (moved from the old Users page; api/export-users.php)
+    // ============================================
+    document.getElementById('exportBtn').addEventListener('click', async function () {
+        showMsg('exportMessage', '');
+        const box = document.getElementById('exportLocations');
+        box.textContent = '';
+        box.appendChild(el('p', 'text-xs text-gray-500 font-bold uppercase', 'Loading locations...'));
+        document.getElementById('exportAll').checked = false;
+        openDialog('exportDialog');
+        try {
+            const data = await getJson('/api/export-users.php?action=get_locations');
+            box.textContent = '';
+            const locations = data.success ? (data.locations || []) : [];
+            if (!locations.length) {
+                box.appendChild(el('p', 'text-xs text-gray-500 font-bold uppercase', 'No locations found'));
+                return;
+            }
+            locations.forEach(loc => {
+                const label = el('label', 'flex items-center gap-2 p-2 cursor-pointer hover:bg-slate-700');
+                const input = el('input', 'perm-check export-loc');
+                input.type = 'checkbox';
+                input.value = loc;
+                input.addEventListener('change', syncExportAll);
+                label.appendChild(input);
+                // Stored names may be HTML-escaped: show them as plain text
+                const txt = document.createElement('textarea');
+                txt.innerHTML = loc;
+                label.appendChild(el('span', 'text-sm font-semibold text-gray-200', txt.value));
+                box.appendChild(label);
+            });
+        } catch (e) {
+            box.textContent = '';
+            box.appendChild(el('p', 'text-xs text-red-400 font-bold uppercase', 'Locations could not be loaded'));
+        }
+    });
+
+    function syncExportAll() {
+        const boxes = Array.from(document.querySelectorAll('.export-loc'));
+        const all = document.getElementById('exportAll');
+        all.checked = boxes.length > 0 && boxes.every(b => b.checked);
+        all.indeterminate = !all.checked && boxes.some(b => b.checked);
+    }
+
+    document.getElementById('exportAll').addEventListener('change', function () {
+        document.querySelectorAll('.export-loc').forEach(b => { b.checked = this.checked; });
+    });
+
+    document.getElementById('exportForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const locations = Array.from(document.querySelectorAll('.export-loc')).filter(b => b.checked).map(b => b.value);
+        const format = (document.querySelector('input[name="exportFormat"]:checked') || {}).value || 'csv';
+        if (!locations.length) { showMsg('exportMessage', 'Choose at least one location.', 'error'); return; }
+        const btn = document.getElementById('exportSubmit');
+        btn.disabled = true;
+        showMsg('exportMessage', 'Making the download...', 'ok');
+        try {
+            const res = await authenticatedFetch('/api/export-users.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ locations: locations, format: format })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const day = new Date().toISOString().split('T')[0];
+            a.download = format === 'csv' ? 'kbf-players-' + day + '.csv' : 'kbf-players-' + day + '.html';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showMsg('exportMessage', 'Downloaded.', 'ok');
+        } catch (err) {
+            console.error('Export error:', err);
+            showMsg('exportMessage', 'The download could not be made.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

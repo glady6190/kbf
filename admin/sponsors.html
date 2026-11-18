@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sponsors - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        .theme-focus:focus { outline: none; border-color: var(--theme-primary); }
+        .theme-accent { accent-color: var(--theme-primary); }
+
+        /* Logo boxes: white background, logo scaled to fit, never cropped */
+        .logo-box { background: #FFFFFF; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .logo-box img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
+        .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* Active switch (same look as the Notifications page) */
+        .switch { position: relative; display: inline-flex; align-items: center; width: 44px; height: 24px; background: #334155; border: 2px solid #4b5563; transition: background-color .2s ease; flex-shrink: 0; cursor: pointer; }
+        .switch::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #94a3b8; transition: transform .2s ease, background-color .2s ease; }
+        .switch[aria-checked="true"] { background: var(--theme-primary); border-color: var(--theme-primary); }
+        .switch[aria-checked="true"]::after { transform: translateX(20px); background: #0F172A; }
+        .switch:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .switch:disabled { cursor: wait; opacity: .6; }
+
+        /* Inactive sponsors stay in the list, greyed */
+        .row-inactive .row-dim { opacity: .45; filter: grayscale(1); }
+
+        /* Amber is only for warnings */
+        .warn-box { border: 2px solid #f59e0b; background: rgba(245, 158, 11, .12); color: #fcd34d; }
+
+        /* Live preview of the home page spotlight panel (matches index.html) */
+        .pv-panel { position: relative; margin-right: 8px; border: 4px solid #374151; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); box-shadow: 8px 8px 0 var(--theme-primary); }
+        .pv-main { display: flex; flex-direction: column; }
+        .pv-logo { display: flex; align-items: center; justify-content: center; width: 100%; height: 180px; padding: 20px; background: #FFFFFF; overflow: hidden; flex-shrink: 0; }
+        .pv-logo img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+        .pv-logo-empty { color: #6B7280; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+        .pv-text { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; min-height: 140px; overflow: hidden; }
+        .pv-name { margin: 0; color: #FFFFFF; font-size: 22px; font-weight: 900; line-height: 1.05; text-transform: uppercase; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .pv-name.is-empty { color: #6B7280; }
+        .pv-desc { margin: 0; color: #9CA3AF; font-size: 14px; font-weight: 500; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .pv-visit { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 4px solid var(--theme-primary); color: var(--theme-primary); font-size: 15px; font-weight: 900; text-transform: uppercase; text-decoration: none; white-space: nowrap; transition: background-color .2s ease, color .2s ease; }
+        .pv-visit svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .pv-visit:hover, .pv-visit:focus-visible { background: var(--theme-primary); color: #0F172A; }
+        .pv-visit:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 3px; }
+        .pv-bar { height: 6px; background: var(--theme-primary); }
+        [hidden] { display: none !important; }
+        @media (min-width: 1024px) {
+            .pv-main { flex-direction: row; align-items: stretch; }
+            .pv-logo { width: 320px; height: 200px; padding: 24px; }
+            .pv-text { flex: 1; min-width: 0; justify-content: center; gap: 14px; height: 200px; padding: 0 28px; }
+            .pv-name { font-size: 28px; }
+        }
+
+        @media (max-width: 768px) {
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Sponsors</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Shown in the rotating spotlight on the home page</p>
+        </div>
+
+        <!-- ============================ -->
+        <!-- HOW THIS WORKS -->
+        <!-- ============================ -->
+        <div class="bg-slate-900 border-2 sm:border-4 theme-primary-border p-4 sm:p-6 mb-8 sm:mb-10">
+            <h2 class="text-base sm:text-lg font-black theme-primary-text uppercase mb-3">How this works</h2>
+            <ul class="list-disc pl-5 space-y-1 text-sm text-gray-300 font-semibold">
+                <li>Sponsors take turns in the large panel on the home page, 4 seconds each, in the order shown in the list below.</li>
+                <li>Use Move up and Move down to change the order. Only sponsors marked Active are shown.</li>
+                <li>Landscape, portrait and square logos all work. They are always shown whole, never cropped.</li>
+                <li>The website and the one-line description are optional. Leave them empty if the sponsor has none.</li>
+            </ul>
+        </div>
+
+        <!-- ============================ -->
+        <!-- FORM -->
+        <!-- ============================ -->
+        <div class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-8 mb-8 sm:mb-10">
+            <h2 id="formTitle" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-4 sm:mb-6">Add Sponsor</h2>
+
+            <form id="sponsorForm" class="space-y-4 sm:space-y-6" novalidate>
+                <!-- Name -->
+                <div>
+                    <label for="sponsorName" class="block text-xs font-black theme-primary-text uppercase mb-2">Name *</label>
+                    <input type="text" id="sponsorName" maxlength="150" required
+                           placeholder="e.g. Smith &amp; Sons Sports"
+                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm transition">
+                </div>
+
+                <!-- Logo -->
+                <div>
+                    <label for="sponsorLogo" class="block text-xs font-black theme-primary-text uppercase mb-2"><span id="logoLabel">Logo *</span></label>
+                    <p id="logoHint" class="text-xs text-gray-500 font-semibold mb-2">JPG, PNG or WebP, up to <span id="logoLimitMb">2</span> MB. Landscape, portrait and square logos all work.</p>
+                    <div class="flex flex-col sm:flex-row gap-4 sm:items-center">
+                        <div class="logo-box w-full sm:w-56 h-32 border-2 sm:border-4 border-gray-700 p-3 flex-shrink-0">
+                            <img id="logoPreview" alt="" class="hidden">
+                            <span id="logoPreviewEmpty" class="text-xs font-bold uppercase text-gray-500">No logo chosen</span>
+                        </div>
+                        <input type="file" id="sponsorLogo" accept="image/jpeg,image/png,image/webp"
+                               class="block w-full text-xs sm:text-sm text-gray-300 font-bold file:mr-4 file:px-4 file:py-2 file:border-0 file:bg-slate-700 file:text-white file:font-black file:uppercase file:text-xs">
+                    </div>
+                    <div id="logoSmallWarning" class="warn-box hidden mt-3 p-3 flex items-start gap-2 text-xs sm:text-sm font-bold" role="status">
+                        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                        <span>This logo is small and may look blurry. A larger image works best.</span>
+                    </div>
+                </div>
+
+                <!-- Website (optional) -->
+                <div>
+                    <label for="sponsorWebsite" class="block text-xs font-black theme-primary-text uppercase mb-2">Website <span class="text-gray-500">(optional)</span></label>
+                    <input type="text" id="sponsorWebsite" maxlength="255" inputmode="url" autocomplete="off"
+                           placeholder="e.g. www.example.co.uk"
+                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm transition">
+                    <p class="text-xs text-gray-500 font-semibold mt-2">If you leave off https://, it is added for you.</p>
+                </div>
+
+                <!-- Description (optional) -->
+                <div>
+                    <label for="sponsorDescription" class="block text-xs font-black theme-primary-text uppercase mb-2">One-line description <span class="text-gray-500">(optional)</span></label>
+                    <input type="text" id="sponsorDescription" maxlength="160" autocomplete="off"
+                           placeholder="e.g. Official racquet partner of KBF-UK"
+                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm transition">
+                    <p class="text-xs text-gray-500 font-semibold mt-2 text-right"><span id="descriptionCount">0</span> / 160</p>
+                </div>
+
+                <!-- Live preview of the home page spotlight -->
+                <div>
+                    <p class="block text-xs font-black theme-primary-text uppercase mb-1">Preview</p>
+                    <p class="text-xs text-gray-500 font-semibold mb-3">How this sponsor will look in the spotlight on the home page.</p>
+                    <div class="pv-panel" aria-label="Preview of the home page spotlight">
+                        <div class="pv-main">
+                            <div class="pv-logo">
+                                <img id="pvLogo" alt="" hidden>
+                                <span id="pvLogoEmpty" class="pv-logo-empty">No logo chosen</span>
+                            </div>
+                            <div class="pv-text">
+                                <h3 id="pvName" class="pv-name is-empty">Sponsor name</h3>
+                                <p id="pvDesc" class="pv-desc" hidden></p>
+                                <a id="pvVisit" class="pv-visit" target="_blank" rel="noopener noreferrer" hidden>
+                                    Visit website
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="pv-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Active -->
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="sponsorActive" checked class="theme-accent w-5 h-5">
+                    <span class="text-xs sm:text-sm font-black uppercase text-gray-300">Active (show on the home page)</span>
+                </label>
+
+                <div id="formMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+
+                <div class="flex flex-col sm:flex-row justify-end gap-3">
+                    <button type="button" id="cancelEditBtn"
+                            class="hidden w-full sm:w-auto px-6 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-gray-300 font-black uppercase text-xs sm:text-sm hover:text-white transition">
+                        Cancel edit
+                    </button>
+                    <button type="submit" id="saveBtn"
+                            class="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 theme-primary-bg text-slate-900 font-black uppercase text-xs sm:text-sm brutal-shadow transition-all">
+                        Add Sponsor
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================ -->
+        <!-- LIST -->
+        <!-- ============================ -->
+        <div class="bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-4 border-gray-700 bg-slate-800">
+                <h2 class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Sponsor Queue</h2>
+                <p class="text-xs text-gray-400 mt-1 uppercase font-bold">Shown on the home page in this order</p>
+            </div>
+            <div id="listMessage" class="hidden mx-4 sm:mx-6 mt-4 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+            <ul id="sponsorList" class="divide-y-2 divide-gray-700">
+                <li class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</li>
+            </ul>
+        </div>
+    </main>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // Page guard (shared shell)
+    KBFShell.start({ anyOf: ['content.sponsors'], active: 'sponsors' }).then(function (user) {
+        window.kbfUser = user;
+        document.getElementById('logoLimitMb').textContent = String(KBFShell.uploadLimitMb('sponsor', 2));
+        loadSponsors();
+    });
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getCSRFToken() {
+        return sessionStorage.getItem('csrf_token');
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    // Element builder: all sponsor values go in via textContent, never innerHTML
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+    }
+
+    function isSafeWebUrl(url) {
+        return typeof url === 'string' && /^https?:\/\//i.test(url);
+    }
+
+    function showMessage(boxId, text, ok) {
+        const box = document.getElementById(boxId);
+        box.textContent = text;
+        box.className = (boxId === 'listMessage' ? 'mx-4 sm:mx-6 mt-4 ' : '') + (ok
+            ? 'p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
+            : 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm');
+        box.classList.remove('hidden');
+    }
+
+    function hideMessage(boxId) {
+        document.getElementById(boxId).classList.add('hidden');
+    }
+
+    // ============================================
+    // STATE
+    // ============================================
+    // Logo size limit from Site settings (2 MB until the shell has loaded)
+    function logoMaxBytes() { return KBFShell.uploadLimitMb('sponsor', 2) * 1024 * 1024; }
+    const LOGO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    let sponsors = [];
+    let editingId = null;
+    let previewObjectUrl = null;
+    let busy = false;
+
+    // ============================================
+    // FORM
+    // ============================================
+    const form = document.getElementById('sponsorForm');
+    const nameInput = document.getElementById('sponsorName');
+    const logoInput = document.getElementById('sponsorLogo');
+    const websiteInput = document.getElementById('sponsorWebsite');
+    const descriptionInput = document.getElementById('sponsorDescription');
+    const activeInput = document.getElementById('sponsorActive');
+
+    function setPreview(src) {
+        const img = document.getElementById('logoPreview');
+        const empty = document.getElementById('logoPreviewEmpty');
+        const pvImg = document.getElementById('pvLogo');
+        const pvEmpty = document.getElementById('pvLogoEmpty');
+        if (src) {
+            img.src = src;
+            img.classList.remove('hidden');
+            empty.classList.add('hidden');
+            pvImg.src = src;
+            pvImg.hidden = false;
+            pvEmpty.hidden = true;
+        } else {
+            img.removeAttribute('src');
+            img.classList.add('hidden');
+            empty.classList.remove('hidden');
+            pvImg.removeAttribute('src');
+            pvImg.hidden = true;
+            pvEmpty.hidden = false;
+        }
+    }
+
+    // Website as the server will save it: https:// added when no scheme is given.
+    // Returns '' when it is not a plain http(s) address.
+    function previewWebsite(value) {
+        let url = String(value || '').trim();
+        if (!url || /[\s<>"'`]/.test(url)) return '';
+        if (!/^[a-z][a-z0-9+.\-]*:/i.test(url)) url = 'https://' + url.replace(/^\/+/, '');
+        return /^https?:\/\/[^\/\s.]+\.[^\s]+$/i.test(url) ? url : '';
+    }
+
+    // Spotlight preview text (every value via textContent)
+    function updateSpotlightPreview() {
+        const name = nameInput.value.trim();
+        const pvName = document.getElementById('pvName');
+        pvName.textContent = name || 'Sponsor name';
+        pvName.classList.toggle('is-empty', !name);
+
+        const description = descriptionInput.value.trim();
+        const pvDesc = document.getElementById('pvDesc');
+        pvDesc.textContent = description;
+        pvDesc.hidden = !description;
+
+        const url = previewWebsite(websiteInput.value);
+        const visit = document.getElementById('pvVisit');
+        if (url) {
+            visit.href = url;
+            visit.setAttribute('aria-label', 'Visit ' + (name || 'sponsor') + ' website (opens in a new tab)');
+            visit.hidden = false;
+        } else {
+            visit.removeAttribute('href');
+            visit.removeAttribute('aria-label');
+            visit.hidden = true;
+        }
+    }
+
+    [nameInput, descriptionInput, websiteInput].forEach(input => input.addEventListener('input', updateSpotlightPreview));
+
+    // Logos under 300 pixels on their longest side get an amber warning
+    // (it never blocks saving)
+    const SMALL_LOGO_PX = 300;
+    function setSmallLogoWarning(show) {
+        document.getElementById('logoSmallWarning').classList.toggle('hidden', !show);
+    }
+
+    function checkLogoSize(src) {
+        setSmallLogoWarning(false);
+        if (!src) return;
+        const probe = new Image();
+        probe.onload = function() {
+            if (previewObjectUrl !== src) return; // another logo was chosen since
+            const longest = Math.max(probe.naturalWidth, probe.naturalHeight);
+            setSmallLogoWarning(longest > 0 && longest < SMALL_LOGO_PX);
+        };
+        probe.src = src;
+    }
+
+    function clearObjectUrl() {
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+    }
+
+    function updateDescriptionCount() {
+        document.getElementById('descriptionCount').textContent = descriptionInput.value.length;
+    }
+
+    descriptionInput.addEventListener('input', updateDescriptionCount);
+
+    logoInput.addEventListener('change', function() {
+        hideMessage('formMessage');
+        clearObjectUrl();
+        setSmallLogoWarning(false);
+        const file = logoInput.files[0];
+        if (!file) {
+            const current = editingId ? sponsors.find(s => s.id === editingId) : null;
+            setPreview(current ? current.logoPath : null);
+            return;
+        }
+        if (!LOGO_TYPES.includes(file.type)) {
+            showMessage('formMessage', 'Only JPG, PNG and WebP logos are allowed', false);
+            logoInput.value = '';
+            setPreview(null);
+            return;
+        }
+        if (file.size > logoMaxBytes()) {
+            showMessage('formMessage', 'Logo must be ' + KBFShell.uploadLimitMb('sponsor', 2) + ' MB or smaller', false);
+            logoInput.value = '';
+            setPreview(null);
+            return;
+        }
+        previewObjectUrl = URL.createObjectURL(file);
+        setPreview(previewObjectUrl);
+        checkLogoSize(previewObjectUrl);
+    });
+
+    function resetForm() {
+        editingId = null;
+        form.reset();
+        activeInput.checked = true;
+        clearObjectUrl();
+        setPreview(null);
+        setSmallLogoWarning(false);
+        updateDescriptionCount();
+        updateSpotlightPreview();
+        document.getElementById('formTitle').textContent = 'Add Sponsor';
+        document.getElementById('saveBtn').textContent = 'Add Sponsor';
+        document.getElementById('logoLabel').textContent = 'Logo *';
+        document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
+    function startEdit(id) {
+        const sponsor = sponsors.find(s => s.id === id);
+        if (!sponsor) return;
+        resetForm();
+        editingId = id;
+        nameInput.value = sponsor.name || '';
+        websiteInput.value = sponsor.websiteUrl || '';
+        descriptionInput.value = sponsor.description || '';
+        activeInput.checked = !!sponsor.isActive;
+        updateDescriptionCount();
+        updateSpotlightPreview();
+        setPreview(sponsor.logoPath);
+        document.getElementById('formTitle').textContent = 'Edit Sponsor';
+        document.getElementById('saveBtn').textContent = 'Save Changes';
+        document.getElementById('logoLabel').textContent = 'Logo (leave empty to keep the current logo)';
+        document.getElementById('cancelEditBtn').classList.remove('hidden');
+        hideMessage('formMessage');
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        nameInput.focus({ preventScroll: true });
+    }
+
+    document.getElementById('cancelEditBtn').addEventListener('click', function() {
+        resetForm();
+        hideMessage('formMessage');
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (busy) return;
+
+        const name = nameInput.value.trim();
+        const description = descriptionInput.value.trim();
+        const file = logoInput.files[0];
+
+        if (!name) { showMessage('formMessage', 'Name is required', false); return; }
+        if (name.length > 150) { showMessage('formMessage', 'Name must be 150 characters or fewer', false); return; }
+        if (description.length > 160) { showMessage('formMessage', 'Description must be 160 characters or fewer', false); return; }
+        if (!editingId && !file) { showMessage('formMessage', 'Please choose a logo for the new sponsor', false); return; }
+
+        const body = new FormData();
+        body.append('action', editingId ? 'update' : 'create');
+        if (editingId) body.append('id', String(editingId));
+        body.append('name', name);
+        body.append('websiteUrl', websiteInput.value.trim());
+        body.append('description', description);
+        body.append('isActive', activeInput.checked ? '1' : '0');
+        if (file) body.append('logo', file);
+
+        const btn = document.getElementById('saveBtn');
+        busy = true;
+        btn.disabled = true;
+
+        try {
+            const res = await authenticatedFetch('/api/sponsors.php', { method: 'POST', body: body });
+            const data = await res.json();
+            if (data.success) {
+                const wasEditing = !!editingId;
+                resetForm();
+                showMessage('formMessage', wasEditing ? 'Sponsor updated' : 'Sponsor added', true);
+                await loadSponsors();
+            } else {
+                showMessage('formMessage', data.message || 'Could not save the sponsor', false);
+            }
+        } catch (err) {
+            console.error('Save sponsor error:', err);
+            showMessage('formMessage', 'Error saving the sponsor. Please try again.', false);
+        } finally {
+            busy = false;
+            btn.disabled = false;
+        }
+    });
+
+    // ============================================
+    // LIST
+    // ============================================
+    function renderSponsors() {
+        const list = document.getElementById('sponsorList');
+        list.textContent = '';
+
+        if (sponsors.length === 0) {
+            list.appendChild(el('li', 'px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm', 'No sponsors yet. Add the first one above.'));
+            return;
+        }
+
+        sponsors.forEach((sponsor, index) => {
+            const row = el('li', 'px-4 sm:px-6 py-4 flex flex-col md:flex-row md:items-center gap-4' + (sponsor.isActive ? '' : ' row-inactive'));
+
+            // Logo on white, scaled to fit, never cropped
+            const logoBox = el('div', 'row-dim logo-box w-full md:w-40 h-24 md:h-20 border-2 border-gray-700 p-2 flex-shrink-0');
+            const img = document.createElement('img');
+            img.src = sponsor.logoPath;
+            img.alt = sponsor.name || '';
+            img.loading = 'lazy';
+            logoBox.appendChild(img);
+            row.appendChild(logoBox);
+
+            // Details
+            const details = el('div', 'row-dim flex-1 min-w-0');
+            const titleRow = el('div', 'flex flex-wrap items-center gap-2');
+            titleRow.appendChild(el('span', 'text-xs font-black text-gray-500', '#' + (index + 1)));
+            titleRow.appendChild(el('span', 'text-sm sm:text-base font-black uppercase text-white break-words', sponsor.name));
+            if (!sponsor.isActive) {
+                titleRow.appendChild(el('span', 'px-2 py-1 text-xs font-black uppercase bg-slate-700 text-gray-300 border-2 border-gray-600', 'Not on the home page'));
+            }
+            details.appendChild(titleRow);
+
+            if (sponsor.websiteUrl && isSafeWebUrl(sponsor.websiteUrl)) {
+                const link = el('a', 'block mt-1 text-xs sm:text-sm font-bold theme-primary-text break-all hover:underline', sponsor.websiteUrl);
+                link.href = sponsor.websiteUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                details.appendChild(link);
+            }
+            if (sponsor.description) {
+                details.appendChild(el('p', 'mt-1 text-xs sm:text-sm font-semibold text-gray-400 break-words', sponsor.description));
+            }
+            row.appendChild(details);
+
+            // Active switch: saved at once
+            const activeWrap = el('div', 'flex items-center gap-2 flex-shrink-0');
+            const switchId = 'active-' + sponsor.id;
+            const toggle = el('button', 'switch');
+            toggle.type = 'button';
+            toggle.id = switchId;
+            toggle.setAttribute('role', 'switch');
+            toggle.setAttribute('aria-checked', sponsor.isActive ? 'true' : 'false');
+            toggle.setAttribute('aria-label', 'Active: show ' + sponsor.name + ' on the home page');
+            toggle.addEventListener('click', () => setSponsorActive(sponsor, !sponsor.isActive, toggle));
+            const toggleLabel = el('label', 'text-xs font-black uppercase text-gray-300 cursor-pointer', 'Active');
+            toggleLabel.htmlFor = switchId;
+            activeWrap.append(toggle, toggleLabel);
+            row.appendChild(activeWrap);
+
+            // Actions
+            const actions = el('div', 'flex flex-wrap gap-2 flex-shrink-0');
+            const up = el('button', 'icon-btn px-3 py-2 bg-slate-800 border-2 border-gray-700 text-gray-300 hover:text-white font-black uppercase text-xs transition', 'Move up');
+            up.type = 'button';
+            up.disabled = index === 0;
+            up.setAttribute('aria-label', 'Move ' + sponsor.name + ' up');
+            up.addEventListener('click', () => moveSponsor(index, -1));
+
+            const down = el('button', 'icon-btn px-3 py-2 bg-slate-800 border-2 border-gray-700 text-gray-300 hover:text-white font-black uppercase text-xs transition', 'Move down');
+            down.type = 'button';
+            down.disabled = index === sponsors.length - 1;
+            down.setAttribute('aria-label', 'Move ' + sponsor.name + ' down');
+            down.addEventListener('click', () => moveSponsor(index, 1));
+
+            const edit = el('button', 'px-3 py-2 bg-slate-800 border-2 theme-primary-border theme-primary-text font-black uppercase text-xs transition', 'Edit');
+            edit.type = 'button';
+            edit.setAttribute('aria-label', 'Edit ' + sponsor.name);
+            edit.addEventListener('click', () => startEdit(sponsor.id));
+
+            const del = el('button', 'px-3 py-2 bg-slate-800 border-2 border-red-500 text-red-400 hover:bg-red-500 hover:text-slate-900 font-black uppercase text-xs transition', 'Delete');
+            del.type = 'button';
+            del.setAttribute('aria-label', 'Delete ' + sponsor.name);
+            del.addEventListener('click', () => deleteSponsor(sponsor));
+
+            actions.append(up, down, edit, del);
+            row.appendChild(actions);
+
+            list.appendChild(row);
+        });
+    }
+
+    async function loadSponsors() {
+        try {
+            const res = await authenticatedFetch('/api/sponsors.php?all=1');
+            const data = await res.json();
+            if (data.success) {
+                sponsors = (data.sponsors || []).map(s => Object.assign({}, s, { id: Number(s.id), isActive: !!s.isActive }));
+                renderSponsors();
+                if (data.tableMissing) {
+                    showMessage('listMessage', 'The Sponsors table does not exist yet. Run database/sponsors.sql in phpMyAdmin first.', false);
+                }
+            } else {
+                showMessage('listMessage', data.message || 'Could not load sponsors', false);
+            }
+        } catch (e) {
+            console.error('Error loading sponsors:', e);
+            showMessage('listMessage', 'Error loading sponsors. Please reload the page.', false);
+        }
+    }
+
+    async function moveSponsor(index, direction) {
+        const target = index + direction;
+        if (busy || target < 0 || target >= sponsors.length) return;
+
+        const reordered = sponsors.slice();
+        const moved = reordered.splice(index, 1)[0];
+        reordered.splice(target, 0, moved);
+
+        busy = true;
+        try {
+            const res = await authenticatedFetch('/api/sponsors.php', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: reordered.map(s => s.id) })
+            });
+            const data = await res.json();
+            if (data.success) {
+                sponsors = reordered;
+                renderSponsors();
+                hideMessage('listMessage');
+            } else {
+                showMessage('listMessage', data.message || 'Could not save the new order', false);
+                await loadSponsors();
+            }
+        } catch (err) {
+            console.error('Reorder error:', err);
+            showMessage('listMessage', 'Error saving the new order. Please try again.', false);
+        } finally {
+            busy = false;
+        }
+    }
+
+    async function setSponsorActive(sponsor, active, toggle) {
+        if (busy) return;
+        busy = true;
+        toggle.disabled = true;
+        const body = new FormData();
+        body.append('action', 'setActive');
+        body.append('id', String(sponsor.id));
+        body.append('isActive', active ? '1' : '0');
+        try {
+            const res = await authenticatedFetch('/api/sponsors.php', { method: 'POST', body: body });
+            const data = await res.json();
+            if (data.success) {
+                sponsor.isActive = !!data.isActive;
+                if (editingId === sponsor.id) activeInput.checked = sponsor.isActive;
+                showMessage('listMessage', sponsor.name + ': ' + (sponsor.isActive ? 'shown on the home page' : 'hidden from the home page'), true);
+                renderSponsors();
+                const again = document.getElementById('active-' + sponsor.id);
+                if (again) again.focus();
+            } else {
+                showMessage('listMessage', data.message || 'Could not save the change', false);
+                toggle.disabled = false;
+            }
+        } catch (err) {
+            console.error('Active switch error:', err);
+            showMessage('listMessage', 'Error saving the change. Please try again.', false);
+            toggle.disabled = false;
+        } finally {
+            busy = false;
+        }
+    }
+
+    async function deleteSponsor(sponsor) {
+        if (busy) return;
+        if (!confirm('Delete the sponsor "' + sponsor.name + '"?\n\nThis also deletes its logo file and cannot be undone.')) return;
+
+        busy = true;
+        try {
+            const res = await authenticatedFetch('/api/sponsors.php?id=' + encodeURIComponent(sponsor.id), { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                if (editingId === sponsor.id) resetForm();
+                showMessage('listMessage', 'Sponsor deleted', true);
+                await loadSponsors();
+            } else {
+                showMessage('listMessage', data.message || 'Could not delete the sponsor', false);
+            }
+        } catch (err) {
+            console.error('Delete sponsor error:', err);
+            showMessage('listMessage', 'Error deleting the sponsor. Please try again.', false);
+        } finally {
+            busy = false;
+        }
+    }
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

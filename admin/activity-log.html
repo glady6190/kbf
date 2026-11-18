@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Log - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+
+        .field { background: #1e293b; border: 2px solid #374151; color: #fff; padding: .5rem .625rem; font-weight: 700; font-size: .8125rem; width: 100%; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .btn-plain { background: #1e293b; border: 2px solid #374151; color: #e5e7eb; font-weight: 900; font-size: .75rem; text-transform: uppercase; padding: .5rem .875rem; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-theme { background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: .75rem; text-transform: uppercase; padding: .5rem .875rem; border: 2px solid var(--theme-primary); }
+        .btn-theme:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-plain:focus-visible, .btn-theme:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Impersonation tag: fixed amber on every theme */
+        .as-tag { display: inline-flex; align-items: center; gap: .25rem; margin-top: .25rem; padding: .125rem .375rem; background: #f59e0b; color: #0F172A; font-size: .65rem; font-weight: 900; text-transform: uppercase; }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Activity</span> log</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Who did what, and when</p>
+        </div>
+
+        <!-- Control centre layout -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0">
+
+        <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="logHeading">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                    <h2 id="logHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-1">Everything recorded</h2>
+                    <p id="logIntro" class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed">Sign-ins, approvals, changes to settings and access, impersonation, and the scheduled jobs.</p>
+                </div>
+                <button type="button" id="csvBtn" class="btn-theme flex items-center justify-center gap-2 flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download CSV
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                    <label for="searchInput" class="block text-xs font-black theme-primary-text uppercase mb-1">Search details</label>
+                    <input type="search" id="searchInput" class="field" placeholder="Search details" autocomplete="off">
+                </div>
+                <div>
+                    <label for="personFilter" class="block text-xs font-black theme-primary-text uppercase mb-1">Person</label>
+                    <select id="personFilter" class="field"><option value="">Everyone</option></select>
+                </div>
+                <div>
+                    <label for="actionFilter" class="block text-xs font-black theme-primary-text uppercase mb-1">Action</label>
+                    <select id="actionFilter" class="field"><option value="">All actions</option></select>
+                </div>
+                <div>
+                    <label for="rangeFilter" class="block text-xs font-black theme-primary-text uppercase mb-1">Date</label>
+                    <select id="rangeFilter" class="field">
+                        <option value="">Any time</option>
+                        <option value="today">Today</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="custom">Choose dates</option>
+                    </select>
+                </div>
+            </div>
+            <div id="customDates" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 sm:max-w-md">
+                <div>
+                    <label for="fromDate" class="block text-xs font-black theme-primary-text uppercase mb-1">From</label>
+                    <input type="date" id="fromDate" class="field">
+                </div>
+                <div>
+                    <label for="toDate" class="block text-xs font-black theme-primary-text uppercase mb-1">To</label>
+                    <input type="date" id="toDate" class="field">
+                </div>
+            </div>
+
+            <!-- Set from a People page link (?about=people or ?about={id}) -->
+            <div id="aboutNote" class="hidden flex flex-wrap items-center gap-3 p-3 bg-slate-800 border-2 border-gray-700">
+                <span id="aboutText" class="text-xs font-black uppercase text-gray-200"></span>
+                <button type="button" id="aboutClear" class="btn-plain">Show everything</button>
+            </div>
+
+            <p id="logMessage" class="hidden p-3 border-2 border-red-500 bg-red-500/20 text-red-400 font-bold text-xs" role="alert"></p>
+
+            <div class="overflow-x-auto border-2 border-gray-700">
+                <table class="w-full text-left text-xs sm:text-sm min-w-[42rem]">
+                    <thead class="bg-slate-800 text-gray-400 uppercase text-xs font-black">
+                        <tr id="logHeadRow">
+                            <th scope="col" class="px-3 py-3 whitespace-nowrap">When</th>
+                            <th scope="col" class="px-3 py-3 whitespace-nowrap">Who</th>
+                            <th scope="col" class="px-3 py-3 whitespace-nowrap">What</th>
+                            <th scope="col" class="px-3 py-3">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody" class="divide-y-2 divide-gray-800"></tbody>
+                </table>
+            </div>
+            <p id="logEmpty" class="hidden py-6 text-center text-gray-400 font-bold uppercase text-xs">No entries match these filters</p>
+
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p id="logCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite"></p>
+                <button type="button" id="moreBtn" class="btn-plain hidden">Show more</button>
+            </div>
+            <p class="text-xs text-gray-500 font-semibold">Every download is recorded in the activity log.</p>
+        </section>
+
+        </main>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): control.activity_log
+    // ============================================
+    KBFShell.startControl({ section: 'activity' }).then(function (user) {
+        window.kbfUser = user;
+        load(true);
+    });
+
+    const API = '/api/control-activity.php';
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const EYE = 'M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z';
+
+    let offset = 0;
+    let showAddress = false;
+    let optionsLoaded = false;
+    let searchTimer = null;
+    let canDownload = true;   // false while viewing as someone else
+
+    // Filters from the address (People page links): ?about=people|{id}, ?person={id}
+    const startParams = new URLSearchParams(window.location.search);
+    let aboutFilter = (function () {
+        const v = startParams.get('about') || '';
+        return (v === 'people' || /^[1-9][0-9]*$/.test(v)) ? v : '';
+    })();
+    let pendingPerson = /^[1-9][0-9]*$/.test(startParams.get('person') || '') ? startParams.get('person') : '';
+
+    function showAboutNote() {
+        const box = document.getElementById('aboutNote');
+        box.classList.toggle('hidden', !aboutFilter);
+        document.getElementById('aboutText').textContent = aboutFilter === 'people'
+            ? 'Showing changes about players and staff'
+            : 'Showing changes about one person';
+    }
+    showAboutNote();
+    document.getElementById('aboutClear').addEventListener('click', function () {
+        aboutFilter = '';
+        showAboutNote();
+        try { history.replaceState(null, '', window.location.pathname); } catch (e) { /* ignore */ }
+        load(true);
+    });
+
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+    }
+
+    function showMessage(text) {
+        const p = document.getElementById('logMessage');
+        p.textContent = text;
+        p.classList.toggle('hidden', !text);
+    }
+
+    // "2026-11-18 14:05:00" -> "18 Nov 2026, 14:05"
+    function formatWhen(value) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(value || ''));
+        if (!m) return String(value || '');
+        return parseInt(m[3], 10) + ' ' + MONTHS[parseInt(m[2], 10) - 1] + ' ' + m[1] + ', ' + m[4] + ':' + m[5];
+    }
+
+    function filterParams() {
+        const q = new URLSearchParams();
+        const search = document.getElementById('searchInput').value.trim();
+        const person = document.getElementById('personFilter').value;
+        const action = document.getElementById('actionFilter').value;
+        const range = document.getElementById('rangeFilter').value;
+        if (search) q.set('q', search);
+        if (aboutFilter) q.set('about', aboutFilter);
+        if (person) q.set('person', person);
+        else if (pendingPerson) q.set('person', pendingPerson);
+        if (action) q.set('action', action);
+        if (range) q.set('range', range);
+        if (range === 'custom') {
+            const from = document.getElementById('fromDate').value;
+            const to = document.getElementById('toDate').value;
+            if (from) q.set('from', from);
+            if (to) q.set('to', to);
+        }
+        return q;
+    }
+
+    // "Kept for 2 years" (months when under a year)
+    function keptText(days) {
+        if (!days) return '';
+        if (days < 365) {
+            const months = Math.max(1, Math.round(days / 30));
+            return ' Kept for ' + months + ' month' + (months === 1 ? '' : 's') + '.';
+        }
+        const years = Math.round((days / 365) * 10) / 10;
+        return ' Kept for ' + years + ' year' + (years === 1 ? '' : 's') + '.';
+    }
+
+    function fillSelect(id, choices) {
+        const select = document.getElementById(id);
+        const keep = select.value;
+        select.innerHTML = '';
+        choices.forEach(c => {
+            const opt = el('option', '', c.label);
+            opt.value = c.value;
+            select.appendChild(opt);
+        });
+        select.value = keep;
+        if (select.value !== keep) select.value = '';
+    }
+
+    // ============================================
+    // LOAD
+    // ============================================
+    async function load(reset) {
+        if (reset) offset = 0;
+        const more = document.getElementById('moreBtn');
+        more.disabled = true;
+        const q = filterParams();
+        q.set('offset', String(offset));
+        try {
+            const res = await authenticatedFetch(API + '?' + q.toString());
+            const data = await res.json();
+            if (!data.success) { showMessage(data.message || 'The activity log could not be loaded.'); return; }
+            showMessage('');
+            showAddress = data.showAddress === true;
+            canDownload = data.canDownload !== false;
+            document.getElementById('csvBtn').disabled = !canDownload;
+
+            if (data.options && !optionsLoaded) {
+                fillSelect('personFilter', data.options.people || []);
+                fillSelect('actionFilter', data.options.actions || []);
+                if (pendingPerson) {
+                    document.getElementById('personFilter').value = pendingPerson;
+                    pendingPerson = '';
+                }
+                optionsLoaded = true;
+            }
+            if (data.retentionDays) {
+                document.getElementById('logIntro').textContent =
+                    'Sign-ins, approvals, changes to settings and access, impersonation, and the scheduled jobs.' + keptText(Number(data.retentionDays));
+            }
+
+            const body = document.getElementById('logBody');
+            if (reset) {
+                body.innerHTML = '';
+                renderHead();
+            }
+            data.entries.forEach(e => body.appendChild(renderRow(e)));
+            offset = data.nextOffset;
+            const shown = body.children.length;
+            document.getElementById('logCount').textContent = 'Showing ' + shown.toLocaleString('en-GB') + ' of ' + Number(data.total).toLocaleString('en-GB') + ' entries';
+            document.getElementById('logEmpty').classList.toggle('hidden', shown > 0);
+            more.classList.toggle('hidden', !data.hasMore);
+        } catch (err) {
+            console.error('Activity log error:', err);
+            showMessage('The activity log could not be loaded.');
+        } finally {
+            more.disabled = false;
+        }
+    }
+
+    function renderHead() {
+        const row = document.getElementById('logHeadRow');
+        const existing = document.getElementById('addressHead');
+        if (showAddress && !existing) {
+            const th = el('th', 'px-3 py-3 whitespace-nowrap', 'Address');
+            th.scope = 'col';
+            th.id = 'addressHead';
+            row.appendChild(th);
+        } else if (!showAddress && existing) {
+            existing.remove();
+        }
+    }
+
+    function renderRow(e) {
+        const tr = el('tr', 'bg-slate-900 hover:bg-slate-800/60 align-top');
+        tr.appendChild(el('td', 'px-3 py-2 whitespace-nowrap text-gray-300 font-semibold', formatWhen(e.when)));
+
+        const who = el('td', 'px-3 py-2 min-w-[9rem]');
+        who.appendChild(el('span', 'block font-bold ' + (e.system ? 'text-gray-400' : 'text-white'), e.who));
+        if (e.actingAs) {
+            const tag = el('span', 'as-tag');
+            const ns = 'http://www.w3.org/2000/svg';
+            const s = document.createElementNS(ns, 'svg');
+            s.setAttribute('class', 'w-3 h-3');
+            s.setAttribute('fill', 'none');
+            s.setAttribute('stroke', 'currentColor');
+            s.setAttribute('viewBox', '0 0 24 24');
+            s.setAttribute('aria-hidden', 'true');
+            const p = document.createElementNS(ns, 'path');
+            p.setAttribute('stroke-linecap', 'round');
+            p.setAttribute('stroke-linejoin', 'round');
+            p.setAttribute('stroke-width', '2.5');
+            p.setAttribute('d', EYE);
+            s.appendChild(p);
+            tag.appendChild(s);
+            tag.appendChild(document.createTextNode('As ' + e.actingAs));
+            who.appendChild(tag);
+        }
+        tr.appendChild(who);
+
+        tr.appendChild(el('td', 'px-3 py-2 font-bold text-gray-100 min-w-[10rem]', e.what));
+        tr.appendChild(el('td', 'px-3 py-2 text-gray-300 font-semibold break-words min-w-[14rem]', e.details));
+        if (showAddress) {
+            tr.appendChild(el('td', 'px-3 py-2 text-gray-400 font-mono text-xs whitespace-nowrap', e.address || ''));
+        }
+        return tr;
+    }
+
+    // ============================================
+    // FILTERS
+    // ============================================
+    document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => load(true), 350);
+    });
+    ['personFilter', 'actionFilter'].forEach(id => document.getElementById(id).addEventListener('change', () => load(true)));
+    document.getElementById('rangeFilter').addEventListener('change', function () {
+        document.getElementById('customDates').classList.toggle('hidden', this.value !== 'custom');
+        load(true);
+    });
+    ['fromDate', 'toDate'].forEach(id => document.getElementById(id).addEventListener('change', () => load(true)));
+    document.getElementById('moreBtn').addEventListener('click', () => load(false));
+
+    // ============================================
+    // DOWNLOAD
+    // ============================================
+    document.getElementById('csvBtn').addEventListener('click', async function () {
+        this.disabled = true;
+        try {
+            const q = filterParams();
+            q.set('download', '1');
+            const res = await authenticatedFetch(API + '?' + q.toString());
+            const type = res.headers.get('Content-Type') || '';
+            if (!res.ok || type.indexOf('text/csv') === -1) {
+                let message = 'The download could not be made.';
+                try { const data = await res.json(); if (data && data.message) message = data.message; } catch (e) { /* ignore */ }
+                showMessage(message);
+                return;
+            }
+            const disposition = res.headers.get('Content-Disposition') || '';
+            const match = /filename="([^"]+)"/.exec(disposition);
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = match ? match[1] : 'kbf-activity-log.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (err) {
+            console.error('Download error:', err);
+            showMessage('The download could not be made.');
+        } finally {
+            this.disabled = !canDownload;
+        }
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

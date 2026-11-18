@@ -1,0 +1,26 @@
+# ============================================
+# STORAGE DIRECTORY - NO WEB ACCESS
+# Email attachments are read by PHP only (api/mailer.php), never served.
+# ============================================
+
+Options -Indexes
+
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+    Require all denied
+    # Also inside FilesMatch, so the site-wide "\.php$ -> Require all granted"
+    # rule in the root .htaccess cannot re-open anything in this folder.
+    <FilesMatch ".*">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Apache 2.2 fallback
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+    <FilesMatch ".*">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>

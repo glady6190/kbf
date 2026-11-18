@@ -1,0 +1,28 @@
+# ============================================
+# JOBS DIRECTORY - NO WEB ACCESS
+# Scheduled jobs run through PHP on the command line (cron),
+# which does not read this file, so cron keeps working.
+# ============================================
+
+# Prevent directory listing
+Options -Indexes
+
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+    Require all denied
+    # Also inside FilesMatch, so the site-wide "\.php$ -> Require all granted"
+    # rule in the root .htaccess cannot re-open .php files in this folder.
+    <FilesMatch ".*">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Apache 2.2 fallback
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+    <FilesMatch ".*">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>

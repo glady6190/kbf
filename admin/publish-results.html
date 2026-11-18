@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Results for a Past Tournament - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Fields: the same style as the tournament form (js/tournament-form.js) */
+        .tf-input { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .625rem .875rem; font-weight: 700; font-size: .875rem; transition: border-color .2s ease; border-radius: 0; }
+        .tf-input::placeholder { color: #6b7280; }
+        .tf-input:focus { outline: none; border-color: var(--theme-primary); }
+        .tf-input:disabled { opacity: .55; cursor: not-allowed; }
+        .tf-label { display: block; font-size: .75rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .5rem; }
+        .tf-optional { color: #9ca3af; font-weight: 700; text-transform: none; }
+        .tf-hint { font-size: .75rem; color: #9ca3af; font-weight: 600; margin-top: .375rem; }
+        @media (min-width: 640px) { .tf-input { border-width: 4px; } }
+
+        /* Buttons and tags, as on the Tournaments page */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: var(--theme-primary); border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: background-color .15s, color .15s; }
+        .btn-outline:hover:not(:disabled) { background: var(--theme-primary); color: #0F172A; }
+        .btn-outline:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-sm { padding: .45rem .7rem; font-size: .68rem; }
+        .btn-solid:focus-visible, .btn-outline:focus-visible, .btn-plain:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .tt-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .tt-tag.is-approved { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .tt-tag.is-due { background: #EF4444; border-color: #EF4444; color: #fff; }
+        .tt-tag.is-amber { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
+        .tt-tag.is-grey { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .tt-tag.is-cancelled { background: #374151; border-color: #4b5563; color: #9ca3af; text-decoration: line-through; }
+
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <a href="/admin/tournaments?tab=completed" class="inline-flex items-center gap-1 text-xs font-black uppercase text-gray-400 hover:text-white mb-4">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            Tournaments
+        </a>
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Add results for a past tournament</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold text-xs sm:text-sm">For tournaments that were never added to the site. This creates the tournament and takes you straight to entering its results.</p>
+        </div>
+
+        <form id="quickForm" class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" novalidate>
+            <div>
+                <label class="tf-label" for="qOrganiser">Organiser *</label>
+                <input type="text" id="qOrganiser" name="organizerName" required maxlength="150" class="tf-input" autocomplete="off" list="qOrganiserList" aria-describedby="qOrganiserHint">
+                <datalist id="qOrganiserList"></datalist>
+                <p class="tf-hint" id="qOrganiserHint">The organiser who ran this tournament, as players should see it. Pick an existing name if they have run tournaments before, so they are grouped together.</p>
+            </div>
+
+            <div>
+                <label class="tf-label" for="qName">Tournament name *</label>
+                <input type="text" id="qName" name="tournamentName" required minlength="3" maxlength="200" class="tf-input uppercase" placeholder="MANCHESTER WINTER CHAMPIONSHIP">
+            </div>
+
+            <div>
+                <label class="tf-label" for="qDate">Date *</label>
+                <input type="date" id="qDate" name="tournamentDate" required class="tf-input" aria-describedby="qDateHint">
+                <p class="tf-hint" id="qDateHint">Today or earlier.</p>
+            </div>
+
+            <div>
+                <label class="tf-label" for="qVenue">Venue name *</label>
+                <input type="text" id="qVenue" name="venue" required maxlength="200" class="tf-input uppercase" placeholder="MANCHESTER SPORTS CENTRE">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="tf-label" for="qLocation">Town or city *</label>
+                    <input type="text" id="qLocation" name="location" required maxlength="100" class="tf-input uppercase" placeholder="MANCHESTER">
+                </div>
+                <div>
+                    <label class="tf-label" for="qPostcode">Postcode <span class="tf-optional">(optional)</span></label>
+                    <input type="text" id="qPostcode" name="postCode" maxlength="10" class="tf-input uppercase" placeholder="M1 1AA">
+                </div>
+            </div>
+
+            <div>
+                <label class="tf-label" for="qCategories">Categories offered *</label>
+                <input type="text" id="qCategories" name="categoriesOffered" required maxlength="100" class="tf-input uppercase" placeholder="A&amp;B, C&amp;C, C&amp;D, B&amp;D, C&amp;E" aria-describedby="qCategoriesHint">
+                <p class="tf-hint" id="qCategoriesHint">The categories or groups that competed, for example "A&amp;B, C&amp;C, C&amp;D". <span id="qCategoriesCount">0</span>/100 characters</p>
+            </div>
+
+            <div id="formMessage" class="hidden msg" role="status" aria-live="polite"></div>
+
+            <!-- Similar tournaments already on the site -->
+            <section id="duplicates" class="hidden border-2 sm:border-4 border-amber-500 bg-slate-800 p-4" aria-labelledby="duplicatesTitle">
+                <h2 id="duplicatesTitle" class="text-sm font-black uppercase text-amber-300 mb-1">Is it one of these?</h2>
+                <p id="duplicatesText" class="text-sm font-semibold text-gray-300 mb-4"></p>
+                <ul id="duplicatesList" class="border-2 border-gray-700 divide-y-2 divide-gray-700 mb-4"></ul>
+                <button type="button" id="createAnyway" class="btn-outline">Create a new tournament anyway</button>
+            </section>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t-2 sm:border-t-4 border-gray-700">
+                <a href="/admin/tournaments?tab=completed" class="btn-plain">Cancel</a>
+                <button type="submit" id="submitBtn" class="btn-solid btn-shadow">Create and enter results</button>
+            </div>
+        </form>
+    </main>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD + SHARED HEADER
+    // Creates the tournament (Approved at once) with api/admin-quick-tournament.php,
+    // then opens the shared results form for it.
+    // ============================================
+    KBFShell.start({ anyOf: ['tournaments.manage_all'], active: 'tournaments' }).then(function () {
+        initPage();
+    });
+
+    const fields = {
+        organiser: document.getElementById('qOrganiser'),
+        name: document.getElementById('qName'),
+        date: document.getElementById('qDate'),
+        venue: document.getElementById('qVenue'),
+        location: document.getElementById('qLocation'),
+        postcode: document.getElementById('qPostcode'),
+        categories: document.getElementById('qCategories')
+    };
+    let organiserNames = [];
+    let busy = false;
+
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    // Every value reaches the page with textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+    }
+
+    function todayString() {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function formatDate(value) {
+        const s = String(value || '');
+        const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + 'T12:00:00') : null;
+        return d && !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    }
+
+    function plural(n, one, many) {
+        return n.toLocaleString('en-GB') + ' ' + (n === 1 ? one : many);
+    }
+
+    function showMsg(text, kind) {
+        const box = document.getElementById('formMessage');
+        if (!text) { box.classList.add('hidden'); return; }
+        box.textContent = text;
+        box.className = 'msg ' + (kind === 'error' ? 'msg-error' : 'msg-ok');
+        box.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    }
+
+    function initPage() {
+        fields.date.max = todayString();
+
+        fields.categories.addEventListener('input', updateCount);
+        updateCount();
+
+        // A changed name or date needs a fresh duplicate check
+        [fields.name, fields.date].forEach(input => input.addEventListener('input', hideDuplicates));
+
+        fields.organiser.addEventListener('change', normaliseOrganiser);
+        loadOrganiserNames();
+        prefillOrganiser();
+    }
+
+    function updateCount() {
+        const count = document.getElementById('qCategoriesCount');
+        count.textContent = String(fields.categories.value.length);
+        count.classList.toggle('text-red-400', fields.categories.value.length >= 100);
+    }
+
+    // Organiser suggestions, most used first (as on the tournament form)
+    async function loadOrganiserNames() {
+        try {
+            const res = await authenticatedFetch('/api/tournaments.php?organiserNames=1');
+            const data = await res.json();
+            if (!data || !data.success || !Array.isArray(data.organiserNames)) return;
+            organiserNames = data.organiserNames.map(String);
+            const list = document.getElementById('qOrganiserList');
+            organiserNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                list.appendChild(option);
+            });
+        } catch (e) { /* suggestions are optional */ }
+    }
+
+    // Pre-fill with the organiser name this user used last
+    async function prefillOrganiser() {
+        try {
+            const res = await authenticatedFetch('/api/tournaments.php?lastOrganiser=1');
+            const data = await res.json();
+            if (data && data.success && data.lastOrganiserName && !fields.organiser.value) {
+                fields.organiser.value = String(data.lastOrganiserName);
+            }
+        } catch (e) { /* leave the field empty */ }
+    }
+
+    function organiserKey(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    // Use the existing spelling when it matches apart from upper and lower case
+    function normaliseOrganiser() {
+        let value = fields.organiser.value.replace(/\s+/g, ' ').trim();
+        const key = organiserKey(value);
+        const match = organiserNames.find(n => organiserKey(n) === key);
+        if (match) value = match;
+        if (fields.organiser.value !== value) fields.organiser.value = value;
+    }
+
+    function validate() {
+        normaliseOrganiser();
+        if (!fields.organiser.value.trim()) return ['Please enter the organiser.', fields.organiser];
+        if (fields.name.value.trim().length < 3) return ['Tournament name must be at least 3 characters.', fields.name];
+        if (!fields.date.value) return ['Please choose the tournament date.', fields.date];
+        if (fields.date.value > todayString()) return ['The date must be today or earlier. Use Create tournament on the Tournaments page for future tournaments.', fields.date];
+        if (!fields.venue.value.trim()) return ['Please enter the venue name.', fields.venue];
+        if (!fields.location.value.trim()) return ['Please enter the town or city.', fields.location];
+        if (!fields.categories.value.trim()) return ['Please enter the categories offered.', fields.categories];
+        if (fields.categories.value.trim().length > 100) return ['Categories text is too long (max 100 characters).', fields.categories];
+        return null;
+    }
+
+    function payload(createAnyway) {
+        return {
+            organizerName: fields.organiser.value.trim(),
+            tournamentName: fields.name.value.trim(),
+            tournamentDate: fields.date.value,
+            venue: fields.venue.value.trim(),
+            location: fields.location.value.trim(),
+            postCode: fields.postcode.value.trim(),
+            categoriesOffered: fields.categories.value.trim(),
+            createAnyway: !!createAnyway
+        };
+    }
+
+    function setBusy(on) {
+        busy = on;
+        document.getElementById('submitBtn').disabled = on;
+        document.getElementById('createAnyway').disabled = on;
+    }
+
+    async function create(createAnyway) {
+        if (busy) return;
+        showMsg('');
+        const error = validate();
+        if (error) {
+            showMsg(error[0], 'error');
+            error[1].focus();
+            return;
+        }
+        setBusy(true);
+        try {
+            const res = await authenticatedFetch('/api/admin-quick-tournament.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload(createAnyway))
+            });
+            const result = await res.json().catch(() => ({ success: false, message: 'Unexpected response from the server.' }));
+            if (result.success) {
+                hideDuplicates();
+                showMsg('Tournament created. Opening the results form...', 'ok');
+                const url = typeof result.redirectUrl === 'string' && /^\/admin\/[A-Za-z0-9\-.]+\?id=\d+$/.test(result.redirectUrl)
+                    ? result.redirectUrl
+                    : '/admin/submit-tournament-results?id=' + encodeURIComponent(String(parseInt(result.tournamentId, 10) || 0));
+                window.location.href = url;
+                return;
+            }
+            if (Array.isArray(result.duplicates) && result.duplicates.length) {
+                showDuplicates(result.duplicates, result.message);
+                setBusy(false);
+                return;
+            }
+            showMsg(result.message || 'The tournament could not be created.', 'error');
+            setBusy(false);
+        } catch (e) {
+            console.error('Create tournament error:', e);
+            showMsg('The tournament could not be created. Please try again.', 'error');
+            setBusy(false);
+        }
+    }
+
+    // ============================================
+    // SIMILAR TOURNAMENTS
+    // ============================================
+    const TAGS = {
+        upcoming: 'is-approved', due: 'is-due', due_waiting: 'is-amber', waiting: 'is-amber',
+        completed: 'is-grey', rejected: 'is-grey', cancelled: 'is-cancelled'
+    };
+
+    function resultsText(t) {
+        const matches = parseInt(t.matchCount, 10) || 0;
+        if (!matches) return 'No results yet';
+        return plural(parseInt(t.categoryCount, 10) || 0, 'category', 'categories') + ' • ' + plural(matches, 'match', 'matches');
+    }
+
+    function showDuplicates(list, message) {
+        const section = document.getElementById('duplicates');
+        document.getElementById('duplicatesText').textContent = (message || 'There are tournaments with a similar name on or near this date.') +
+            ' Use one of them to add its results, or create a new tournament if this one is different.';
+        const ul = document.getElementById('duplicatesList');
+        ul.textContent = '';
+        list.forEach(t => {
+            const li = el('li', 'p-3 flex flex-col sm:flex-row sm:items-center gap-3');
+            const text = el('div', 'min-w-0 flex-1');
+            text.appendChild(el('p', 'text-sm font-black text-white break-words', t.name));
+            const meta = el('p', 'text-xs font-bold text-gray-400 break-words');
+            meta.textContent = [formatDate(t.date), t.organiser, [t.venue, t.town].filter(Boolean).join(', ')].filter(Boolean).join(' • ');
+            text.appendChild(meta);
+            const line = el('div', 'flex flex-wrap items-center gap-2 mt-1.5');
+            line.appendChild(el('span', 'tt-tag ' + (TAGS[t.status] || 'is-grey'), t.statusLabel || t.status || ''));
+            line.appendChild(el('span', 'text-xs font-semibold text-gray-400', resultsText(t)));
+            text.appendChild(line);
+            li.appendChild(text);
+            if (t.canEnterResults) {
+                const use = el('a', 'btn-solid btn-sm', 'Use this one');
+                use.href = '/admin/submit-tournament-results?id=' + encodeURIComponent(String(parseInt(t.id, 10) || 0));
+                li.appendChild(use);
+            } else {
+                li.appendChild(el('span', 'text-xs font-semibold text-gray-400 sm:max-w-[12rem]', 'Results cannot be entered for this tournament (' + (t.statusLabel || t.status || '') + ').'));
+            }
+            ul.appendChild(li);
+        });
+        section.classList.remove('hidden');
+        section.scrollIntoView({ block: 'nearest' });
+        const first = ul.querySelector('a') || document.getElementById('createAnyway');
+        if (first) first.focus();
+    }
+
+    function hideDuplicates() {
+        document.getElementById('duplicates').classList.add('hidden');
+    }
+
+    document.getElementById('quickForm').addEventListener('submit', e => {
+        e.preventDefault();
+        create(false);
+    });
+    document.getElementById('createAnyway').addEventListener('click', () => create(true));
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

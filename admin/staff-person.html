@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Member - Admin</title>
+    <meta name="robots" content="noindex">
+    <script>
+    // This page is now part of the People page. Any query string is kept.
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var id = params.get('id');
+        params.delete('id');
+        params.set('tab', 'staff');
+        if (id && /^[1-9][0-9]*$/.test(id)) {
+            params.set('person', id);
+            params.set('panel', 'access');
+        }
+        window.location.replace('/admin/people?' + params.toString() + window.location.hash);
+    })();
+    </script>
+    <style>body { background: #020617; color: #e5e7eb; font-family: system-ui, sans-serif; padding: 2rem; } a { color: #10b981; font-weight: 700; }</style>
+</head>
+<body>
+    <p>This page has moved to <a href="/admin/people?tab=staff">People</a>.</p>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Settings - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+
+        /* Policy choice cards: real radio buttons, the whole card is the label */
+        .choice-card { border: 4px solid #374151; }
+        .choice-card:hover { border-color: #6b7280; }
+        .choice-card:has(input:checked) { border-color: var(--theme-primary); }
+        .choice-card:has(input:focus-visible) { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+        .choice-card:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
+        .choice-radio { width: 18px; height: 18px; accent-color: var(--theme-primary); flex-shrink: 0; }
+
+        .rule-input { width: 7rem; background: #1e293b; border: 4px solid #374151; color: #fff; padding: .5rem .75rem; font-weight: 700; font-size: .875rem; }
+        .rule-input:focus { outline: none; border-color: var(--theme-primary); }
+        .rule-input[aria-invalid="true"] { border-color: #ef4444; }
+
+        @media (max-width: 768px) {
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Security</span> Settings</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">How staff sign in to the admin area</p>
+        </div>
+
+        <!-- Control centre layout: sidebar (drawn by the shell) and content -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0">
+
+        <div id="pageLoading" class="py-16 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+
+        <div id="pageContent" class="hidden space-y-6 sm:space-y-8">
+            <!-- ============================ -->
+            <!-- 2-STEP VERIFICATION -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-8" aria-labelledby="twoStepHeading">
+                <h2 id="twoStepHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-2">2-step verification</h2>
+                <p class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed mb-5 sm:mb-6">After their password, staff enter a 6-digit code from an authenticator app such as Google Authenticator or Microsoft Authenticator. Codes are never sent by email.</p>
+
+                <div id="notConfiguredWarning" class="hidden mb-5 sm:mb-6 p-3 sm:p-4 border-2 sm:border-4 border-amber-500 bg-amber-500/10 flex gap-3" role="alert">
+                    <svg class="w-6 h-6 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-black uppercase text-amber-400 mb-1">Not configured on this server</p>
+                        <p class="text-xs sm:text-sm text-gray-200 font-semibold leading-relaxed">2-step verification is not configured on this server, so nobody can set it up yet. If you choose a "Required" setting now, the people it applies to will not be able to sign in until it is configured.</p>
+                    </div>
+                </div>
+
+                <fieldset>
+                    <legend class="sr-only">Who must use 2-step verification</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="policyChoices">
+                        <label class="choice-card block p-4 bg-slate-800 cursor-pointer transition">
+                            <span class="flex items-start gap-3">
+                                <input type="radio" name="twoStepPolicy" value="off" class="choice-radio mt-0.5">
+                                <span>
+                                    <span class="block text-sm font-black uppercase text-white">Off</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-1">Nobody is asked for a code. You can still require it for individual people from their staff page.</span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="choice-card block p-4 bg-slate-800 cursor-pointer transition">
+                            <span class="flex items-start gap-3">
+                                <input type="radio" name="twoStepPolicy" value="optional" class="choice-radio mt-0.5">
+                                <span>
+                                    <span class="block text-sm font-black uppercase text-white">Optional</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-1">Anyone can turn it on for their own account. Nobody is forced to.</span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="choice-card block p-4 bg-slate-800 cursor-pointer transition">
+                            <span class="flex items-start gap-3">
+                                <input type="radio" name="twoStepPolicy" value="required_admins" class="choice-radio mt-0.5">
+                                <span>
+                                    <span class="block text-sm font-black uppercase text-white">Required for Super and Main Admins</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-1">They set it up at their next sign-in. Other staff can turn it on if they wish.</span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="choice-card block p-4 bg-slate-800 cursor-pointer transition">
+                            <span class="flex items-start gap-3">
+                                <input type="radio" name="twoStepPolicy" value="required_all" class="choice-radio mt-0.5">
+                                <span>
+                                    <span class="block text-sm font-black uppercase text-white">Required for all staff</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-1">Every staff member sets it up at their next sign-in.</span>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <p id="setUpCount" class="mt-5 text-xs sm:text-sm font-bold uppercase text-gray-300"></p>
+
+                <div id="policyMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+
+                <div class="mt-5 sm:mt-6 flex justify-end">
+                    <button type="button" id="savePolicyBtn" onclick="savePolicy()"
+                            class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save settings</button>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- SIGN-IN RULES -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-8" aria-labelledby="rulesHeading">
+                <h2 id="rulesHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-2">Sign-in rules</h2>
+                <p class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed mb-5 sm:mb-6">Changes apply from the next sign-in or page load. Impersonation always asks for your password, and for your code when you have 2-step verification set up.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="rule-sessionMinutes" class="block text-xs font-black theme-primary-text uppercase mb-2">Session ends after</label>
+                        <div class="flex items-center gap-2"><input type="number" id="rule-sessionMinutes" class="rule-input" min="15" max="720" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">minutes idle</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">15 to 720.</p>
+                    </div>
+                    <div>
+                        <label for="rule-warningMinutes" class="block text-xs font-black theme-primary-text uppercase mb-2">Warning before it ends</label>
+                        <div class="flex items-center gap-2"><input type="number" id="rule-warningMinutes" class="rule-input" min="1" max="30" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">minutes</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">1 to 30, and less than the session length.</p>
+                    </div>
+                    <div>
+                        <label for="rule-lockoutAttemptsEmail" class="block text-xs font-black theme-primary-text uppercase mb-2">Failed sign-ins before lockout, per email</label>
+                        <input type="number" id="rule-lockoutAttemptsEmail" class="rule-input" min="3" max="20" step="1" inputmode="numeric">
+                        <p class="text-xs text-gray-500 font-semibold mt-1">3 to 20.</p>
+                    </div>
+                    <div>
+                        <label for="rule-lockoutAttemptsIp" class="block text-xs font-black theme-primary-text uppercase mb-2">Failed sign-ins before lockout, per internet address</label>
+                        <input type="number" id="rule-lockoutAttemptsIp" class="rule-input" min="10" max="200" step="1" inputmode="numeric">
+                        <p class="text-xs text-gray-500 font-semibold mt-1">10 to 200.</p>
+                    </div>
+                    <div>
+                        <label for="rule-lockoutMinutes" class="block text-xs font-black theme-primary-text uppercase mb-2">Lockout lasts</label>
+                        <div class="flex items-center gap-2"><input type="number" id="rule-lockoutMinutes" class="rule-input" min="5" max="120" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">minutes</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">5 to 120.</p>
+                    </div>
+                    <div>
+                        <label for="rule-impersonationMinutes" class="block text-xs font-black theme-primary-text uppercase mb-2">Impersonation ends after</label>
+                        <div class="flex items-center gap-2"><input type="number" id="rule-impersonationMinutes" class="rule-input" min="5" max="120" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">minutes</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">5 to 120.</p>
+                    </div>
+                    <div>
+                        <label for="rule-auditRetentionDays" class="block text-xs font-black theme-primary-text uppercase mb-2">Keep the activity log for</label>
+                        <div class="flex items-center gap-2"><input type="number" id="rule-auditRetentionDays" class="rule-input" min="90" max="3650" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">days</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">90 to 3,650. Older entries are removed each night.</p>
+                    </div>
+                </div>
+
+                <div id="rulesMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+
+                <div class="mt-5 sm:mt-6 flex justify-end">
+                    <button type="button" id="saveRulesBtn" onclick="saveRules()"
+                            class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save sign-in rules</button>
+                </div>
+            </section>
+        </div>
+
+        </main>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): Super Admins only
+    // ============================================
+    KBFShell.startControl({ section: 'security' }).then(function (user) {
+        window.kbfUser = user;
+        loadSettings();
+    });
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getCSRFToken() {
+        return sessionStorage.getItem('csrf_token');
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    function showMessage(text, ok) {
+        const box = document.getElementById('policyMessage');
+        box.textContent = text;
+        box.setAttribute('role', ok ? 'status' : 'alert');
+        box.className = ok
+            ? 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
+            : 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
+    }
+
+    function hideMessage() {
+        document.getElementById('policyMessage').classList.add('hidden');
+    }
+
+    function plural(n, one, many) {
+        return n + ' ' + (n === 1 ? one : many);
+    }
+
+    // ============================================
+    // LOAD
+    // ============================================
+    let savedPolicy = 'off';
+
+    async function loadSettings() {
+        try {
+            const res = await authenticatedFetch('/api/staff.php?action=securitySettings');
+            const data = await res.json();
+            if (!data.success) {
+                document.getElementById('pageLoading').textContent = data.message || 'Could not load security settings';
+                return;
+            }
+            render(data);
+            document.getElementById('pageLoading').classList.add('hidden');
+            document.getElementById('pageContent').classList.remove('hidden');
+        } catch (e) {
+            console.error('Load security settings error:', e);
+            document.getElementById('pageLoading').textContent = 'Could not load security settings';
+        }
+    }
+
+    function render(data) {
+        savedPolicy = data.twoStepPolicy || 'off';
+        setPolicyChoice(savedPolicy);
+
+        document.getElementById('notConfiguredWarning').classList.toggle('hidden', !!data.twoStepConfigured);
+
+        const total = parseInt(data.staffTotal, 10) || 0;
+        const setUp = parseInt(data.staffSetUp, 10) || 0;
+        document.getElementById('setUpCount').textContent = 'Set up so far: ' + setUp + ' of ' + total + ' staff';
+
+        renderRules(data.signInRules || {});
+    }
+
+    // ============================================
+    // SIGN-IN RULES
+    // ============================================
+    const RULE_FIELDS = ['sessionMinutes', 'warningMinutes', 'lockoutAttemptsEmail', 'lockoutAttemptsIp', 'lockoutMinutes', 'impersonationMinutes', 'auditRetentionDays'];
+
+    function renderRules(rules) {
+        RULE_FIELDS.forEach(f => {
+            const input = document.getElementById('rule-' + f);
+            input.value = rules[f] != null ? rules[f] : '';
+            input.removeAttribute('aria-invalid');
+        });
+    }
+
+    function showRulesMessage(text, ok) {
+        const box = document.getElementById('rulesMessage');
+        box.textContent = text;
+        box.setAttribute('role', ok ? 'status' : 'alert');
+        box.className = ok
+            ? 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
+            : 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
+    }
+
+    async function saveRules() {
+        const rules = {};
+        RULE_FIELDS.forEach(f => {
+            const input = document.getElementById('rule-' + f);
+            input.removeAttribute('aria-invalid');
+            rules[f] = input.value.trim();
+        });
+        if (parseInt(rules.warningMinutes, 10) >= parseInt(rules.sessionMinutes, 10)) {
+            document.getElementById('rule-warningMinutes').setAttribute('aria-invalid', 'true');
+            showRulesMessage('The warning must be shorter than the session length', false);
+            return;
+        }
+        const btn = document.getElementById('saveRulesBtn');
+        btn.disabled = true;
+        try {
+            const res = await authenticatedFetch('/api/staff.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'setSignInRules', rules: rules })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                if (data.field) {
+                    const input = document.getElementById('rule-' + data.field);
+                    if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
+                }
+                showRulesMessage(data.message || 'Could not save the sign-in rules', false);
+                return;
+            }
+            renderRules(data.signInRules || {});
+            showRulesMessage(data.message || 'Sign-in rules saved', true);
+        } catch (e) {
+            console.error('Save sign-in rules error:', e);
+            showRulesMessage('Could not save the sign-in rules. Please try again.', false);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function setPolicyChoice(policy) {
+        document.querySelectorAll('input[name="twoStepPolicy"]').forEach(input => {
+            input.checked = input.value === policy;
+        });
+    }
+
+    function chosenPolicy() {
+        const input = document.querySelector('input[name="twoStepPolicy"]:checked');
+        return input ? input.value : null;
+    }
+
+    // ============================================
+    // SAVE
+    // ============================================
+    async function savePolicy() {
+        hideMessage();
+        const policy = chosenPolicy();
+        if (!policy) {
+            showMessage('Choose a setting first', false);
+            return;
+        }
+
+        if (policy !== savedPolicy && (policy === 'required_admins' || policy === 'required_all')) {
+            const who = policy === 'required_all'
+                ? 'Every staff member who has not set up 2-step verification'
+                : 'Super Admins and Main Admins who have not set up 2-step verification';
+            const question = who + ' will have to set it up at their next sign-in.\n\nSave this setting?';
+            if (!confirm(question)) return;
+        }
+
+        const btn = document.getElementById('savePolicyBtn');
+        btn.disabled = true;
+        try {
+            const res = await authenticatedFetch('/api/staff.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'setTwoStepPolicy', policy: policy })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                showMessage(data.message || 'Could not save settings', false);
+                return;
+            }
+            savedPolicy = data.twoStepPolicy || policy;
+            setPolicyChoice(savedPolicy);
+            showMessage(data.message || 'Settings saved', true);
+        } catch (e) {
+            console.error('Save security settings error:', e);
+            showMessage('Could not save settings. Please try again.', false);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

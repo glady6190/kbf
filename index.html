@@ -1,0 +1,2550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KBF-UK - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        /* Theme variations */
+        [data-theme="emerald"] {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        [data-theme="cyan"] {
+            --theme-primary: #06b6d4;
+            --theme-secondary: #0891b2;
+            --theme-light: #22d3ee;
+        }
+        
+        [data-theme="yellow"] {
+            --theme-primary: #f4f916;
+            --theme-secondary: #eab308;
+            --theme-light: #fef08a;
+        }
+        
+        [data-theme="orange"] {
+            --theme-primary: #f97316;
+            --theme-secondary: #ea580c;
+            --theme-light: #fb923c;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideLeft {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+        
+        @keyframes neonPulse {
+            0%, 100% {
+                box-shadow: 0 0 5px var(--theme-primary), 0 0 20px var(--theme-primary), 0 0 40px var(--theme-primary);
+            }
+            50% {
+                box-shadow: 0 0 10px var(--theme-primary), 0 0 40px var(--theme-primary), 0 0 80px var(--theme-primary);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        /* Upcoming tournaments ticker (theme colours come only from --theme-primary / --theme-secondary) */
+        .ticker-bar {
+            background: #FFFFFF;
+        }
+
+        .ticker-label {
+            background: var(--theme-primary);
+            color: #0F172A;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 10px;
+        }
+
+        .ticker-label-icon {
+            width: 14px;
+            height: 14px;
+            fill: #0F172A;
+            flex-shrink: 0;
+        }
+
+        .ticker-wrapper {
+            overflow: hidden;
+            width: 100%;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .ticker-content {
+            display: inline-flex;
+            flex: none;
+            align-items: center;
+            white-space: nowrap;
+            animation-name: slideLeft;
+            animation-duration: 60s;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+            will-change: transform;
+        }
+
+        .ticker-bar:hover .ticker-content,
+        .ticker-bar:focus-within .ticker-content {
+            animation-play-state: paused;
+        }
+
+        .ticker-set {
+            display: inline-flex;
+            flex: none;
+            align-items: center;
+        }
+
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 20px;
+            border-right: 2px solid #E2E8F0;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .ticker-item:hover .ticker-name {
+            text-decoration: underline;
+        }
+
+        .ticker-item:focus-visible {
+            outline: 2px solid #0F172A;
+            outline-offset: -2px;
+        }
+
+        .ticker-date {
+            background: var(--theme-primary);
+            color: #0F172A;
+            padding: 3px 8px;
+            border-radius: 0;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            font-size: 10px;
+        }
+
+        .ticker-name {
+            color: #1E293B;
+            font-weight: 800;
+        }
+
+        .ticker-location {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .ticker-pin {
+            width: 13px;
+            height: 13px;
+            fill: var(--theme-secondary);
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 640px) {
+            .ticker-label { font-size: 12px; }
+            .ticker-label-icon { width: 18px; height: 18px; }
+            .ticker-item { font-size: 13px; }
+            .ticker-date { font-size: 12px; }
+            .ticker-pin { width: 15px; height: 15px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ticker-wrapper {
+                overflow-x: auto;
+            }
+            .ticker-content {
+                animation: none;
+                transform: none;
+            }
+        }
+        
+        /* Stats: glowing icon rings (theme colour comes only from --theme-primary) */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-gap: 0;
+            row-gap: 26px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-width: 0;
+        }
+
+        .stat-item:nth-child(2n) {
+            border-left: 2px solid #1F2937;
+        }
+
+        .stat-ring {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 9999px;
+            background: #0B1324;
+            border: 3px solid var(--theme-primary);
+            box-shadow: 0 0 22px var(--theme-primary);
+            box-shadow: 0 0 22px color-mix(in srgb, var(--theme-primary) 33%, transparent);
+            flex-shrink: 0;
+        }
+
+        .stat-icon {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: var(--theme-primary);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .stat-number {
+            margin-top: 12px;
+            color: #FFFFFF;
+            font-size: 36px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .stat-label {
+            margin-top: 6px;
+            color: #CBD5E1;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        @media (min-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                row-gap: 0;
+            }
+            .stat-item:nth-child(n) {
+                border-left: 2px solid #1F2937;
+            }
+            .stat-item:first-child {
+                border-left: none;
+            }
+            .stat-ring {
+                width: 84px;
+                height: 84px;
+                border-width: 4px;
+                box-shadow: 0 0 34px var(--theme-primary);
+                box-shadow: 0 0 34px color-mix(in srgb, var(--theme-primary) 33%, transparent);
+            }
+            .stat-icon {
+                width: 36px;
+                height: 36px;
+            }
+            .stat-number {
+                margin-top: 20px;
+                font-size: 62px;
+            }
+            .stat-label {
+                margin-top: 10px;
+                font-size: 14px;
+                letter-spacing: 0.12em;
+            }
+        }
+
+        /* Latest News cards + promotions (theme colour comes only from --theme-primary) */
+        .news-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 24px;
+        }
+
+        .news-grid > .news-card:nth-child(n+3) {
+            display: none;
+        }
+
+        .news-card {
+            display: flex;
+            flex-direction: column;
+            border: 4px solid #374151;
+            border-radius: 0;
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+            text-decoration: none;
+            overflow: hidden;
+            transition: border-color 0.2s ease;
+        }
+
+        .news-card:hover,
+        .news-card:focus-visible {
+            border-color: var(--theme-primary);
+        }
+
+        .news-card:focus-visible {
+            outline: 3px solid #FFFFFF;
+            outline-offset: 3px;
+        }
+
+        .news-card-media {
+            position: relative;
+            height: 150px;
+            flex-shrink: 0;
+            border-bottom: 4px solid #374151;
+            background: #0B1324;
+            overflow: hidden;
+        }
+
+        .news-card-media img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .news-card-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: #0B1324;
+            color: var(--theme-primary);
+        }
+
+        .news-card-placeholder svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .news-card-tag {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 9px;
+            background: var(--theme-primary);
+            color: #0F172A;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            line-height: 1;
+        }
+
+        .news-card-tag svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        .news-card-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 16px;
+        }
+
+        .news-card-title {
+            margin: 0;
+            color: #FFFFFF;
+            font-size: 16px;
+            font-weight: 900;
+            line-height: 1.15;
+            text-transform: uppercase;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-card-excerpt {
+            margin: 10px 0 16px;
+            color: #9CA3AF;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-card-footer {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-top: 14px;
+            border-top: 2px solid #374151;
+        }
+
+        .news-card-date {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #9CA3AF;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+
+        .news-card-date svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .news-card-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--theme-primary);
+            font-size: 13px;
+            font-weight: 900;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .news-card-more svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .news-card:hover .news-card-more svg,
+        .news-card:focus-visible .news-card-more svg {
+            transform: translateX(3px);
+        }
+
+        @media (min-width: 640px) {
+            .news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .news-grid > .news-card:nth-child(n+3) { display: flex; }
+            .news-card-media { height: 200px; }
+            .news-card-body { padding: 22px; }
+            .news-card-title { font-size: 19px; }
+            .news-card-excerpt { font-size: 14px; }
+        }
+
+        @media (min-width: 1024px) {
+            .news-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+
+        /* Promotions: stacked panel below lg, single strip at lg and up */
+        .promo-block {
+            margin-top: 28px;
+            display: flex;
+            flex-direction: column;
+            border: 4px solid #374151;
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+        }
+
+        .promo-block[hidden] {
+            display: none;
+        }
+
+        .promo-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--theme-primary);
+            color: #0F172A;
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+
+        .promo-label svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .promo-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            min-width: 0;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .promo-cell + .promo-cell {
+            border-top: 2px solid #374151;
+        }
+
+        .promo-cell:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        .promo-cell:focus-visible {
+            outline: 3px solid #FFFFFF;
+            outline-offset: -3px;
+        }
+
+        .promo-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 9999px;
+            border: 3px solid var(--theme-primary);
+            background: #0B1324;
+            color: var(--theme-primary);
+            font-size: 14px;
+            font-weight: 900;
+            overflow: hidden;
+        }
+
+        .promo-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .promo-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .promo-name {
+            display: block;
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .promo-date {
+            display: block;
+            margin-top: 2px;
+            color: #9CA3AF;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .promo-grades {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .promo-grade-old,
+        .promo-grade-new {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .promo-grade-old {
+            width: 27px;
+            height: 27px;
+            border: 3px solid #475569;
+            color: #CBD5E1;
+            font-size: 12px;
+        }
+
+        .promo-grade-new {
+            width: 32px;
+            height: 32px;
+            background: var(--theme-primary);
+            color: #0F172A;
+            font-size: 14px;
+            box-shadow: 0 0 14px var(--theme-primary);
+            box-shadow: 0 0 14px color-mix(in srgb, var(--theme-primary) 33%, transparent);
+        }
+
+        .promo-grade-arrow {
+            width: 14px;
+            height: 14px;
+            color: var(--theme-primary);
+        }
+
+        @media (min-width: 1024px) {
+            .promo-block {
+                flex-direction: row;
+                align-items: stretch;
+            }
+            .promo-label {
+                padding: 14px 22px;
+                font-size: 15px;
+            }
+            .promo-label svg {
+                width: 24px;
+                height: 24px;
+            }
+            .promo-label-recent {
+                display: none;
+            }
+            .promo-cell {
+                flex: 1 1 0;
+                padding: 14px 18px;
+            }
+            .promo-cell + .promo-cell {
+                border-top: none;
+                border-left: 2px solid #374151;
+            }
+            .promo-date {
+                display: none;
+            }
+        }
+
+        .neon-text {
+            color: var(--theme-primary);
+        }
+        
+        .neon-border {
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 10px var(--theme-primary), inset 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+        
+        .neon-glow {
+            animation: neonPulse 2s ease-in-out infinite;
+        }
+        
+        .theme-primary-bg {
+            background-color: var(--theme-primary);
+        }
+        
+        .theme-primary-text {
+            color: var(--theme-primary);
+        }
+        
+        .theme-primary-border {
+            border-color: var(--theme-primary);
+        }
+        
+        .theme-switcher-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .theme-switcher-btn:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+        
+        .theme-switcher-btn.active {
+            border-color: white;
+            box-shadow: 0 0 15px currentColor;
+        }
+        
+        .theme-switcher-btn.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        }
+        
+        /* Brutalist box shadows */
+        .brutal-shadow {
+            box-shadow: 8px 8px 0px var(--theme-primary);
+        }
+        
+        .brutal-shadow:hover {
+            box-shadow: 12px 12px 0px var(--theme-primary);
+            transform: translate(-2px, -2px);
+        }
+        
+        /* Dropdown Menu Styles */
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #1e293b;
+    border: 4px solid;
+    border-color: var(--theme-primary);
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid #374151;
+}
+
+.dropdown-menu a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu a:hover {
+    background-color: #0f172a;
+    color: var(--theme-primary);
+    padding-left: 30px;
+}
+
+.dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    font-size: 0.6rem;
+    margin-left: 5px;
+    transition: transform 0.3s;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.dropdown:hover .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Mobile Dropdown */
+.mobile-dropdown-menu {
+    display: none;
+    background-color: #0f172a;
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+}
+
+.mobile-dropdown-menu.active {
+    display: block;
+}
+
+.mobile-dropdown-menu a {
+    display: block;
+    padding: 10px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-left: 3px solid #374151;
+    margin: 5px 0;
+    transition: all 0.2s;
+}
+
+.mobile-dropdown-menu a:hover {
+    border-left-color: var(--theme-primary);
+    color: var(--theme-primary);
+    padding-left: 25px;
+}
+        
+        /* Sponsors: spotlight panel, all-sponsors row, become-a-sponsor band
+           (theme colour comes only from --theme-primary) */
+.sponsor-feature[hidden],
+.sponsor-panel [hidden],
+.sponsor-all[hidden] {
+    display: none !important;
+}
+
+.sponsor-panel {
+    position: relative;
+    margin-right: 8px;
+    border: 4px solid #374151;
+    border-radius: 0;
+    background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+    box-shadow: 8px 8px 0 var(--theme-primary);
+}
+
+.sponsor-panel-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.sponsor-panel-main.is-fading {
+    animation: sponsorFadeIn 0.5s ease-out;
+}
+
+@keyframes sponsorFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.sponsor-logo-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 180px;
+    padding: 20px;
+    background: #FFFFFF;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.sponsor-logo-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.sponsor-logo-link:focus-visible {
+    outline: 3px solid #0F172A;
+    outline-offset: 2px;
+}
+
+.sponsor-logo-area img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.sponsor-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    height: 228px;
+    padding: 18px;
+    overflow: hidden;
+}
+
+.sponsor-counter {
+    margin: 0;
+    color: var(--theme-primary);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+}
+
+.sponsor-name {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.05;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.sponsor-desc {
+    margin: 0;
+    color: #9CA3AF;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.sponsor-visit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 4px solid var(--theme-primary);
+    color: var(--theme-primary);
+    font-size: 15px;
+    font-weight: 900;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sponsor-visit svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.sponsor-visit:hover,
+.sponsor-visit:focus-visible {
+    background: var(--theme-primary);
+    color: #0F172A;
+}
+
+.sponsor-visit:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 3px;
+}
+
+.sponsor-progress {
+    height: 6px;
+    background: #1F2937;
+    overflow: hidden;
+}
+
+.sponsor-progress-fill {
+    width: 100%;
+    height: 100%;
+    background: var(--theme-primary);
+    transform: scaleX(0);
+    transform-origin: left center;
+}
+
+.sponsor-progress-fill.is-running {
+    animation-name: sponsorProgress;
+    animation-duration: 4s;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+@keyframes sponsorProgress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+/* Pause while hovered, while focus is inside, or while the tab is hidden */
+.sponsor-panel:hover .sponsor-progress-fill,
+.sponsor-panel:focus-within .sponsor-progress-fill,
+.sponsor-panel.is-paused .sponsor-progress-fill {
+    animation-play-state: paused;
+}
+
+.sponsor-all {
+    margin-top: 48px;
+}
+
+.sponsor-all-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 20px;
+    color: #9CA3AF;
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+}
+
+.sponsor-all-divider::before,
+.sponsor-all-divider::after {
+    content: '';
+    flex: 1;
+    border-top: 2px solid #374151;
+}
+
+.sponsor-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.sponsor-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 76px;
+    padding: 8px;
+    background: #FFFFFF;
+    border: 4px solid #374151;
+    border-radius: 0;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.sponsor-tile img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.sponsor-tile.is-current,
+.sponsor-tile:hover {
+    border-color: var(--theme-primary);
+}
+
+.sponsor-tile:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 3px;
+}
+
+.sponsor-band {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    margin-top: 28px;
+    padding: 22px;
+    border: 4px solid #374151;
+    background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+    text-align: center;
+}
+
+.sponsor-feature[hidden] + .sponsor-band {
+    margin-top: 0;
+}
+
+.sponsor-band-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.sponsor-band-title {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 1.1;
+}
+
+.sponsor-band-copy {
+    margin: 8px 0 0;
+    color: #9CA3AF;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.sponsor-band-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    padding: 14px 22px;
+    background: var(--theme-primary);
+    color: #0F172A;
+    font-size: 15px;
+    font-weight: 900;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 6px 6px 0 var(--theme-primary);
+    transition: transform 0.2s ease;
+}
+
+.sponsor-band-cta svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.sponsor-band-cta:hover svg,
+.sponsor-band-cta:focus-visible svg {
+    transform: translateX(4px);
+}
+
+.sponsor-band-cta:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 4px;
+}
+
+@media (min-width: 768px) {
+    .sponsor-tiles {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+    }
+    .sponsor-tile {
+        height: 116px;
+        padding: 14px;
+    }
+    .sponsor-band {
+        flex-direction: row;
+        gap: 24px;
+        padding: 28px 32px;
+        text-align: left;
+    }
+    .sponsor-band-cta {
+        margin-right: 8px;
+        margin-bottom: 8px;
+        box-shadow: 8px 8px 0 var(--theme-primary);
+    }
+}
+
+@media (min-width: 1024px) {
+    .sponsor-panel {
+        margin-right: 12px;
+        box-shadow: 12px 12px 0 var(--theme-primary);
+    }
+    .sponsor-panel-main {
+        flex-direction: row;
+        align-items: stretch;
+    }
+    .sponsor-logo-area {
+        width: 440px;
+        height: 270px;
+        padding: 28px;
+    }
+    .sponsor-text {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+        gap: 16px;
+        height: 270px;
+        padding: 0 40px;
+    }
+    .sponsor-name {
+        font-size: 36px;
+    }
+    .sponsor-desc {
+        font-size: 16px;
+    }
+    .sponsor-tiles {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sponsor-panel-main.is-fading {
+        animation: none;
+    }
+    .sponsor-progress {
+        display: none;
+    }
+}
+
+/* Animated Background Icons */
+.floating-icon {
+    position: absolute;
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.floating-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+[data-theme="emerald"] .floating-icon img {
+    filter: brightness(0) saturate(100%) invert(73%) sepia(55%) saturate(464%) hue-rotate(101deg) brightness(91%) contrast(86%);
+}
+
+[data-theme="cyan"] .floating-icon img {
+    filter: brightness(0) saturate(100%) invert(64%) sepia(88%) saturate(1456%) hue-rotate(157deg) brightness(95%) contrast(101%);
+}
+
+[data-theme="yellow"] .floating-icon img {
+    filter: brightness(0) saturate(100%) invert(88%) sepia(85%) saturate(1724%) hue-rotate(359deg) brightness(104%) contrast(96%);
+}
+
+[data-theme="orange"] .floating-icon img {
+    filter: brightness(0) saturate(100%) invert(52%) sepia(98%) saturate(2599%) hue-rotate(360deg) brightness(101%) contrast(96%);
+}
+
+@keyframes floatRandom {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(30px, -30px) rotate(90deg);
+    }
+    50% {
+        transform: translate(-20px, 20px) rotate(180deg);
+    }
+    75% {
+        transform: translate(40px, 10px) rotate(270deg);
+    }
+    100% {
+        transform: translate(0, 0) rotate(360deg);
+    }
+}
+
+        /* Hero content (theme colour comes only from --theme-primary) */
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 40px;
+            align-items: center;
+        }
+
+        .hero-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 26px;
+            text-align: left;
+            min-width: 0;
+        }
+
+        .hero-welcome {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .hero-logo-wrap {
+            position: relative;
+            display: none;
+            flex-shrink: 0;
+        }
+
+        .hero-logo-glow {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            background: var(--theme-primary);
+            filter: blur(12px);
+            opacity: 0.4;
+        }
+
+        .hero-logo {
+            position: relative;
+            width: 88px;
+            height: 88px;
+            border-radius: 9999px;
+            border: 5px solid var(--theme-primary);
+            box-shadow: 0 0 12px var(--theme-primary);
+            background: #FFFFFF;
+            overflow: hidden;
+        }
+
+        .hero-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .hero-welcome-bar {
+            width: 32px;
+            height: 5px;
+            background: var(--theme-primary);
+            flex-shrink: 0;
+        }
+
+        .hero-welcome-text {
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        .hero-title {
+            margin: 0;
+            font-size: min(44px, 10.5vw);
+            font-weight: 900;
+            line-height: 0.96;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+        }
+
+        .hero-title span {
+            display: block;
+            white-space: nowrap;
+        }
+
+        .hero-title-solid {
+            color: #FFFFFF;
+        }
+
+        .hero-title-outline {
+            color: #FFFFFF;
+        }
+
+        @supports (-webkit-text-stroke: 1px white) {
+            .hero-title-outline {
+                color: transparent;
+                -webkit-text-stroke: 1.5px #FFFFFF;
+            }
+        }
+
+        .hero-title-accent {
+            color: var(--theme-primary);
+        }
+
+        .hero-tagline {
+            margin: 0;
+            color: #D1D5DB;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .hero-tiles {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .hero-tile {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 18px;
+            border: 4px solid #334155;
+            border-radius: 0;
+            background: #0F172A;
+            text-decoration: none;
+            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hero-tile:focus-visible {
+            outline: 3px solid #FFFFFF;
+            outline-offset: 4px;
+        }
+
+        .hero-tile-title {
+            display: block;
+            color: #FFFFFF;
+            font-size: 17px;
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1.15;
+        }
+
+        .hero-tile-desc {
+            display: block;
+            margin-top: 4px;
+            color: #A7B4C8;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .hero-tile-arrow {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            color: var(--theme-primary);
+            transition: transform 0.2s ease;
+        }
+
+        .hero-tile:hover .hero-tile-arrow,
+        .hero-tile:focus-visible .hero-tile-arrow {
+            transform: translateX(4px);
+        }
+
+        .hero-tile-dark:hover,
+        .hero-tile-dark:focus-visible {
+            border-color: var(--theme-primary);
+        }
+
+        .hero-tile-primary {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+            box-shadow: 6px 6px 0 var(--theme-primary);
+        }
+
+        .hero-tile-primary .hero-tile-title,
+        .hero-tile-primary .hero-tile-arrow {
+            color: #0F172A;
+        }
+
+        .hero-tile-primary .hero-tile-desc {
+            color: rgba(15, 23, 42, 0.8);
+        }
+
+        @media (min-width: 768px) {
+            .hero-logo-wrap { display: block; }
+            .hero-welcome { gap: 18px; }
+            .hero-welcome-bar { width: 48px; height: 6px; }
+            .hero-welcome-text { font-size: 18px; }
+            .hero-title { font-size: 64px; }
+            .hero-tagline { font-size: 20px; }
+            .hero-tiles { gap: 18px; }
+            .hero-tile { padding: 20px 26px; }
+            .hero-tile-title { font-size: 22px; }
+            .hero-tile-desc { font-size: 14px; }
+            .hero-tile-arrow { width: 28px; height: 28px; }
+            .hero-tile-primary { box-shadow: 8px 8px 0 var(--theme-primary); }
+        }
+
+        @media (min-width: 768px) {
+            @supports (-webkit-text-stroke: 1px white) {
+                .hero-title-outline { -webkit-text-stroke-width: 2.5px; }
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .hero-grid {
+                grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+                gap: 56px;
+            }
+            /* 86px, scaled down on narrow lg screens so FEDERATION UK stays on one line */
+            .hero-title { font-size: min(86px, 6.4vw); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <!-- Top Upcoming Tournaments Ticker -->
+    <div id="ticker-bar" class="ticker-bar overflow-hidden">
+        <div class="flex items-stretch">
+            <div class="ticker-label flex-shrink-0 px-2 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center">
+                <svg class="ticker-label-icon" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/>
+                </svg>
+                <span class="ml-1 sm:ml-2 whitespace-nowrap"><span class="sm:hidden">Upcoming</span><span class="hidden sm:inline">Upcoming tournaments</span></span>
+            </div>
+            <div class="ticker-wrapper flex-1 py-2 sm:py-3">
+                <div id="news-ticker" class="ticker-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+<nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+    <div class="relative">
+        <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+        <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+             style="box-shadow: 0 0 12px var(--theme-primary);">
+            <img src="/assets/images/logo/KBF-Logo.jpeg"
+                 alt="KBF-UK Logo"
+                 class="w-full h-full object-contain">
+        </div>
+    </div>
+    <div>
+        <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+        <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+    </div>
+</a>      <div class="hidden md:flex items-center space-x-2">
+                <a href="/" class="text-white font-black px-5 py-2 border-b-4 theme-primary-border uppercase text-sm tracking-wider">Home</a>
+                <a href="/rankings" class="text-gray-400 hover-theme-primary font-bold px-5 py-2 uppercase text-sm tracking-wider transition theme-hover">Grading</a>
+                <a href="/tournaments" class="text-gray-400 hover-theme-primary font-bold px-5 py-2 uppercase text-sm tracking-wider transition theme-hover">Tournaments</a>
+                <a href="/gallery" class="text-gray-400 hover-theme-primary font-bold px-5 py-2 uppercase text-sm tracking-wider transition theme-hover">Gallery</a>
+                
+                <!-- Dropdown More Menu -->
+<div class="dropdown">
+    <a href="#" class="dropdown-toggle text-gray-400 hover-theme-primary font-bold px-5 py-2 uppercase text-sm tracking-wider transition theme-hover" onclick="event.preventDefault();">
+        More
+    </a>
+    <div class="dropdown-menu">
+        <a href="/news">News</a>
+        <a href="/register">Register</a>
+    </div>
+</div>
+                
+                <!-- Theme Switcher -->
+                <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+                
+                <div class="ml-4">
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
+                        Login
+                    </a>
+                </div>
+            </div>
+            <!-- Mobile menu button -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-btn" class="text-emerald-400 hover:text-emerald-300 p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 border-emerald-500">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="/" class="block text-white bg-emerald-500/20 border-l-4 border-emerald-500 px-3 py-2 font-bold uppercase text-sm">Home</a>
+            <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 hover-theme-primary px-3 py-2 font-bold uppercase text-sm">Grading</a>
+            <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 hover-theme-primary px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+            <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 hover-theme-primary px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+            
+            <!-- Mobile Dropdown More -->
+            <div>
+                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                    More
+                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                </button>
+                <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                    <a href="/news">News</a>
+                    <a href="/register">Register</a>
+                </div>
+            </div>
+            
+            <!-- Mobile Theme Switcher -->
+            <div class="px-3 py-4 border-t-2 border-gray-700">
+                <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                <div class="flex items-center space-x-3">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+            </div>
+            
+            <a href="/login" class="block bg-emerald-500 text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<div class="relative gradient-bg overflow-hidden border-b-8 theme-primary-border">
+    <!-- Animated Badminton Equipment Background -->
+    <div id="floating-icons-container"></div>
+    
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-0 right-0 w-96 h-96 rounded-full filter blur-3xl" style="background-color: var(--theme-primary);"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 rounded-full filter blur-3xl" style="background-color: var(--theme-secondary);"></div>
+    </div>
+    
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+        <div class="hero-grid animate-fadeInUp">
+            <!-- Left: welcome, heading, tagline -->
+            <div class="hero-left">
+                <div class="hero-welcome">
+                    <div class="hero-logo-wrap">
+                        <div class="hero-logo-glow"></div>
+                        <div class="hero-logo">
+                            <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                        </div>
+                    </div>
+                    <span class="hero-welcome-bar" aria-hidden="true"></span>
+                    <span class="hero-welcome-text">Welcome to</span>
+                </div>
+
+                <h1 class="hero-title">
+                    <span class="hero-title-solid">Kerala</span>
+                    <span class="hero-title-outline">Badminton</span>
+                    <span class="hero-title-accent">Federation UK</span>
+                </h1>
+
+                <p class="hero-tagline">Fair Grading • Epic Battles • Ultimate Glory</p>
+            </div>
+
+            <!-- Right: link tiles -->
+            <div class="hero-tiles">
+                <a href="/rankings" class="hero-tile hero-tile-primary">
+                    <span>
+                        <span class="hero-tile-title">View Grading</span>
+                        <span class="hero-tile-desc">Points and rankings for all seven grades</span>
+                    </span>
+                    <svg class="hero-tile-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </a>
+                <a href="/tournaments" class="hero-tile hero-tile-dark">
+                    <span>
+                        <span class="hero-tile-title">Tournaments</span>
+                        <span class="hero-tile-desc">Upcoming fixtures and past results</span>
+                    </span>
+                    <svg class="hero-tile-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </a>
+                <a href="/register" class="hero-tile hero-tile-dark">
+                    <span>
+                        <span class="hero-tile-title">Register</span>
+                        <span class="hero-tile-desc">Join as a player and get your KBF ID</span>
+                    </span>
+                    <svg class="hero-tile-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Stats Section -->
+    <div class="bg-slate-900 py-9 lg:py-16 border-b-4 theme-primary-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-ring">
+                        <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <div class="stat-number" id="totalPlayers">0</div>
+                    <div class="stat-label">Players</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-ring">
+                        <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                        </svg>
+                    </div>
+                    <div class="stat-number" id="totalTournaments">0</div>
+                    <div class="stat-label">Tournaments</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-ring">
+                        <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+                        </svg>
+                    </div>
+                    <div class="stat-number" id="totalClubs">0</div>
+                    <div class="stat-label">Organisers</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-ring">
+                        <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/>
+                        </svg>
+                    </div>
+                    <div class="stat-number" id="totalMatches">0</div>
+                    <div class="stat-label">Matches played</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest News Section -->
+    <div class="bg-slate-950 py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 gap-4">
+                <div>
+                    <h2 class="text-4xl md:text-5xl font-black text-white uppercase mb-2">
+                        <span class="theme-primary-text">Latest</span> News
+                    </h2>
+                    <div class="h-2 w-32 theme-primary-bg"></div>
+                </div>
+                <a href="/news" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm brutal-shadow transition-all">
+                    View All News →
+                </a>
+            </div>
+            
+            <div id="announcements" class="news-grid">
+                <div class="col-span-full text-center py-16">
+                    <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700" style="border-top-color: var(--theme-primary);"></div>
+                    <p class="text-gray-400 mt-6 text-lg font-bold uppercase">Loading...</p>
+                </div>
+            </div>
+
+            <div id="promotions" class="promo-block" hidden></div>
+        </div>
+    </div>
+    
+    <!-- Sponsors Section -->
+    <div class="bg-slate-900 py-20 border-t-4 theme-primary-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-black text-white uppercase mb-2">
+                    <span class="theme-primary-text">Our</span> Sponsors
+                </h2>
+                <div class="h-2 w-32 theme-primary-bg mx-auto"></div>
+                <p class="text-gray-400 font-bold uppercase text-sm mt-4">Supporting Excellence in Badminton</p>
+            </div>
+            
+            <!-- Spotlight + all sponsors (hidden until loaded; stays hidden with no active sponsors) -->
+            <div id="sponsor-feature" class="sponsor-feature" hidden>
+                <div id="sponsor-panel" class="sponsor-panel" role="region" aria-roledescription="carousel" aria-label="Sponsor spotlight">
+                    <div id="sponsor-panel-main" class="sponsor-panel-main">
+                        <div id="sponsor-logo-area" class="sponsor-logo-area"></div>
+                        <div class="sponsor-text">
+                            <p id="sponsor-counter" class="sponsor-counter" hidden></p>
+                            <h3 id="sponsor-name" class="sponsor-name"></h3>
+                            <p id="sponsor-desc" class="sponsor-desc" hidden></p>
+                            <a id="sponsor-visit" class="sponsor-visit" target="_blank" rel="noopener sponsored" hidden>
+                                Visit website
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    <div id="sponsor-progress" class="sponsor-progress" hidden>
+                        <div id="sponsor-progress-fill" class="sponsor-progress-fill"></div>
+                    </div>
+                </div>
+
+                <div id="sponsor-all" class="sponsor-all" hidden>
+                    <p class="sponsor-all-divider">All sponsors</p>
+                    <div id="sponsor-tiles" class="sponsor-tiles"></div>
+                </div>
+            </div>
+
+            <!-- Become a sponsor (always shown) -->
+            <div class="sponsor-band">
+                <div class="stat-ring">
+                    <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>
+                    </svg>
+                </div>
+                <div class="sponsor-band-text">
+                    <h3 class="sponsor-band-title">Become a sponsor</h3>
+                    <p id="sponsor-band-copy" class="sponsor-band-copy">Put your brand in front of players and organisers at tournaments across the UK.</p>
+                </div>
+                <a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="sponsor-band-cta">
+                    Get in touch
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <!-- Shared news and promotion helpers (also used by news.html) -->
+    <script src="/js/news-helpers.js"></script>
+    <script>
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+        
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-theme') === theme) {
+                btn.classList.add('active');
+            }
+        });
+        
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+        }
+    }
+    
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        changeTheme(savedTheme);
+        
+        generateFloatingIcons();
+        // Home page values from Site settings first (each falls back to
+        // today's value if the settings cannot be loaded)
+        const settingsReady = window.KBFSiteSettings ? KBFSiteSettings.ready : Promise.resolve(null);
+        settingsReady.then(function () {
+            loadTournamentTicker();
+            loadStats();
+            loadAnnouncements();
+            loadSponsors();
+        });
+    });
+    
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+        const menu = document.getElementById('mobile-menu');
+        menu.classList.toggle('hidden');
+    });
+
+    // ============================================
+    // UPCOMING TOURNAMENTS TICKER
+    // ============================================
+    // Pixels per second: Site settings ticker_speed, 50 until the settings arrive
+    const TICKER_SPEED_DEFAULT = 50;
+    function tickerSpeed() {
+        const v = window.KBFSiteSettings ? Number(KBFSiteSettings.get('home.tickerSpeed', TICKER_SPEED_DEFAULT)) : TICKER_SPEED_DEFAULT;
+        return v >= 20 && v <= 150 ? v : TICKER_SPEED_DEFAULT;
+    }
+
+    const TICKER_PIN_PATH = 'M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z';
+    let tickerTournaments = [];
+    let tickerResizeTimer = null;
+    let tickerLastWidth = 0;
+
+    function tickerTodayISO() {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${now.getFullYear()}-${month}-${day}`;
+    }
+
+    // "2026-11-28" -> "Sat 28 Nov" (uppercased by CSS)
+    function formatTickerDate(isoDate) {
+        const [year, month, day] = isoDate.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const weekday = date.toLocaleDateString('en-GB', { weekday: 'short' });
+        const monthName = date.toLocaleDateString('en-GB', { month: 'short' });
+        return `${weekday} ${day} ${monthName}`;
+    }
+
+    function hideTicker() {
+        const bar = document.getElementById('ticker-bar');
+        if (bar) bar.style.display = 'none';
+    }
+
+    function createTickerPin() {
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('class', 'ticker-pin');
+        svg.setAttribute('viewBox', '0 0 20 20');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('fill-rule', 'evenodd');
+        path.setAttribute('clip-rule', 'evenodd');
+        path.setAttribute('d', TICKER_PIN_PATH);
+        svg.appendChild(path);
+        return svg;
+    }
+
+    // All API text goes in via textContent, never innerHTML
+    function createTickerItem(tournament) {
+        const link = document.createElement('a');
+        link.className = 'ticker-item';
+        link.href = '/tournament-details?id=' + encodeURIComponent(tournament.TournamentId);
+
+        const date = document.createElement('span');
+        date.className = 'ticker-date';
+        date.textContent = formatTickerDate(tournament.TournamentDate);
+        link.appendChild(date);
+
+        const name = document.createElement('span');
+        name.className = 'ticker-name';
+        name.textContent = tournament.Name || '';
+        link.appendChild(name);
+
+        const locationText = String(tournament.Location || '').trim();
+        if (locationText) {
+            const location = document.createElement('span');
+            location.className = 'ticker-location';
+            location.appendChild(createTickerPin());
+            const locationLabel = document.createElement('span');
+            locationLabel.textContent = locationText;
+            location.appendChild(locationLabel);
+            link.appendChild(location);
+        }
+
+        return link;
+    }
+
+    function renderTicker() {
+        const bar = document.getElementById('ticker-bar');
+        const track = document.getElementById('news-ticker');
+        if (!bar || !track || tickerTournaments.length === 0) return;
+        const wrapper = bar.querySelector('.ticker-wrapper');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        track.textContent = '';
+        const set = document.createElement('div');
+        set.className = 'ticker-set';
+        tickerTournaments.forEach(t => set.appendChild(createTickerItem(t)));
+        track.appendChild(set);
+        tickerLastWidth = wrapper.clientWidth;
+
+        // Reduced motion: one set only, scrolled by hand (overflow-x: auto in CSS)
+        if (reduceMotion) {
+            track.style.animationDuration = '';
+            return;
+        }
+
+        // Repeat the list until one set is at least as wide as the visible area
+        const visibleWidth = wrapper.clientWidth;
+        let guard = 0;
+        while (set.getBoundingClientRect().width > 0 &&
+               set.getBoundingClientRect().width < visibleWidth &&
+               guard < 100) {
+            tickerTournaments.forEach(t => set.appendChild(createTickerItem(t)));
+            guard++;
+        }
+
+        // One identical copy of the whole set for a seamless translateX(-50%) loop
+        const copy = set.cloneNode(true);
+        copy.setAttribute('aria-hidden', 'true');
+        copy.querySelectorAll('a').forEach(a => a.setAttribute('tabindex', '-1'));
+        track.appendChild(copy);
+
+        const setWidth = set.getBoundingClientRect().width;
+        if (setWidth > 0) {
+            track.style.animationDuration = (setWidth / tickerSpeed()) + 's';
+        }
+    }
+
+    function onTickerResize() {
+        clearTimeout(tickerResizeTimer);
+        tickerResizeTimer = setTimeout(() => {
+            const wrapper = document.querySelector('#ticker-bar .ticker-wrapper');
+            if (wrapper && wrapper.clientWidth !== tickerLastWidth) {
+                renderTicker();
+            }
+        }, 200);
+    }
+
+    async function loadTournamentTicker() {
+        try {
+            const response = await fetch('/api/tournaments.php', {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('Ticker fetch failed: ' + response.status);
+            const data = await response.json();
+
+            const today = tickerTodayISO();
+            const list = (data && data.success && Array.isArray(data.tournaments)) ? data.tournaments : [];
+            const upcoming = list
+                .map(t => Object.assign({}, t, { TournamentDate: String(t.TournamentDate || '').slice(0, 10) }))
+                .filter(t => t.Status === 'Approved' &&
+                             /^\d{4}-\d{2}-\d{2}$/.test(t.TournamentDate) &&
+                             t.TournamentDate >= today)
+                .sort((a, b) => a.TournamentDate.localeCompare(b.TournamentDate));
+
+            if (upcoming.length === 0) {
+                hideTicker();
+                return;
+            }
+
+            tickerTournaments = upcoming;
+            renderTicker();
+            window.addEventListener('resize', onTickerResize);
+        } catch (error) {
+            console.error('Error loading tournament ticker:', error);
+            hideTicker();
+        }
+    }
+
+    // ============================================
+    // STATISTICS
+    // ============================================
+    async function loadStats() {
+        const statIds = ['totalPlayers', 'totalTournaments', 'totalClubs', 'totalMatches'];
+
+        // Show loading state immediately — prevents showing stale 0s
+        statIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = '—';
+                el.classList.add('animate-pulse', 'opacity-50');
+            }
+        });
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10-second timeout
+
+        try {
+            const response = await fetch('/api/stats.php', {
+                credentials: 'include',
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+
+            if (!response.ok) throw new Error('Stats fetch failed: ' + response.status);
+
+            const data = await response.json();
+
+            statIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('animate-pulse', 'opacity-50');
+            });
+
+            if (data.success) {
+                animateValue('totalPlayers', 0, data.stats.totalPlayers, 2000);
+                animateValue('totalTournaments', 0, data.stats.totalTournaments, 2000);
+                animateValue('totalClubs', 0, data.stats.totalClubs, 2000);
+                animateValue('totalMatches', 0, data.stats.totalMatches || 0, 2000);
+                updateSponsorBandCopy(data.stats);
+            }
+        } catch (error) {
+            clearTimeout(timeout);
+            console.error('Error loading stats:', error);
+            // Remove pulse — leave elements showing — so users know data is unavailable
+            statIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('animate-pulse', 'opacity-50');
+            });
+        }
+    }
+
+    function animateValue(id, start, end, duration) {
+        const element = document.getElementById(id);
+        const range = end - start;
+        const startTime = performance.now();
+        
+        function easeOutExpo(t) {
+            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
+        
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeOutExpo(progress);
+            const current = Math.floor(start + (range * easedProgress));
+            
+            element.textContent = current;
+            
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+        
+        requestAnimationFrame(update);
+    }
+
+    // ============================================
+    // ANNOUNCEMENTS
+    // ============================================
+    // Shared news and promotion helpers (js/news-helpers.js, also used by news.html)
+    const newsIcon = KBFNews.icon;
+    const newsEl = KBFNews.el;
+    const postDate = KBFNews.postDate;
+    const formatPostDate = KBFNews.formatDate;
+    const postHref = KBFNews.postHref;
+    const isPromotion = KBFNews.isPromotion;
+    const promotionName = KBFNews.promotionName;
+    const promotionGrades = KBFNews.promotionGrades;
+    const promotionInitials = KBFNews.promotionInitials;
+
+    function createNewsCard(post) {
+        const card = newsEl('a', 'news-card');
+        card.href = postHref(post);
+
+        const media = newsEl('div', 'news-card-media');
+        const placeholder = () => {
+            const block = newsEl('div', 'news-card-placeholder');
+            block.appendChild(newsIcon('newspaper'));
+            return block;
+        };
+        if (post.FeaturedImage) {
+            const img = document.createElement('img');
+            img.src = post.FeaturedImage;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.addEventListener('error', () => img.replaceWith(placeholder()));
+            media.appendChild(img);
+        } else {
+            media.appendChild(placeholder());
+        }
+        const tag = newsEl('span', 'news-card-tag');
+        tag.appendChild(newsIcon('newspaper'));
+        tag.appendChild(newsEl('span', '', post.TournamentName ? 'Tournament news' : 'News'));
+        media.appendChild(tag);
+        card.appendChild(media);
+
+        const body = newsEl('div', 'news-card-body');
+        body.appendChild(newsEl('h3', 'news-card-title', post.Title || ''));
+        body.appendChild(newsEl('p', 'news-card-excerpt', KBFNews.excerpt(post)));
+
+        const footer = newsEl('div', 'news-card-footer');
+        const date = newsEl('span', 'news-card-date');
+        date.appendChild(newsIcon('calendar'));
+        date.appendChild(newsEl('span', '', formatPostDate(post)));
+        footer.appendChild(date);
+        const more = newsEl('span', 'news-card-more', 'Read more');
+        more.appendChild(newsIcon('arrow'));
+        footer.appendChild(more);
+        body.appendChild(footer);
+        card.appendChild(body);
+
+        return card;
+    }
+
+    function createPromotionCell(post) {
+        const name = promotionName(post);
+        const cell = newsEl('a', 'promo-cell');
+        cell.href = postHref(post);
+
+        const avatar = newsEl('span', 'promo-avatar');
+        const showInitials = () => { avatar.textContent = promotionInitials(name); };
+        if (post.FeaturedImage) {
+            const img = document.createElement('img');
+            img.src = post.FeaturedImage;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.addEventListener('error', showInitials);
+            avatar.appendChild(img);
+        } else {
+            showInitials();
+        }
+        cell.appendChild(avatar);
+
+        const text = newsEl('span', 'promo-text');
+        text.appendChild(newsEl('span', 'promo-name', name));
+        text.appendChild(newsEl('span', 'promo-date', formatPostDate(post)));
+        cell.appendChild(text);
+
+        const grades = promotionGrades(post);
+        if (grades) {
+            const box = newsEl('span', 'promo-grades');
+            box.setAttribute('aria-label', 'Grade ' + grades.from + ' to ' + grades.to);
+            const oldGrade = newsEl('span', 'promo-grade-old', grades.from);
+            oldGrade.setAttribute('aria-hidden', 'true');
+            const newGrade = newsEl('span', 'promo-grade-new', grades.to);
+            newGrade.setAttribute('aria-hidden', 'true');
+            box.appendChild(oldGrade);
+            box.appendChild(newsIcon('arrow', 'promo-grade-arrow'));
+            box.appendChild(newGrade);
+            cell.appendChild(box);
+        }
+
+        return cell;
+    }
+
+    // Hidden when Site settings show_promotions_strip is off
+    function promotionsStripOn() {
+        return !window.KBFSiteSettings || KBFSiteSettings.get('home.showPromotionsStrip', true) !== false;
+    }
+
+    function renderPromotions(promotions) {
+        const block = document.getElementById('promotions');
+        if (!block) return;
+        block.textContent = '';
+        if (promotions.length === 0 || !promotionsStripOn()) {
+            block.hidden = true;
+            return;
+        }
+        const label = newsEl('div', 'promo-label');
+        label.appendChild(newsIcon('trophy'));
+        const labelText = newsEl('span');
+        labelText.appendChild(newsEl('span', 'promo-label-recent', 'Recent '));
+        labelText.appendChild(document.createTextNode('Promotions'));
+        label.appendChild(labelText);
+        block.appendChild(label);
+        promotions.forEach(post => block.appendChild(createPromotionCell(post)));
+        block.hidden = false;
+    }
+
+    async function loadAnnouncements() {
+        try {
+            const response = await fetch('/api/announcements.php?limit=40', {
+                credentials: 'include'
+            });
+            const data = await response.json();
+
+            const container = document.getElementById('announcements');
+            const posts = (data && data.success && Array.isArray(data.announcements)) ? data.announcements.slice() : [];
+            posts.sort((a, b) => {
+                const da = postDate(a), db = postDate(b);
+                return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+            });
+
+            const news = posts.filter(post => !isPromotion(post)).slice(0, 4);
+            const promotions = posts.filter(isPromotion).slice(0, 3);
+
+            renderPromotions(promotions);
+
+            if (news.length > 0) {
+                container.textContent = '';
+                news.forEach(post => container.appendChild(createNewsCard(post)));
+            } else {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-20 border-4 border-gray-700 bg-slate-900">
+                        <div class="inline-flex items-center justify-center w-24 h-24 theme-primary-bg border-4 border-gray-700 mb-6">
+                            <svg class="w-12 h-12 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mb-2 uppercase">No News Yet</h3>
+                        <p class="text-gray-400 font-bold uppercase">Check back soon!</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading announcements:', error);
+        }
+    }
+    
+    // ============================================
+    // SPONSORS
+    // ============================================
+    // Seconds per sponsor: Site settings sponsor_rotate_seconds, 4 until the settings arrive
+    const SPONSOR_ROTATE_MS_DEFAULT = 4000;
+    function sponsorRotateMs() {
+        const s = window.KBFSiteSettings ? Number(KBFSiteSettings.get('home.sponsorRotateSeconds', 4)) : 4;
+        return s >= 2 && s <= 30 ? s * 1000 : SPONSOR_ROTATE_MS_DEFAULT;
+    }
+
+    let sponsorList = [];
+    let sponsorIndex = 0;
+    const sponsorReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function isSafeSponsorUrl(url) {
+        return typeof url === 'string' && /^https?:\/\/[^\s]+$/i.test(url);
+    }
+
+    function isSafeSponsorLogo(path) {
+        return typeof path === 'string' && /^\/assets\/images\/sponsors\/[A-Za-z0-9._-]+$/.test(path);
+    }
+
+    // All sponsor values are set with textContent / properties, never innerHTML
+    function showSponsor(index, animate) {
+        if (sponsorList.length === 0) return;
+        sponsorIndex = (index + sponsorList.length) % sponsorList.length;
+        const sponsor = sponsorList[sponsorIndex];
+        const hasWebsite = isSafeSponsorUrl(sponsor.websiteUrl);
+
+        // Logo (link to the website when there is one)
+        const logoArea = document.getElementById('sponsor-logo-area');
+        logoArea.textContent = '';
+        const img = document.createElement('img');
+        img.src = sponsor.logoPath;
+        img.alt = sponsor.name;
+        if (hasWebsite) {
+            const link = document.createElement('a');
+            link.className = 'sponsor-logo-link';
+            link.href = sponsor.websiteUrl;
+            link.target = '_blank';
+            link.rel = 'noopener sponsored';
+            link.appendChild(img);
+            logoArea.appendChild(link);
+        } else {
+            logoArea.appendChild(img);
+        }
+
+        // Text
+        const counter = document.getElementById('sponsor-counter');
+        counter.textContent = 'Sponsor ' + (sponsorIndex + 1) + ' of ' + sponsorList.length;
+        counter.hidden = sponsorList.length < 2;
+
+        document.getElementById('sponsor-name').textContent = sponsor.name;
+
+        const desc = document.getElementById('sponsor-desc');
+        desc.textContent = sponsor.description || '';
+        desc.hidden = !sponsor.description;
+
+        const visit = document.getElementById('sponsor-visit');
+        if (hasWebsite) {
+            visit.href = sponsor.websiteUrl;
+            visit.setAttribute('aria-label', 'Visit ' + sponsor.name + ' website (opens in a new tab)');
+            visit.hidden = false;
+        } else {
+            visit.removeAttribute('href');
+            visit.removeAttribute('aria-label');
+            visit.hidden = true;
+        }
+
+        // Current tile
+        document.querySelectorAll('#sponsor-tiles .sponsor-tile').forEach((tile, i) => {
+            const current = i === sponsorIndex;
+            tile.classList.toggle('is-current', current);
+            tile.setAttribute('aria-pressed', current ? 'true' : 'false');
+        });
+
+        // Fade in
+        const main = document.getElementById('sponsor-panel-main');
+        if (animate && !sponsorReduceMotion) {
+            main.classList.remove('is-fading');
+            void main.offsetWidth;
+            main.classList.add('is-fading');
+        }
+
+        restartSponsorTimer();
+    }
+
+    // The progress bar animation is the timer: when it finishes, the next sponsor shows.
+    // Pausing the animation (hover, focus, hidden tab) therefore pauses the rotation too.
+    function restartSponsorTimer() {
+        const fill = document.getElementById('sponsor-progress-fill');
+        fill.classList.remove('is-running');
+        if (sponsorList.length < 2 || sponsorReduceMotion) return;
+        fill.style.animationDuration = sponsorRotateMs() + 'ms';
+        void fill.offsetWidth;
+        fill.classList.add('is-running');
+    }
+
+    function renderSponsorTiles() {
+        const all = document.getElementById('sponsor-all');
+        const tiles = document.getElementById('sponsor-tiles');
+        tiles.textContent = '';
+        if (sponsorList.length < 2) {
+            all.hidden = true;
+            return;
+        }
+        sponsorList.forEach((sponsor, i) => {
+            const tile = document.createElement('button');
+            tile.type = 'button';
+            tile.className = 'sponsor-tile';
+            tile.setAttribute('aria-label', 'Show ' + sponsor.name);
+            tile.setAttribute('aria-pressed', 'false');
+            const img = document.createElement('img');
+            img.src = sponsor.logoPath;
+            img.alt = '';
+            img.loading = 'lazy';
+            tile.appendChild(img);
+            tile.addEventListener('click', () => showSponsor(i, true));
+            tiles.appendChild(tile);
+        });
+        all.hidden = false;
+    }
+
+    // "Put your brand in front of 1,234 players and 56 organisers ..." once stats arrive
+    function updateSponsorBandCopy(stats) {
+        const copy = document.getElementById('sponsor-band-copy');
+        if (!copy || !stats) return;
+        const players = Number(stats.totalPlayers);
+        const organisers = Number(stats.totalClubs);
+        if (!Number.isFinite(players) || !Number.isFinite(organisers) || players <= 0 || organisers <= 0) return;
+        copy.textContent = 'Put your brand in front of ' + players.toLocaleString('en-GB') + ' players and ' +
+            organisers.toLocaleString('en-GB') + ' organisers at tournaments across the UK.';
+    }
+
+    async function loadSponsors() {
+        const feature = document.getElementById('sponsor-feature');
+        try {
+            const response = await fetch('/api/sponsors.php', {
+                credentials: 'include'
+            });
+            const data = await response.json();
+            const list = (data && data.success && Array.isArray(data.sponsors)) ? data.sponsors : [];
+
+            sponsorList = list
+                .filter(s => s && typeof s.name === 'string' && s.name.trim() !== '' && isSafeSponsorLogo(s.logoPath))
+                .map(s => ({
+                    name: s.name.trim(),
+                    logoPath: s.logoPath,
+                    websiteUrl: isSafeSponsorUrl(s.websiteUrl) ? s.websiteUrl : null,
+                    description: typeof s.description === 'string' ? s.description.trim() : ''
+                }));
+
+            if (sponsorList.length === 0) {
+                feature.hidden = true;
+                return;
+            }
+
+            // Warm the cache so each logo is ready when its turn comes
+            sponsorList.forEach(s => { const pre = new Image(); pre.src = s.logoPath; });
+
+            const panel = document.getElementById('sponsor-panel');
+            const fill = document.getElementById('sponsor-progress-fill');
+            document.getElementById('sponsor-progress').hidden = sponsorList.length < 2 || sponsorReduceMotion;
+
+            fill.addEventListener('animationend', () => showSponsor(sponsorIndex + 1, true));
+            document.addEventListener('visibilitychange', () => {
+                panel.classList.toggle('is-paused', document.hidden);
+            });
+            panel.classList.toggle('is-paused', document.hidden);
+
+            renderSponsorTiles();
+            feature.hidden = false;
+            showSponsor(0, false);
+        } catch (error) {
+            console.error('Error loading sponsors:', error);
+            feature.hidden = true;
+        }
+    }
+
+    // ============================================
+    // FLOATING ICONS
+    // ============================================
+    function generateFloatingIcons() {
+        const container = document.getElementById('floating-icons-container');
+        const icons = [
+            '/assets/images/icons/shuttlecock.png',
+            '/assets/images/icons/racquet.png',
+            '/assets/images/icons/shuttlecock.png',
+            '/assets/images/icons/racquet.png',
+            '/assets/images/icons/shuttlecock.png',
+            '/assets/images/icons/racquet.png',
+            '/assets/images/icons/shuttlecock.png',
+            '/assets/images/icons/racquet.png'
+        ];
+        
+        icons.forEach((iconPath, index) => {
+            const icon = document.createElement('div');
+            icon.className = 'floating-icon';
+            
+            const size = Math.random() * 50 + 50;
+            icon.style.width = size + 'px';
+            icon.style.height = size + 'px';
+            
+            icon.style.left = (Math.random() * 90) + '%';
+            icon.style.top = (Math.random() * 90) + '%';
+            
+            const duration = Math.random() * 20 + 20;
+            icon.style.animation = `floatRandom ${duration}s ease-in-out infinite`;
+            icon.style.animationDelay = Math.random() * 5 + 's';
+            
+            icon.innerHTML = `<img src="${escapeHtml(iconPath)}" alt="Badminton icon">`;
+            container.appendChild(icon);
+        });
+    }
+</script>
+    <!-- Footer contact, social links and home page values from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>

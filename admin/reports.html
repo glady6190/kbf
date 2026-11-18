@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports and Exports - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+
+        .ring-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 9999px; border: 3px solid var(--theme-primary); color: var(--theme-primary); flex-shrink: 0; }
+        .card { background: #0f172a; border: 4px solid #374151; }
+        .card.is-open { border-color: var(--theme-primary); }
+        .btn-plain { background: #1e293b; border: 2px solid #374151; color: #e5e7eb; font-weight: 900; font-size: .75rem; text-transform: uppercase; padding: .5rem .875rem; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-theme { background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: .75rem; text-transform: uppercase; padding: .5rem .875rem; border: 2px solid var(--theme-primary); }
+        .btn-theme:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-plain:focus-visible, .btn-theme:focus-visible, .bar-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .field { background: #1e293b; border: 2px solid #374151; color: #fff; padding: .5rem .625rem; font-weight: 700; font-size: .8125rem; width: 100%; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+
+        /* Charts: plain HTML and CSS */
+        .bar-btn { display: grid; grid-template-columns: 3.5rem 1fr 3rem; align-items: center; gap: .75rem; width: 100%; text-align: left; padding: .25rem; }
+        .bar-btn:hover .bar-fill { opacity: .85; }
+        .bar-track { height: 22px; background: #1e293b; border: 2px solid #374151; position: relative; }
+        .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--theme-primary); }
+        .bar-btn[aria-pressed="true"] .bar-track { border-color: #fff; }
+        .month-chart { display: flex; align-items: flex-end; gap: .5rem; height: 160px; padding-top: 1.25rem; min-width: max-content; }
+        .month-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 2.75rem; }
+        .month-bar { width: 100%; background: var(--theme-primary); min-height: 2px; }
+        .month-count { font-size: .7rem; font-weight: 900; color: #fff; margin-bottom: .25rem; }
+        .month-label { font-size: .65rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; margin-top: .375rem; white-space: nowrap; }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Reports</span> and exports</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">View the figures, or download them as a spreadsheet</p>
+        </div>
+
+        <!-- Control centre layout -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0 space-y-6 sm:space-y-8">
+
+            <div id="cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            <p id="pageMessage" class="hidden p-3 border-2 border-red-500 bg-red-500/20 text-red-400 font-bold text-xs" role="alert"></p>
+
+            <!-- ============================ -->
+            <!-- OPEN REPORT -->
+            <!-- ============================ -->
+            <section id="reportPanel" class="hidden bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="reportTitle" tabindex="-1">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 id="reportTitle" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase"></h2>
+                        <p id="reportSummary" class="text-xs sm:text-sm text-gray-300 font-semibold mt-1"></p>
+                    </div>
+                    <button type="button" id="reportCsvBtn" class="btn-theme flex items-center justify-center gap-2 flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download CSV
+                    </button>
+                </div>
+
+                <div id="reportFilters" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                <div id="reportChart"></div>
+
+                <div class="overflow-x-auto border-2 border-gray-700">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead id="reportHead" class="bg-slate-800 text-gray-400 uppercase text-xs font-black"></thead>
+                        <tbody id="reportBody" class="divide-y-2 divide-gray-800"></tbody>
+                    </table>
+                </div>
+                <p id="reportEmpty" class="hidden py-6 text-center text-gray-400 font-bold uppercase text-xs">Nothing matches these filters</p>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p id="reportCount" class="text-xs text-gray-400 font-bold uppercase"></p>
+                    <button type="button" id="reportMoreBtn" class="btn-plain hidden">Show more</button>
+                </div>
+                <p class="text-xs text-gray-500 font-semibold">Every download is recorded in the activity log.</p>
+            </section>
+
+        </main>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): control.reports
+    // ============================================
+    KBFShell.startControl({ section: 'reports' }).then(function (user) {
+        window.kbfUser = user;
+        renderCards(user);
+    });
+
+    const API = '/api/control-reports.php';
+    const ICONS = {
+        players: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        registrations: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+        tournaments: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+        points: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+        grades: 'M7 11l5-5m0 0l5 5m-5-5v12',
+        staff: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'
+    };
+    const REPORTS = [
+        { key: 'players', name: 'Players', text: 'Every player with their grade and points.', filters: 'Grade, location, active or not' },
+        { key: 'registrations', name: 'Registrations', text: 'Applications and what happened to them.', filters: 'Date range' },
+        { key: 'tournaments', name: 'Tournaments', text: 'Tournaments with their results and points.', filters: 'Season, organiser, status' },
+        { key: 'points', name: 'Points and results', text: 'Every points award, player by player.', filters: 'Season, grade, tournament' },
+        { key: 'grades', name: 'Grade changes', text: 'Promotions and other grade changes.', filters: 'Season, grade, type' },
+        { key: 'staff', name: 'Staff and access', text: 'Who can sign in and what they can do.', filters: 'No filters', superAdminOnly: true }
+    ];
+
+    let current = null;     // { key, params, offset }
+    let lastData = null;
+
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+    }
+
+    function svg(path, cls) {
+        const ns = 'http://www.w3.org/2000/svg';
+        const s = document.createElementNS(ns, 'svg');
+        s.setAttribute('class', cls || 'w-5 h-5');
+        s.setAttribute('fill', 'none');
+        s.setAttribute('stroke', 'currentColor');
+        s.setAttribute('viewBox', '0 0 24 24');
+        s.setAttribute('aria-hidden', 'true');
+        const p = document.createElementNS(ns, 'path');
+        p.setAttribute('stroke-linecap', 'round');
+        p.setAttribute('stroke-linejoin', 'round');
+        p.setAttribute('stroke-width', '2');
+        p.setAttribute('d', path);
+        s.appendChild(p);
+        return s;
+    }
+
+    function showPageMessage(text) {
+        const p = document.getElementById('pageMessage');
+        p.textContent = text;
+        p.classList.toggle('hidden', !text);
+    }
+
+    function query(key, params, extra) {
+        const q = new URLSearchParams();
+        q.set('report', key);
+        Object.keys(params || {}).forEach(k => { if (params[k] !== '' && params[k] != null) q.set(k, params[k]); });
+        Object.keys(extra || {}).forEach(k => q.set(k, extra[k]));
+        return API + '?' + q.toString();
+    }
+
+    // ============================================
+    // CARDS
+    // ============================================
+    function renderCards(user) {
+        const wrap = document.getElementById('cards');
+        wrap.innerHTML = '';
+        REPORTS.filter(r => !r.superAdminOnly || user.isSuperAdmin).forEach(r => {
+            const card = el('article', 'card p-4 sm:p-5 flex flex-col gap-3');
+            card.id = 'card-' + r.key;
+            const top = el('div', 'flex items-center gap-3');
+            const ring = el('span', 'ring-icon');
+            ring.appendChild(svg(ICONS[r.key]));
+            top.appendChild(ring);
+            top.appendChild(el('h2', 'text-base font-black uppercase text-white', r.name));
+            card.appendChild(top);
+            card.appendChild(el('p', 'text-xs sm:text-sm text-gray-300 font-semibold', r.text));
+            card.appendChild(el('p', 'text-xs text-gray-500 font-bold uppercase', r.filters));
+            const buttons = el('div', 'flex gap-2 mt-auto pt-1');
+            const view = el('button', 'btn-plain flex-1', 'View');
+            view.type = 'button';
+            view.setAttribute('aria-controls', 'reportPanel');
+            view.addEventListener('click', () => openReport(r.key));
+            const csv = el('button', 'btn-plain flex-1 flex items-center justify-center gap-1');
+            csv.type = 'button';
+            csv.appendChild(svg('M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4', 'w-4 h-4'));
+            csv.appendChild(document.createTextNode('CSV'));
+            csv.setAttribute('aria-label', 'Download ' + r.name + ' as CSV');
+            csv.addEventListener('click', () => downloadCsv(r.key, {}, csv));
+            buttons.appendChild(view);
+            buttons.appendChild(csv);
+            card.appendChild(buttons);
+            wrap.appendChild(card);
+        });
+    }
+
+    // ============================================
+    // OPEN A REPORT
+    // ============================================
+    async function openReport(key) {
+        document.querySelectorAll('.card').forEach(c => c.classList.toggle('is-open', c.id === 'card-' + key));
+        current = { key: key, params: {}, offset: 0 };
+        const panel = document.getElementById('reportPanel');
+        panel.classList.remove('hidden');
+        await loadPage(true);
+        panel.focus();
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function loadPage(reset) {
+        if (!current) return;
+        if (reset) current.offset = 0;
+        const more = document.getElementById('reportMoreBtn');
+        more.disabled = true;
+        try {
+            const res = await authenticatedFetch(query(current.key, current.params, { offset: current.offset }));
+            const data = await res.json();
+            if (!data.success) { showPageMessage(data.message || 'The report could not be loaded.'); return; }
+            showPageMessage('');
+            if (reset) {
+                lastData = data;
+                document.getElementById('reportTitle').textContent = data.title;
+                document.getElementById('reportSummary').textContent = data.summary ? data.summary.line : '';
+                document.getElementById('reportCsvBtn').disabled = data.canDownload === false;
+                renderFilters(data.options || []);
+                renderChart(data.summary || null);
+                renderHead(data.columns);
+                document.getElementById('reportBody').innerHTML = '';
+            }
+            appendRows(lastData.columns, data.rows);
+            current.offset = data.nextOffset;
+            const shown = document.getElementById('reportBody').children.length;
+            document.getElementById('reportCount').textContent = 'Showing ' + shown.toLocaleString('en-GB') + ' of ' + Number(data.total).toLocaleString('en-GB');
+            document.getElementById('reportEmpty').classList.toggle('hidden', shown > 0);
+            more.classList.toggle('hidden', !data.hasMore);
+        } catch (e) {
+            console.error('Report error:', e);
+            showPageMessage('The report could not be loaded.');
+        } finally {
+            more.disabled = false;
+        }
+    }
+
+    function renderFilters(options) {
+        const wrap = document.getElementById('reportFilters');
+        wrap.innerHTML = '';
+        options.forEach(o => {
+            const div = el('div');
+            const id = 'filter-' + o.name;
+            const label = el('label', 'block text-xs font-black theme-primary-text uppercase mb-1', o.label);
+            label.htmlFor = id;
+            let input;
+            if (o.type === 'date') {
+                input = el('input', 'field');
+                input.type = 'date';
+            } else {
+                input = el('select', 'field');
+                (o.choices || []).forEach(c => {
+                    const opt = el('option', '', c.label);
+                    opt.value = c.value;
+                    input.appendChild(opt);
+                });
+            }
+            input.id = id;
+            input.value = current.params[o.name] != null ? current.params[o.name] : (input.tagName === 'SELECT' && input.options.length ? input.options[0].value : '');
+            input.addEventListener('change', () => {
+                current.params[o.name] = input.value;
+                loadPage(true);
+            });
+            div.appendChild(label);
+            div.appendChild(input);
+            wrap.appendChild(div);
+        });
+    }
+
+    function renderChart(summary) {
+        const wrap = document.getElementById('reportChart');
+        wrap.innerHTML = '';
+        if (!summary) return;
+
+        if (summary.type === 'gradeBars' && summary.bars && summary.bars.length) {
+            wrap.appendChild(el('h3', 'text-xs font-black uppercase text-gray-300 mb-2', 'Players by grade'));
+            const max = Math.max(1, ...summary.bars.map(b => b.count));
+            const list = el('div', 'space-y-1');
+            summary.bars.forEach(b => {
+                const btn = el('button', 'bar-btn');
+                btn.type = 'button';
+                const on = String(current.params.grade || '') === b.value;
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                btn.setAttribute('aria-label', b.label + ': ' + b.count + ' players. ' + (on ? 'Showing only this grade; choose again to show all.' : 'Show only this grade.'));
+                btn.appendChild(el('span', 'text-sm font-black text-white', b.label));
+                const track = el('span', 'bar-track');
+                const fill = el('span', 'bar-fill');
+                fill.style.width = (b.count / max * 100).toFixed(1) + '%';
+                track.appendChild(fill);
+                btn.appendChild(track);
+                btn.appendChild(el('span', 'text-sm font-bold text-gray-200 text-right', b.count.toLocaleString('en-GB')));
+                btn.addEventListener('click', () => {
+                    current.params.grade = on ? '' : b.value;
+                    loadPage(true);
+                });
+                list.appendChild(btn);
+            });
+            wrap.appendChild(list);
+            wrap.appendChild(el('p', 'text-xs text-gray-500 font-semibold mt-2', 'Choose a bar to show only that grade.'));
+            return;
+        }
+
+        if (summary.type === 'monthBars' && summary.months && summary.months.length) {
+            wrap.appendChild(el('h3', 'text-xs font-black uppercase text-gray-300 mb-2', 'Registrations received per month'));
+            const max = Math.max(1, ...summary.months.map(m => m.received));
+            const scroll = el('div', 'overflow-x-auto border-2 border-gray-700 p-3');
+            const chart = el('div', 'month-chart');
+            chart.setAttribute('role', 'img');
+            chart.setAttribute('aria-label', summary.months.map(m => m.month + ': ' + m.received + ' received, ' + m.approved + ' approved, ' + m.rejected + ' rejected, ' + m.waiting + ' waiting').join('; '));
+            summary.months.forEach(m => {
+                const col = el('div', 'month-col');
+                col.title = m.month + ': ' + m.received + ' received, ' + m.approved + ' approved, ' + m.rejected + ' rejected, ' + m.waiting + ' waiting';
+                col.appendChild(el('span', 'month-count', String(m.received)));
+                const bar = el('span', 'month-bar');
+                bar.style.height = Math.max(2, (m.received / max) * 120) + 'px';
+                col.appendChild(bar);
+                col.appendChild(el('span', 'month-label', m.month));
+                chart.appendChild(col);
+            });
+            scroll.appendChild(chart);
+            wrap.appendChild(scroll);
+        }
+    }
+
+    function renderHead(columns) {
+        const head = document.getElementById('reportHead');
+        head.innerHTML = '';
+        const tr = el('tr');
+        columns.forEach(c => {
+            const th = el('th', 'px-3 py-3 whitespace-nowrap', c.label);
+            th.scope = 'col';
+            tr.appendChild(th);
+        });
+        head.appendChild(tr);
+    }
+
+    function appendRows(columns, rows) {
+        const body = document.getElementById('reportBody');
+        rows.forEach(r => {
+            const tr = el('tr', 'bg-slate-900 hover:bg-slate-800/60 align-top');
+            columns.forEach((c, i) => {
+                const value = r[c.key];
+                const td = el('td', 'px-3 py-2 ' + (i === 0 ? 'font-bold text-white whitespace-nowrap' : 'text-gray-300'),
+                    value === null || value === undefined ? '' : String(value));
+                tr.appendChild(td);
+            });
+            body.appendChild(tr);
+        });
+    }
+
+    document.getElementById('reportMoreBtn').addEventListener('click', () => loadPage(false));
+    document.getElementById('reportCsvBtn').addEventListener('click', function () {
+        if (current) downloadCsv(current.key, current.params, this);
+    });
+
+    // ============================================
+    // DOWNLOAD
+    // ============================================
+    async function downloadCsv(key, params, btn) {
+        if (btn) btn.disabled = true;
+        try {
+            const res = await authenticatedFetch(query(key, params, { download: 1 }));
+            const type = res.headers.get('Content-Type') || '';
+            if (!res.ok || type.indexOf('text/csv') === -1) {
+                let message = 'The download could not be made.';
+                try { const data = await res.json(); if (data && data.message) message = data.message; } catch (e) { /* ignore */ }
+                showPageMessage(message);
+                return;
+            }
+            showPageMessage('');
+            const disposition = res.headers.get('Content-Disposition') || '';
+            const match = /filename="([^"]+)"/.exec(disposition);
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = match ? match[1] : 'kbf-' + key + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (e) {
+            console.error('Download error:', e);
+            showPageMessage('The download could not be made.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

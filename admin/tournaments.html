@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournaments - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: var(--theme-primary); border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: background-color .15s, color .15s; }
+        .btn-outline:hover:not(:disabled) { background: var(--theme-primary); color: #0F172A; }
+        .btn-outline:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-sm { padding: .45rem .7rem; font-size: .68rem; }
+        .btn-solid:focus-visible, .btn-outline:focus-visible, .btn-plain:focus-visible, .tt-tab:focus-visible, .tt-ptab:focus-visible,
+        .tt-row:focus-visible, .tt-menu-btn:focus-visible, .tt-menu-item:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Tabs */
+        .tt-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .tt-tab:hover { color: #fff; }
+        .tt-tab .tt-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
+        .tt-tab .tt-count.is-alert { background: #EF4444; color: #fff; }
+        .tt-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
+        .tt-tab.is-active .tt-count { background: #0F172A; color: var(--theme-primary); }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
+        .choice { accent-color: var(--theme-primary); width: 18px; height: 18px; flex-shrink: 0; }
+
+        /* Date tile, poster thumbnail, status tags */
+        .tt-date { width: 3.25rem; flex-shrink: 0; border: 2px solid #374151; background: #0f172a; text-align: center; padding: .2rem 0 .25rem; line-height: 1.05; }
+        .tt-date-month { display: block; color: var(--theme-primary); font-size: .65rem; font-weight: 900; text-transform: uppercase; }
+        .tt-date-day { display: block; color: #fff; font-size: 1.25rem; font-weight: 900; }
+        .tt-date.is-large { width: 4rem; }
+        .tt-date.is-large .tt-date-day { font-size: 1.6rem; }
+        .tt-thumb { width: 2.75rem; height: 3.5rem; flex-shrink: 0; border: 2px solid #374151; background: #0f172a; display: flex; align-items: center; justify-content: center; color: #4b5563; overflow: hidden; }
+        .tt-thumb img { width: 100%; height: 100%; object-fit: contain; }
+        .tt-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .tt-tag.is-approved { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .tt-tag.is-due { background: #EF4444; border-color: #EF4444; color: #fff; }
+        .tt-tag.is-amber { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
+        .tt-tag.is-grey { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .tt-tag.is-cancelled { background: #374151; border-color: #4b5563; color: #9ca3af; text-decoration: line-through; }
+        .tt-days { color: #EF4444; }
+        .tt-chip { display: inline-block; padding: .1rem .4rem; border: 2px solid #4b5563; background: #1e293b; color: #9ca3af; font-size: .6rem; font-weight: 900; text-transform: uppercase; }
+
+        /* Rows */
+        .tt-row { cursor: pointer; transition: background-color .15s; }
+        .tt-row:hover { background: #1e293b; }
+        .tt-row.is-open { background: #1e293b; box-shadow: inset 4px 0 0 var(--theme-primary); }
+        .tt-menu-btn { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #374151; background: #1e293b; color: #e5e7eb; flex-shrink: 0; }
+        .tt-menu-btn:hover, .tt-menu-btn[aria-expanded="true"] { border-color: var(--theme-primary); color: #fff; }
+
+        /* Row menu */
+        .tt-menu { position: fixed; z-index: 55; min-width: 13rem; background: #0f172a; border: 2px solid #4b5563; box-shadow: 4px 4px 0 #020617; padding: .25rem 0; }
+        .tt-menu-item { display: flex; width: 100%; align-items: center; gap: .6rem; padding: .6rem .9rem; color: #e5e7eb; font-weight: 800; font-size: .78rem; text-align: left; }
+        .tt-menu-item:hover, .tt-menu-item:focus { background: #1e293b; color: #fff; outline: none; }
+
+        /* Slide-in panels (as on the People page) */
+        .tt-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, .78); z-index: 40; }
+        .tt-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 44rem; background: #0f172a; border-left: 4px solid var(--theme-primary); z-index: 50; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .22s ease; }
+        .tt-panel.is-open { transform: translateX(0); }
+        @media (max-width: 640px) { .tt-panel { border-left-width: 0; } }
+        @media (prefers-reduced-motion: reduce) { .tt-panel { transition: none; } }
+        .tt-ptab { padding: .65rem .8rem; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: #9ca3af; border-bottom: 4px solid transparent; white-space: nowrap; }
+        .tt-ptab:hover { color: #fff; }
+        .tt-ptab.is-active { color: #fff; border-bottom-color: var(--theme-primary); }
+        .tt-ring { width: 4.5rem; height: 4.5rem; border-radius: 9999px; border: 3px solid #374151; display: flex; align-items: center; justify-content: center; color: #6b7280; margin: 0 auto; }
+
+        /* Dialogs (above the panels) */
+        .tt-dialog-wrap { position: fixed; inset: 0; background: rgba(2, 6, 23, .82); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+        @media (min-width: 640px) { .tt-dialog-wrap { align-items: center; } }
+        .tt-dialog { background: #0f172a; border: 4px solid #374151; width: 100%; max-width: 32rem; margin: 2rem 0; }
+
+        /* Messages */
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Tournaments</h1>
+                <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+                <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Every tournament, from approval to results</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="/admin/publish-results" id="quickResultsBtn" class="btn-outline hidden">Add results for a past tournament</a>
+                <button type="button" id="createBtn" class="btn-solid btn-shadow hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                    Create tournament
+                </button>
+            </div>
+        </div>
+
+        <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
+
+        <!-- Tabs -->
+        <div class="flex gap-3 overflow-x-auto pb-2 pt-1 pl-1 mb-3" role="tablist" aria-label="Which tournaments to show" id="listTabs">
+            <button type="button" class="tt-tab" role="tab" data-tab="upcoming">Upcoming <span class="tt-count" data-count="upcoming">0</span></button>
+            <button type="button" class="tt-tab" role="tab" data-tab="due">Results due <span class="tt-count" data-count="due">0</span></button>
+            <button type="button" class="tt-tab" role="tab" data-tab="waiting">Waiting approval <span class="tt-count" data-count="waiting">0</span></button>
+            <button type="button" class="tt-tab" role="tab" data-tab="completed">Completed <span class="tt-count" data-count="completed">0</span></button>
+            <button type="button" class="tt-tab" role="tab" data-tab="rejected">Rejected <span class="tt-count" data-count="rejected">0</span></button>
+            <button type="button" class="tt-tab" role="tab" data-tab="all">All <span class="tt-count" data-count="all">0</span></button>
+        </div>
+
+        <!-- Search, organiser and season -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <div class="md:col-span-2 relative">
+                <label for="searchInput" class="sr-only">Search by tournament, organiser or town</label>
+                <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="search" id="searchInput" class="field pl-9" placeholder="Search by tournament, organiser or town" autocomplete="off" maxlength="100">
+            </div>
+            <div>
+                <label for="organiserFilter" class="sr-only">Organiser</label>
+                <select id="organiserFilter" class="field"><option value="">All organisers</option></select>
+            </div>
+            <div>
+                <label for="seasonFilter" class="sr-only">Season</label>
+                <select id="seasonFilter" class="field">
+                    <option value="this">This season</option>
+                    <option value="all">All seasons</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <div class="hidden lg:block overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-800 border-b-2 border-gray-700">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Date</th>
+                            <th scope="col" class="px-2 py-3"><span class="sr-only">Poster</span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Tournament</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Organiser</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Venue</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Status</th>
+                            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y-2 divide-gray-800"></tbody>
+                </table>
+            </div>
+            <div id="compactList" class="lg:hidden divide-y-2 divide-gray-800"></div>
+            <p id="listEmpty" class="hidden px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm"></p>
+        </div>
+
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p id="listCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite">Loading...</p>
+            <button type="button" id="moreBtn" class="btn-plain hidden">Show more</button>
+        </div>
+    </main>
+
+    <!-- Row menu (one, shared by every row) -->
+    <div id="rowMenu" class="tt-menu hidden" role="menu" aria-label="Tournament actions"></div>
+
+    <!-- ============================ -->
+    <!-- TOURNAMENT PANEL -->
+    <!-- ============================ -->
+    <div id="tBackdrop" class="tt-backdrop hidden"></div>
+    <aside id="tPanel" class="tt-panel hidden" role="dialog" aria-modal="true" aria-labelledby="tpName">
+        <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 pt-4">
+            <div class="flex items-start gap-4">
+                <div id="tpDate"></div>
+                <div class="min-w-0 flex-1">
+                    <h2 id="tpName" class="text-lg sm:text-xl font-black uppercase text-white break-words"></h2>
+                    <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                        <span id="tpTag"></span>
+                    </div>
+                    <p id="tpCreated" class="text-xs font-bold text-gray-400 mt-1.5"></p>
+                </div>
+                <button type="button" id="tpClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="flex overflow-x-auto mt-4 -mb-1" role="tablist" id="tpTabs">
+                <button type="button" class="tt-ptab" role="tab" data-pane="details">Details</button>
+                <button type="button" class="tt-ptab" role="tab" data-pane="results">Results</button>
+                <button type="button" class="tt-ptab" role="tab" data-pane="news">News posts</button>
+                <button type="button" class="tt-ptab" role="tab" data-pane="history">History</button>
+            </div>
+        </div>
+
+        <div id="tpBody" class="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+            <div id="tpMessage" class="hidden msg mb-4" role="status" aria-live="polite"></div>
+            <div id="tpLoading" class="py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+
+            <!-- Details -->
+            <section id="paneDetails" class="hidden" role="tabpanel" aria-label="Details">
+                <form id="detailsForm" novalidate>
+                    <p id="detailsReadOnly" class="hidden msg msg-ok mb-4">You can see these details. Changing them needs "Manage all tournaments and results", or being the organiser who created the tournament.</p>
+                    <fieldset id="detailsFieldset" class="min-w-0">
+                        <legend class="sr-only">Tournament details</legend>
+                        <div id="detailsSlot"></div>
+                    </fieldset>
+                    <div id="detailsMessage" class="hidden msg mt-4" role="status" aria-live="polite"></div>
+                    <div id="detailsActions" class="flex justify-end mt-4">
+                        <button type="submit" id="detailsSave" class="btn-solid btn-shadow w-full sm:w-auto">Save details</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Results -->
+            <section id="paneResults" class="hidden" role="tabpanel" aria-label="Results"></section>
+
+            <!-- News posts -->
+            <section id="paneNews" class="hidden" role="tabpanel" aria-label="News posts"></section>
+
+            <!-- History -->
+            <section id="paneHistory" class="hidden" role="tabpanel" aria-label="History"></section>
+        </div>
+
+        <div id="tpFooter" class="hidden bg-slate-800 border-t-4 border-gray-700 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-end gap-2"></div>
+    </aside>
+
+    <!-- ============================ -->
+    <!-- CREATE TOURNAMENT PANEL -->
+    <!-- ============================ -->
+    <div id="createBackdrop" class="tt-backdrop hidden"></div>
+    <aside id="createPanel" class="tt-panel hidden" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+        <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 py-4 flex items-start justify-between gap-4">
+            <h2 id="createTitle" class="text-lg sm:text-xl font-black uppercase theme-primary-text">Create tournament</h2>
+            <button type="button" id="createClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="createForm" class="flex-1 flex flex-col min-h-0" novalidate>
+            <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+                <div id="createSlot"></div>
+                <section id="createDuplicates" class="hidden border-2 border-amber-500 bg-slate-800 p-4 mt-4" aria-labelledby="createDuplicatesTitle">
+                    <h3 id="createDuplicatesTitle" class="text-sm font-black uppercase text-amber-300 mb-1">Similar tournaments already on the site</h3>
+                    <p class="text-sm font-semibold text-gray-300 mb-3">Check this is not one of these. If it is a different tournament, press Create tournament again.</p>
+                    <ul id="createDuplicatesList" class="border-2 border-gray-700 divide-y-2 divide-gray-700"></ul>
+                </section>
+                <div id="createMessage" class="hidden msg mt-4" role="status" aria-live="polite"></div>
+            </div>
+            <div class="bg-slate-800 border-t-4 border-gray-700 px-4 sm:px-6 py-3 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button type="button" id="createCancel" class="btn-plain">Cancel</button>
+                <button type="submit" id="createSubmit" class="btn-solid">Create tournament</button>
+            </div>
+        </form>
+    </aside>
+
+    <!-- ============================ -->
+    <!-- DIALOGS -->
+    <!-- ============================ -->
+    <div id="confirmDialog" class="tt-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+        <div class="tt-dialog p-5 sm:p-6">
+            <h2 id="confirmTitle" class="text-lg font-black uppercase theme-primary-text mb-3"></h2>
+            <p id="confirmText" class="text-sm text-gray-300 font-semibold mb-5"></p>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button type="button" id="confirmNo" class="btn-plain">Cancel</button>
+                <button type="button" id="confirmYes" class="btn-solid">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="rejectDialog" class="tt-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="rejectTitle">
+        <div class="tt-dialog p-5 sm:p-6">
+            <h2 id="rejectTitle" class="text-lg font-black uppercase theme-primary-text mb-2">Reject tournament</h2>
+            <p id="rejectName" class="text-sm text-white font-black mb-4 break-words"></p>
+            <label for="rejectReason" class="field-label">Reason (included in the email to the organiser)</label>
+            <textarea id="rejectReason" class="field" rows="4" maxlength="1000"></textarea>
+            <div id="rejectMessage" class="hidden msg msg-error mt-3" role="alert"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+                <button type="button" class="btn-plain" data-close="rejectDialog">Cancel</button>
+                <button type="button" id="rejectYes" class="btn-solid">Reject tournament</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusDialog" class="tt-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="statusTitle">
+        <div class="tt-dialog p-5 sm:p-6">
+            <h2 id="statusTitle" class="text-lg font-black uppercase theme-primary-text mb-2">Change status</h2>
+            <p id="statusName" class="text-sm text-white font-black break-words"></p>
+            <p id="statusNow" class="text-xs text-gray-400 font-bold mb-4"></p>
+            <fieldset>
+                <legend class="field-label">New status</legend>
+                <div id="statusChoices" class="space-y-2"></div>
+            </fieldset>
+            <div id="statusReasonWrap" class="hidden mt-4">
+                <label for="statusReason" class="field-label">Reason for cancelling</label>
+                <textarea id="statusReason" class="field" rows="3" maxlength="500"></textarea>
+                <p class="text-xs text-gray-400 font-semibold mt-1">Cancelled tournaments are hidden from the website and no longer count as results due.</p>
+            </div>
+            <div id="statusMessage" class="hidden msg msg-error mt-3" role="alert"></div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+                <button type="button" class="btn-plain" data-close="statusDialog">Cancel</button>
+                <button type="button" id="statusYes" class="btn-solid">Change status</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/tournament-form.js"></script>
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD + SHARED HEADER
+    // ============================================
+    KBFShell.start({ anyOf: ['tournaments.approve', 'tournaments.manage_all'], active: 'tournaments' }).then(function (user) {
+        me = user;
+        initPage();
+    });
+
+    // ============================================
+    // STATE
+    // ============================================
+    const API = '/api/tournaments.php';
+    const TABS = ['upcoming', 'due', 'waiting', 'completed', 'rejected', 'all'];
+    const PANES = ['details', 'results', 'news', 'history'];
+    let me = null;
+    const list = { tab: 'upcoming', q: '', organiser: '', season: 'this', rows: [], total: 0, seq: 0, filtersReady: false };
+    let openId = null;         // tournament open in the panel
+    let paneName = 'details';
+    let detail = null;         // ?action=adminTournament
+    let full = null;           // ?id= (tournament, matches, roundPoints)
+    let historyRows = null;    // ?action=history
+    let form = null;           // the one tournament form, moved between panels
+    const layers = [];         // open panels and dialogs, top last
+
+    // ============================================
+    // HELPERS
+    // ============================================
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    async function getJson(url) {
+        const res = await authenticatedFetch(url);
+        return res.json();
+    }
+
+    async function sendJson(url, method, payload) {
+        const res = await authenticatedFetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return res.json().catch(() => ({ success: false, message: 'Unexpected response from the server.' }));
+    }
+
+    function can(key) { return !!(me && me.has(key)); }
+
+    // Every value reaches the page with textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+    }
+
+    // Constant icon markup only (never data)
+    const ICONS = {
+        pin: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>',
+        image: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+        chevron: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>',
+        dots: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 5h.01M12 12h.01M12 19h.01"/>',
+        edit: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>',
+        swap: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>',
+        external: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>',
+        trash: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>',
+        mail: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>',
+        trophy: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 21h8m-4-4v4m-5-17h10v5a5 5 0 01-10 0V4zM7 6H4v2a3 3 0 003 3m10-5h3v2a3 3 0 01-3 3"/>',
+        news: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>',
+        plus: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/>',
+        check: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>',
+        arrow: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>'
+    };
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('class', className || 'w-4 h-4');
+        svg.innerHTML = ICONS[name] || '';
+        return svg;
+    }
+
+    function button(className, text, iconName) {
+        const b = el('button', className);
+        b.type = 'button';
+        if (iconName) b.appendChild(icon(iconName, 'w-4 h-4 flex-shrink-0'));
+        b.appendChild(document.createTextNode(text));
+        return b;
+    }
+
+    function link(href, className, text, iconName) {
+        const a = el('a', className);
+        a.href = href;
+        if (iconName) a.appendChild(icon(iconName, 'w-4 h-4 flex-shrink-0'));
+        if (text !== undefined && text !== null) a.appendChild(document.createTextNode(text));
+        return a;
+    }
+
+    function idParam(id) { return encodeURIComponent(String(parseInt(id, 10) || 0)); }
+
+    // Only images served from this site's uploads folder are shown
+    function safeImage(path) {
+        return (typeof path === 'string' && /^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(path) && path.indexOf('..') === -1) ? path : null;
+    }
+
+    function parseDate(value) {
+        if (!value) return null;
+        const s = String(value);
+        const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T12:00:00' : s.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDate(value) {
+        const d = parseDate(value);
+        return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    }
+
+    function formatDateTime(value) {
+        const d = parseDate(value);
+        if (!d) return '';
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' +
+            d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function daysAgoText(n) {
+        n = parseInt(n, 10) || 0;
+        if (n <= 0) return 'Today';
+        return n === 1 ? '1 day ago' : n.toLocaleString('en-GB') + ' days ago';
+    }
+
+    function showMsg(id, text, kind) {
+        const box = document.getElementById(id);
+        if (!text) { box.classList.add('hidden'); return; }
+        box.textContent = text;
+        box.classList.remove('hidden', 'msg-ok', 'msg-error');
+        box.classList.add(kind === 'error' ? 'msg-error' : 'msg-ok');
+        box.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    }
+
+    function dateTile(date, large) {
+        const box = el('div', 'tt-date' + (large ? ' is-large' : ''));
+        const d = parseDate(date);
+        box.appendChild(el('span', 'tt-date-month', d ? d.toLocaleDateString('en-GB', { month: 'short' }) : '-'));
+        box.appendChild(el('span', 'tt-date-day', d ? String(d.getDate()) : '-'));
+        if (d) box.setAttribute('title', formatDate(date));
+        return box;
+    }
+
+    function posterThumb(src) {
+        const box = el('div', 'tt-thumb');
+        const safe = safeImage(src);
+        if (safe) {
+            const img = el('img');
+            img.src = safe;
+            img.alt = '';
+            img.loading = 'lazy';
+            box.appendChild(img);
+        } else {
+            box.appendChild(icon('image', 'w-5 h-5'));
+        }
+        return box;
+    }
+
+    // Status tag: Upcoming shows as Approved
+    const TAGS = {
+        upcoming: ['Approved', 'is-approved'],
+        due: ['Results due', 'is-due'],
+        due_waiting: ['Results waiting approval', 'is-amber'],
+        waiting: ['Waiting approval', 'is-amber'],
+        completed: ['Completed', 'is-grey'],
+        rejected: ['Rejected', 'is-grey'],
+        cancelled: ['Cancelled', 'is-cancelled'],
+        other: ['Other', 'is-grey']
+    };
+
+    function statusTag(status) {
+        const t = TAGS[status] || TAGS.other;
+        return el('span', 'tt-tag ' + t[1], t[0]);
+    }
+
+    function onWebsite(t) {
+        return t.storedStatus === 'Approved' || t.storedStatus === 'Completed';
+    }
+
+    function canEditDetails(t) {
+        if (can('tournaments.manage_all')) return true;
+        return can('tournaments.organise_own') && !!t.isOwn && (t.storedStatus === 'Pending' || t.storedStatus === 'Approved');
+    }
+
+    // ============================================
+    // LAYERS: focus, Escape and the Tab key (as on the People page)
+    // ============================================
+    function focusables(root) {
+        return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+            .filter(n => n.offsetParent !== null || n === document.activeElement);
+    }
+
+    function pushLayer(node, close, returnFocus) {
+        layers.push({ node: node, close: close, returnFocus: returnFocus || document.activeElement });
+        document.body.style.overflow = 'hidden';
+    }
+
+    function popLayer(node) {
+        const i = layers.findIndex(l => l.node === node);
+        if (i === -1) return null;
+        const layer = layers.splice(i, 1)[0];
+        if (!layers.length) document.body.style.overflow = '';
+        return layer;
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (menu.open) return; // the row menu handles its own keys
+        const top = layers[layers.length - 1];
+        if (!top) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            top.close();
+            return;
+        }
+        if (e.key === 'Tab') {
+            const items = focusables(top.node);
+            if (!items.length) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (e.shiftKey && (document.activeElement === first || !top.node.contains(document.activeElement))) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && (document.activeElement === last || !top.node.contains(document.activeElement))) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    });
+
+    function openDialog(id, focusId) {
+        const wrap = document.getElementById(id);
+        wrap.classList.remove('hidden');
+        pushLayer(wrap, () => closeDialog(id));
+        const target = focusId ? document.getElementById(focusId) : focusables(wrap)[0];
+        if (target) target.focus();
+    }
+
+    function closeDialog(id) {
+        const wrap = document.getElementById(id);
+        wrap.classList.add('hidden');
+        const layer = popLayer(wrap);
+        if (layer && layer.returnFocus && document.contains(layer.returnFocus)) layer.returnFocus.focus();
+    }
+
+    document.querySelectorAll('[data-close]').forEach(btn => {
+        btn.addEventListener('click', () => closeDialog(btn.getAttribute('data-close')));
+    });
+    document.querySelectorAll('.tt-dialog-wrap').forEach(wrap => {
+        wrap.addEventListener('click', e => { if (e.target === wrap && wrap.id !== 'confirmDialog') closeDialog(wrap.id); });
+    });
+
+    // A small yes/no dialog; resolves true or false
+    function askConfirm(title, text, yesText) {
+        return new Promise(resolve => {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmText').textContent = text;
+            const yes = document.getElementById('confirmYes');
+            const no = document.getElementById('confirmNo');
+            yes.textContent = yesText;
+            const wrap = document.getElementById('confirmDialog');
+            let done = false;
+            function finish(answer) {
+                if (done) return;
+                done = true;
+                yes.onclick = null;
+                no.onclick = null;
+                closeDialog('confirmDialog');
+                resolve(answer);
+            }
+            yes.onclick = () => finish(true);
+            no.onclick = () => finish(false);
+            wrap.classList.remove('hidden');
+            pushLayer(wrap, () => finish(false));
+            no.focus();
+        });
+    }
+
+    // ============================================
+    // ADDRESS (tab, q, organiser, season, id, panel)
+    // ============================================
+    function stateFromUrl() {
+        const p = new URLSearchParams(window.location.search);
+        // results_due: links about adding results (the tab is "due")
+        const tab = p.get('tab') === 'results_due' ? 'due' : p.get('tab');
+        const id = parseInt(p.get('id') || '', 10);
+        const panel = p.get('panel');
+        const season = p.get('season') || 'this';
+        return {
+            tab: TABS.includes(tab) ? tab : 'upcoming',
+            q: (p.get('q') || '').slice(0, 100),
+            organiser: (p.get('organiser') || '').slice(0, 150),
+            season: (season === 'all' || season === 'this' || /^\d{4}-H\d{1,2}$/.test(season)) ? season : 'this',
+            id: id > 0 ? id : null,
+            panel: PANES.includes(panel) ? panel : 'details'
+        };
+    }
+
+    function buildUrl() {
+        const p = new URLSearchParams();
+        if (list.tab !== 'upcoming') p.set('tab', list.tab);
+        if (list.q) p.set('q', list.q);
+        if (list.organiser) p.set('organiser', list.organiser);
+        if (list.season !== 'this') p.set('season', list.season);
+        if (openId) {
+            p.set('id', String(openId));
+            if (paneName !== 'details') p.set('panel', paneName);
+        }
+        const s = p.toString();
+        return window.location.pathname + (s ? '?' + s : '');
+    }
+
+    function writeUrl(push) {
+        const url = buildUrl();
+        if (url === window.location.pathname + window.location.search) return;
+        try {
+            if (push) window.history.pushState(null, '', url); else window.history.replaceState(null, '', url);
+        } catch (e) { /* ignore */ }
+    }
+
+    window.addEventListener('popstate', function () {
+        const s = stateFromUrl();
+        const listChanged = s.tab !== list.tab || s.q !== list.q || s.organiser !== list.organiser || s.season !== list.season;
+        list.tab = s.tab; list.q = s.q; list.organiser = s.organiser; list.season = s.season;
+        syncControls();
+        if (listChanged) loadList(true);
+        if (s.id && s.id !== openId) {
+            openTournament(s.id, s.panel, { fromHistory: true });
+        } else if (s.id && s.id === openId) {
+            showPane(s.panel, true);
+        } else if (!s.id && openId) {
+            closeTournament(true);
+        }
+    });
+
+    // ============================================
+    // INITIALISE
+    // ============================================
+    function initPage() {
+        const canCreate = can('tournaments.organise_own') || can('tournaments.manage_all');
+        document.getElementById('createBtn').classList.toggle('hidden', !canCreate);
+        document.getElementById('quickResultsBtn').classList.toggle('hidden', !can('tournaments.manage_all'));
+
+        const s = stateFromUrl();
+        list.tab = s.tab; list.q = s.q; list.organiser = s.organiser; list.season = s.season;
+        syncControls();
+        loadList(true);
+        if (s.id) openTournament(s.id, s.panel, { fromHistory: true });
+    }
+
+    function syncControls() {
+        document.querySelectorAll('#listTabs .tt-tab').forEach(btn => {
+            const on = btn.getAttribute('data-tab') === list.tab;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        updateDueAlert();
+        document.getElementById('searchInput').value = list.q;
+        setSelect('organiserFilter', list.organiser);
+        setSelect('seasonFilter', list.season);
+    }
+
+    // Select a value, adding it as an option when the list does not have it yet
+    function setSelect(id, value) {
+        const select = document.getElementById(id);
+        if (value && !Array.from(select.options).some(o => o.value === value)) {
+            const o = el('option', '', value);
+            o.value = value;
+            select.appendChild(o);
+        }
+        select.value = value || select.options[0].value;
+    }
+
+    // ============================================
+    // LIST
+    // ============================================
+    document.querySelectorAll('#listTabs .tt-tab').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const tab = this.getAttribute('data-tab');
+            if (tab === list.tab) return;
+            list.tab = tab;
+            syncControls();
+            writeUrl(true);
+            loadList(true);
+        });
+    });
+
+    let searchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        const value = this.value.trim().slice(0, 100);
+        searchTimer = setTimeout(() => {
+            if (value === list.q) return;
+            list.q = value;
+            writeUrl(false);
+            loadList(true);
+        }, 300);
+    });
+
+    document.getElementById('organiserFilter').addEventListener('change', function () {
+        list.organiser = this.value;
+        writeUrl(true);
+        loadList(true);
+    });
+
+    document.getElementById('seasonFilter').addEventListener('change', function () {
+        list.season = this.value;
+        writeUrl(true);
+        loadList(true);
+    });
+
+    document.getElementById('moreBtn').addEventListener('click', () => loadList(false));
+
+    async function loadList(reset) {
+        const seq = ++list.seq;
+        const more = document.getElementById('moreBtn');
+        more.disabled = true;
+        const p = new URLSearchParams({
+            action: 'adminList',
+            tab: list.tab,
+            season: list.season,
+            offset: String(reset ? 0 : list.rows.length)
+        });
+        if (list.q) p.set('q', list.q);
+        if (list.organiser) p.set('organiser', list.organiser);
+        try {
+            const data = await getJson(API + '?' + p.toString());
+            if (seq !== list.seq) return; // a newer request has started
+            if (!data.success) {
+                showMsg('pageMessage', data.message || 'The list could not be loaded.', 'error');
+                document.getElementById('listCount').textContent = '';
+                return;
+            }
+            if (!list.filtersReady) fillFilters(data);
+            Object.keys(data.counts || {}).forEach(key => {
+                const badge = document.querySelector(`[data-count="${key}"]`);
+                if (badge) badge.textContent = Number(data.counts[key]).toLocaleString('en-GB');
+            });
+            list.dueCount = Number((data.counts || {}).due) || 0;
+            updateDueAlert();
+            list.rows = reset ? data.tournaments : list.rows.concat(data.tournaments);
+            list.total = Number(data.total) || 0;
+            renderList();
+            more.classList.toggle('hidden', list.rows.length >= list.total);
+        } catch (e) {
+            console.error('Tournaments list error:', e);
+            if (seq === list.seq) showMsg('pageMessage', 'The list could not be loaded.', 'error');
+        } finally {
+            more.disabled = false;
+        }
+    }
+
+    // Results due count on a red square while above 0 and not the open tab
+    function updateDueAlert() {
+        const badge = document.querySelector('[data-count="due"]');
+        badge.classList.toggle('is-alert', (list.dueCount || 0) > 0 && list.tab !== 'due');
+    }
+
+    function fillFilters(data) {
+        list.filtersReady = true;
+        const organiserSelect = document.getElementById('organiserFilter');
+        (data.organiserNames || []).forEach(name => {
+            if (Array.from(organiserSelect.options).some(o => o.value === name)) return;
+            const o = el('option', '', name);
+            o.value = name;
+            organiserSelect.appendChild(o);
+        });
+        const seasonSelect = document.getElementById('seasonFilter');
+        // Remove a season added from the address before the real list arrived
+        Array.from(seasonSelect.options).forEach(o => { if (o.value !== 'this' && o.value !== 'all') o.remove(); });
+        (data.seasons || []).forEach(s => {
+            const o = el('option', '', s.name);
+            o.value = s.key;
+            seasonSelect.appendChild(o);
+        });
+        syncControls();
+    }
+
+    function renderList() {
+        closeMenu(false);
+        const body = document.getElementById('tableBody');
+        const compact = document.getElementById('compactList');
+        body.textContent = '';
+        compact.textContent = '';
+        const rows = list.rows;
+
+        const empty = document.getElementById('listEmpty');
+        if (!rows.length) {
+            empty.textContent = (list.q || list.organiser) ? 'No tournaments match this search' : 'No tournaments here';
+            empty.classList.remove('hidden');
+        } else {
+            empty.classList.add('hidden');
+        }
+
+        rows.forEach(t => {
+            body.appendChild(tableRow(t));
+            compact.appendChild(compactRow(t));
+        });
+
+        const to = rows.length;
+        document.getElementById('listCount').textContent = to
+            ? 'Showing 1 to ' + to.toLocaleString('en-GB') + ' of ' + list.total.toLocaleString('en-GB')
+            : 'Showing 0 of 0';
+        markOpenRow();
+    }
+
+    // The name opens the panel (keyboard access to every row)
+    function nameBlock(t) {
+        const wrap = el('div', 'min-w-0');
+        const open = el('button', 'text-left text-sm font-black text-white break-words hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-white', t.name);
+        open.type = 'button';
+        open.addEventListener('click', () => openTournament(t.id, 'details', { returnFocus: open }));
+        wrap.appendChild(open);
+        if (t.status === 'due') {
+            wrap.appendChild(el('p', 'text-xs font-black tt-days', daysAgoText(t.daysSince)));
+            if (t.lastReminder) wrap.appendChild(el('p', 'text-xs font-semibold text-gray-500', 'Reminded ' + formatDate(t.lastReminder)));
+        } else {
+            wrap.appendChild(el('p', 'text-xs font-bold text-gray-400', t.weekday || ''));
+        }
+        const summary = resultsSummary(t);
+        if (summary) wrap.appendChild(el('p', 'text-xs font-semibold text-gray-400', summary));
+        return wrap;
+    }
+
+    // Completed and Results due tabs, e.g. "2 categories (bullet) 8 matches"
+    function resultsSummary(t) {
+        return (list.tab === 'completed' || list.tab === 'due') ? countsText(t) : '';
+    }
+
+    function countsText(t) {
+        const matches = Number(t.matchCount) || 0;
+        if (!matches) return 'No results yet';
+        const categories = Number(t.categoryCount) || 0;
+        return categories.toLocaleString('en-GB') + (categories === 1 ? ' category' : ' categories') + ' • ' +
+            matches.toLocaleString('en-GB') + (matches === 1 ? ' match' : ' matches');
+    }
+
+    function venueLine(t) {
+        const wrap = el('div', 'flex items-start gap-1 text-sm text-gray-300 font-semibold min-w-0');
+        wrap.appendChild(icon('pin', 'w-4 h-4 flex-shrink-0 text-gray-500 mt-0.5'));
+        const text = el('div', 'min-w-0');
+        text.appendChild(el('span', 'block break-words', t.venue || '-'));
+        if (t.town) text.appendChild(el('span', 'block text-xs text-gray-500 font-bold', t.town));
+        wrap.appendChild(text);
+        return wrap;
+    }
+
+    function tableRow(t) {
+        const tr = el('tr', 'tt-row');
+        tr.dataset.tid = String(t.id);
+        tr.addEventListener('click', e => {
+            if (e.target.closest('a, button')) return;
+            openTournament(t.id, 'details', { returnFocus: tr.querySelector('.tt-menu-btn') || tr.querySelector('button') });
+        });
+
+        const tdDate = el('td', 'px-4 py-3');
+        tdDate.appendChild(dateTile(t.date));
+        tr.appendChild(tdDate);
+
+        const tdPoster = el('td', 'px-2 py-3');
+        tdPoster.appendChild(posterThumb(t.poster));
+        tr.appendChild(tdPoster);
+
+        const tdName = el('td', 'px-4 py-3');
+        tdName.appendChild(nameBlock(t));
+        tr.appendChild(tdName);
+
+        tr.appendChild(el('td', 'px-4 py-3 text-sm text-gray-300 font-semibold break-words', t.organiser || '-'));
+
+        const tdVenue = el('td', 'px-4 py-3');
+        tdVenue.appendChild(venueLine(t));
+        tr.appendChild(tdVenue);
+
+        const tdStatus = el('td', 'px-4 py-3');
+        tdStatus.appendChild(statusTag(t.status));
+        if (t.status === 'completed' && t.resultsCount > 0) {
+            tdStatus.appendChild(el('p', 'text-xs font-semibold text-gray-500 mt-1', t.resultsCount.toLocaleString('en-GB') + (t.resultsCount === 1 ? ' result' : ' results')));
+        }
+        tr.appendChild(tdStatus);
+
+        const tdActions = el('td', 'px-4 py-3');
+        const actions = el('div', 'flex items-center justify-end gap-2');
+        nextSteps(t).forEach(n => actions.appendChild(n));
+        const menuBtn = menuButton(t);
+        if (menuBtn) actions.appendChild(menuBtn);
+        tdActions.appendChild(actions);
+        tr.appendChild(tdActions);
+        return tr;
+    }
+
+    function compactRow(t) {
+        const btn = el('button', 'tt-row w-full text-left px-4 py-3 flex items-center gap-3');
+        btn.type = 'button';
+        btn.dataset.tid = String(t.id);
+        btn.setAttribute('aria-label', 'Open ' + t.name);
+        btn.appendChild(dateTile(t.date));
+        const mid = el('div', 'min-w-0 flex-1');
+        mid.appendChild(el('p', 'text-sm font-black text-white break-words', t.name));
+        mid.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', t.organiser || ''));
+        const summary = resultsSummary(t);
+        if (summary) mid.appendChild(el('p', 'text-xs font-semibold text-gray-400', summary));
+        const tagLine = el('div', 'mt-1.5 flex flex-wrap items-center gap-2');
+        tagLine.appendChild(statusTag(t.status));
+        if (t.status === 'due') tagLine.appendChild(el('span', 'text-xs font-black tt-days', daysAgoText(t.daysSince)));
+        mid.appendChild(tagLine);
+        btn.appendChild(mid);
+        btn.appendChild(icon('chevron', 'w-5 h-5 flex-shrink-0 text-gray-500'));
+        btn.addEventListener('click', () => openTournament(t.id, 'details', { returnFocus: btn }));
+        return btn;
+    }
+
+    function markOpenRow() {
+        document.querySelectorAll('[data-tid]').forEach(row => {
+            row.classList.toggle('is-open', openId !== null && row.dataset.tid === String(openId));
+        });
+    }
+
+    // ============================================
+    // NEXT STEP (one per status)
+    // ============================================
+    function nextSteps(t, inPanel) {
+        const small = inPanel ? '' : ' btn-sm';
+        const out = [];
+        if (t.status === 'waiting') {
+            if (can('tournaments.approve')) {
+                const approve = button('btn-solid' + small, 'Approve', 'check');
+                approve.addEventListener('click', () => approveTournament(t, approve));
+                const reject = button('btn-plain' + small, 'Reject');
+                reject.addEventListener('click', () => openReject(t, reject));
+                out.push(approve, reject);
+            }
+        } else if (t.status === 'upcoming') {
+            if (canEditDetails(t)) {
+                const edit = button('btn-plain' + small, 'Edit details', 'edit');
+                edit.addEventListener('click', () => {
+                    if (openId === t.id) showPane('details');
+                    else openTournament(t.id, 'details', { returnFocus: edit });
+                });
+                out.push(edit);
+            }
+        } else if (t.status === 'due') {
+            if (can('tournaments.manage_all')) {
+                out.push(link('/admin/submit-tournament-results?id=' + idParam(t.id), 'btn-solid' + small, 'Submit results'));
+            } else {
+                const remind = button('btn-outline' + small, 'Remind', 'mail');
+                remind.addEventListener('click', () => remindOrganiser(t, remind));
+                out.push(remind);
+            }
+        } else if (t.status === 'due_waiting') {
+            out.push(link('/admin/approvals', 'btn-solid' + small, 'Review results'));
+        } else if (t.status === 'completed') {
+            if (can('tournaments.manage_all')) {
+                // The shared results form in edit mode
+                out.push(link('/admin/edit-results?id=' + idParam(t.id), 'btn-solid' + small, 'Edit results', 'edit'));
+            } else {
+                out.push(link('/tournament-details?id=' + idParam(t.id), 'btn-plain' + small, 'View results'));
+            }
+        }
+        return out;
+    }
+
+    // ============================================
+    // ROW MENU: Edit, Add results for another category, Change status,
+    // View on the website, Delete
+    // A real menu button (aria-haspopup, aria-expanded) with arrow keys,
+    // Home, End, Escape and Tab.
+    // ============================================
+    const menu = { open: false, button: null, t: null };
+    const menuEl = document.getElementById('rowMenu');
+
+    function menuItems(t) {
+        const items = [];
+        if (canEditDetails(t)) {
+            items.push(['Edit', 'edit', () => {
+                if (openId === t.id && panelIsOpen()) showPane('details');
+                else openTournament(t.id, 'details', { returnFocus: menu.button });
+            }]);
+        }
+        if (t.status === 'completed' && can('tournaments.manage_all')) {
+            // The shared results form, to enter a category that has no results yet
+            items.push(['Add results for another category', 'plus', null, '/admin/submit-tournament-results?id=' + idParam(t.id)]);
+        }
+        if (can('tournaments.manage_all')) items.push(['Change status', 'swap', () => openStatusDialog(t)]);
+        if (onWebsite(t)) items.push(['View on the website', 'external', null, '/tournament-details?id=' + idParam(t.id)]);
+        if (t.canDelete) items.push(['Delete', 'trash', () => deleteTournament(t)]);
+        return items;
+    }
+
+    function menuButton(t) {
+        if (!menuItems(t).length) return null;
+        const b = el('button', 'tt-menu-btn');
+        b.type = 'button';
+        b.setAttribute('aria-haspopup', 'menu');
+        b.setAttribute('aria-expanded', 'false');
+        b.setAttribute('aria-controls', 'rowMenu');
+        b.setAttribute('aria-label', 'More actions for ' + t.name);
+        b.appendChild(icon('dots', 'w-5 h-5'));
+        b.addEventListener('click', e => {
+            e.stopPropagation();
+            if (menu.open && menu.button === b) closeMenu(true);
+            else openMenu(b, t, 0);
+        });
+        b.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                openMenu(b, t, e.key === 'ArrowUp' ? -1 : 0);
+            }
+        });
+        return b;
+    }
+
+    function openMenu(btn, t, focusIndex) {
+        closeMenu(false);
+        menuEl.textContent = '';
+        menuItems(t).forEach(item => {
+            let node;
+            if (item[3]) {
+                node = el('a', 'tt-menu-item');
+                node.href = item[3];
+            } else {
+                node = el('button', 'tt-menu-item');
+                node.type = 'button';
+            }
+            node.setAttribute('role', 'menuitem');
+            node.tabIndex = -1;
+            node.appendChild(icon(item[1], 'w-4 h-4 flex-shrink-0 text-gray-400'));
+            node.appendChild(document.createTextNode(item[0]));
+            if (item[2]) {
+                node.addEventListener('click', () => {
+                    const action = item[2];
+                    closeMenu(true); // focus back on the menu button first
+                    action();
+                });
+            }
+            menuEl.appendChild(node);
+        });
+        menu.open = true;
+        menu.button = btn;
+        menu.t = t;
+        btn.setAttribute('aria-expanded', 'true');
+        menuEl.classList.remove('hidden');
+        positionMenu();
+        const items = menuItemNodes();
+        const target = focusIndex === -1 ? items[items.length - 1] : items[0];
+        if (target) target.focus();
+    }
+
+    function menuItemNodes() {
+        return Array.from(menuEl.querySelectorAll('[role="menuitem"]'));
+    }
+
+    function positionMenu() {
+        if (!menu.open || !menu.button) return;
+        const r = menu.button.getBoundingClientRect();
+        const w = menuEl.offsetWidth;
+        const h = menuEl.offsetHeight;
+        let left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+        let top = r.bottom + 4;
+        if (top + h > window.innerHeight - 8 && r.top - h - 4 > 8) top = r.top - h - 4;
+        menuEl.style.left = left + 'px';
+        menuEl.style.top = top + 'px';
+    }
+
+    function closeMenu(focusButton) {
+        if (!menu.open) return;
+        menu.open = false;
+        menuEl.classList.add('hidden');
+        if (menu.button) {
+            menu.button.setAttribute('aria-expanded', 'false');
+            if (focusButton && document.contains(menu.button)) menu.button.focus();
+        }
+    }
+
+    menuEl.addEventListener('keydown', e => {
+        const items = menuItemNodes();
+        const i = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+        else if (e.key === 'Home') { e.preventDefault(); items[0].focus(); }
+        else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+        else if (e.key === 'Tab') { closeMenu(true); }
+    });
+    document.addEventListener('click', e => {
+        if (menu.open && !menuEl.contains(e.target) && e.target !== menu.button && !(menu.button && menu.button.contains(e.target))) closeMenu(false);
+    });
+    window.addEventListener('resize', () => closeMenu(false));
+    window.addEventListener('scroll', () => closeMenu(false), true);
+
+    // ============================================
+    // TOURNAMENT PANEL
+    // ============================================
+    const panelEl = document.getElementById('tPanel');
+    const backdropEl = document.getElementById('tBackdrop');
+
+    function panelIsOpen() { return layers.some(l => l.node === panelEl); }
+
+    async function openTournament(id, pane, opts) {
+        opts = opts || {};
+        closeMenu(false);
+        const wasOpen = panelIsOpen();
+        openId = parseInt(id, 10);
+        detail = null;
+        full = null;
+        historyRows = null;
+        paneName = PANES.includes(pane) ? pane : 'details';
+
+        if (!wasOpen) pushLayer(panelEl, () => closeTournament(false), opts.returnFocus || document.activeElement);
+        backdropEl.classList.remove('hidden');
+        panelEl.classList.remove('hidden');
+        requestAnimationFrame(() => panelEl.classList.add('is-open'));
+        if (!opts.fromHistory) writeUrl(true);
+        markOpenRow();
+        resetPanelView();
+        document.getElementById('tpClose').focus();
+        await loadPanel(openId);
+    }
+
+    async function loadPanel(id) {
+        try {
+            const [fullData, detailData] = await Promise.all([
+                getJson(API + '?id=' + idParam(id)),
+                getJson(API + '?action=adminTournament&id=' + idParam(id))
+            ]);
+            if (openId !== id) return;
+            if (!fullData.success || !detailData.success) {
+                document.getElementById('tpLoading').textContent = (detailData && detailData.message) || (fullData && fullData.message) || 'This tournament could not be loaded.';
+                return;
+            }
+            full = fullData;
+            detail = detailData;
+            historyRows = null;
+            renderPanelHeader();
+            renderFooter();
+            showPane(paneName, true);
+        } catch (e) {
+            console.error('Tournament load error:', e);
+            if (openId === id) document.getElementById('tpLoading').textContent = 'This tournament could not be loaded.';
+        }
+    }
+
+    function resetPanelView() {
+        const loading = document.getElementById('tpLoading');
+        loading.textContent = 'Loading...';
+        loading.classList.remove('hidden');
+        ['paneDetails', 'paneResults', 'paneNews', 'paneHistory'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById('tpFooter').classList.add('hidden');
+        showMsg('tpMessage', '');
+        document.getElementById('tpName').textContent = '';
+        document.getElementById('tpTag').textContent = '';
+        document.getElementById('tpCreated').textContent = '';
+        document.getElementById('tpDate').textContent = '';
+        document.querySelectorAll('#tpTabs .tt-ptab').forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected', 'false'); });
+    }
+
+    function closeTournament(fromHistory) {
+        if (!panelIsOpen()) return;
+        panelEl.classList.remove('is-open');
+        backdropEl.classList.add('hidden');
+        setTimeout(() => { if (!panelEl.classList.contains('is-open')) panelEl.classList.add('hidden'); }, 230);
+        const oldId = openId;
+        openId = null;
+        detail = null;
+        full = null;
+        historyRows = null;
+        const layer = popLayer(panelEl);
+        if (!fromHistory) writeUrl(true);
+        markOpenRow();
+        let target = layer && layer.returnFocus && document.contains(layer.returnFocus) ? layer.returnFocus : null;
+        if (!target && oldId) {
+            target = document.querySelector(`tr[data-tid="${oldId}"] button`) || document.querySelector(`button[data-tid="${oldId}"]`);
+        }
+        if (target) target.focus();
+    }
+
+    document.getElementById('tpClose').addEventListener('click', () => closeTournament(false));
+    backdropEl.addEventListener('click', () => closeTournament(false));
+
+    // The panel's tournament in the same shape as a list row
+    function panelRow() {
+        const d = detail.tournament;
+        return {
+            id: d.id,
+            name: d.name,
+            date: d.date,
+            status: d.status,
+            storedStatus: d.storedStatus,
+            isOwn: !!(full && full.tournament && (full.tournament.IsOwn === true || full.tournament.IsOwn === 1 || full.tournament.IsOwn === '1')),
+            canDelete: d.canDelete,
+            lastReminder: d.lastReminder
+        };
+    }
+
+    function renderPanelHeader() {
+        const d = detail.tournament;
+        const dateBox = document.getElementById('tpDate');
+        dateBox.textContent = '';
+        dateBox.appendChild(dateTile(d.date, true));
+        document.getElementById('tpName').textContent = d.name;
+        const tag = document.getElementById('tpTag');
+        tag.textContent = '';
+        tag.appendChild(statusTag(d.status));
+        document.getElementById('tpCreated').textContent = 'Created by ' + (d.createdBy || 'unknown');
+    }
+
+    function renderFooter() {
+        const t = panelRow();
+        const footer = document.getElementById('tpFooter');
+        footer.textContent = '';
+        // The row menu, so Change status and Delete are also reachable on phones
+        const menuBtn = menuButton(t);
+        if (menuBtn) {
+            menuBtn.classList.add('mr-auto');
+            footer.appendChild(menuBtn);
+        }
+        if (onWebsite(t)) {
+            const a = link('/tournament-details?id=' + idParam(t.id), 'btn-plain', 'View on the website', 'external');
+            a.target = '_blank';
+            a.rel = 'noopener';
+            footer.appendChild(a);
+        }
+        nextSteps(t, true).forEach(n => footer.appendChild(n));
+        footer.classList.toggle('hidden', !footer.childNodes.length);
+    }
+
+    document.querySelectorAll('#tpTabs .tt-ptab').forEach(btn => {
+        btn.addEventListener('click', () => showPane(btn.getAttribute('data-pane')));
+        btn.addEventListener('keydown', e => {
+            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+            e.preventDefault();
+            const tabs = Array.from(document.querySelectorAll('#tpTabs .tt-ptab'));
+            const i = tabs.indexOf(btn);
+            const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+            next.focus();
+            showPane(next.getAttribute('data-pane'));
+        });
+    });
+
+    function showPane(name, fromLoad) {
+        if (!PANES.includes(name)) name = 'details';
+        const changed = name !== paneName;
+        paneName = name;
+        if (!detail) return;
+        document.getElementById('tpLoading').classList.add('hidden');
+        document.querySelectorAll('#tpTabs .tt-ptab').forEach(b => {
+            const on = b.getAttribute('data-pane') === name;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        const ids = { details: 'paneDetails', results: 'paneResults', news: 'paneNews', history: 'paneHistory' };
+        Object.keys(ids).forEach(k => document.getElementById(ids[k]).classList.toggle('hidden', k !== name));
+        if (name === 'details') renderDetails();
+        if (name === 'results') renderResults();
+        if (name === 'news') renderNews();
+        if (name === 'history') renderHistory();
+        if (changed || !fromLoad) writeUrl(false);
+    }
+
+    // ---------- Details: the tournament form in edit mode ----------
+    function getForm() {
+        if (!form) {
+            const host = el('div');
+            host.id = 'tournamentFormHost';
+            document.getElementById('detailsSlot').appendChild(host);
+            form = {
+                host: host,
+                tf: KBFTournamentForm.mount(host, {
+                    showHowItWorks: false,
+                    canEditOrganiser: can('tournaments.manage_all'),
+                    canEditCore: can('tournaments.manage_all')
+                })
+            };
+        }
+        return form;
+    }
+
+    function renderDetails() {
+        const f = getForm();
+        const slot = document.getElementById('detailsSlot');
+        // Load the form once per loaded tournament, so switching tabs keeps unsaved changes
+        if (f.host.parentNode !== slot || f.loadedFrom !== full) {
+            slot.appendChild(f.host);
+            f.tf.loadForEdit(full.tournament);
+            f.loadedFrom = full;
+            showMsg('detailsMessage', '');
+        }
+        const editable = canEditDetails(panelRow());
+        document.getElementById('detailsFieldset').disabled = !editable;
+        document.getElementById('detailsActions').classList.toggle('hidden', !editable);
+        document.getElementById('detailsReadOnly').classList.toggle('hidden', editable);
+        document.getElementById('detailsSave').disabled = false;
+    }
+
+    document.getElementById('detailsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!detail || !form) return;
+        const tf = form.tf;
+        const id = openId;
+        showMsg('detailsMessage', '');
+        const error = tf.validate();
+        if (error) { showMsg('detailsMessage', error, 'error'); return; }
+
+        const save = document.getElementById('detailsSave');
+        save.disabled = true;
+        try {
+            // Name, date, venue, categories and organiser first (PUT), so the
+            // registration closing date is checked against the new date
+            const core = tf.coreChanges() || {};
+            const organiser = tf.organiserChange();
+            if (organiser !== null) core.organiserName = organiser;
+            if (Object.keys(core).length) {
+                core.tournamentId = id;
+                const coreResult = await sendJson(API, 'PUT', core);
+                if (!coreResult.success) {
+                    showMsg('detailsMessage', coreResult.message || 'The details could not be saved.', 'error');
+                    return;
+                }
+            }
+            const res = await authenticatedFetch(API, { method: 'POST', body: tf.buildFormData() });
+            const result = await res.json().catch(() => ({ success: false }));
+            if (!result.success) {
+                showMsg('detailsMessage', (Object.keys(core).length ? 'The name, date, venue and organiser were saved, but the other details were not: ' : '') + (result.message || 'The details could not be saved.'), 'error');
+                return;
+            }
+            if (openId !== id) return;
+            await loadPanel(id);
+            showMsg('detailsMessage', 'Details saved. The status has not changed.', 'ok');
+            loadList(true);
+        } catch (err) {
+            console.error('Save details error:', err);
+            showMsg('detailsMessage', 'The details could not be saved. Please try again.', 'error');
+        } finally {
+            save.disabled = false;
+        }
+    });
+
+    // ---------- Results ----------
+    function personName(first, last, guest) {
+        const name = ((first || '') + ' ' + (last || '')).trim();
+        return name || String(guest || '').trim();
+    }
+
+    function teamName(m, team) {
+        const names = team === 1
+            ? [personName(m.P1FirstName, m.P1LastName, m.GuestPlayer1Name), personName(m.Partner1FirstName, m.Partner1LastName, m.GuestPartner1Name)]
+            : [personName(m.P2FirstName, m.P2LastName, m.GuestPlayer2Name), personName(m.Partner2FirstName, m.Partner2LastName, m.GuestPartner2Name)];
+        return names.filter(Boolean).join(' & ') || 'Unknown players';
+    }
+
+    // Placings and points from the approved matches
+    function placings() {
+        const points = full.roundPoints || {};
+        const groups = {};
+        (full.matches || []).forEach(m => {
+            const rp = points[m.RoundType] || {};
+            const win = rp.Winner || {};
+            const lose = rp.Loser || {};
+            const winner = String(m.WinnerTeam);
+            const t1Won = winner === '1' || winner === '0';
+            const t2Won = winner === '2' || winner === '0';
+            const category = m.CategoryName || m.GroupName || 'Results';
+            if (!groups[category]) groups[category] = [];
+            [[1, t1Won], [2, t2Won]].forEach(([team, won]) => {
+                const p = won ? win : lose;
+                const value = parseInt(p.points, 10) || 0;
+                if (value <= 0) return;
+                groups[category].push({ team: teamName(m, team), placing: p.reason || m.RoundType || '', points: value });
+            });
+        });
+        Object.keys(groups).forEach(k => groups[k].sort((a, b) => b.points - a.points));
+        return groups;
+    }
+
+    function renderResults() {
+        const pane = document.getElementById('paneResults');
+        pane.textContent = '';
+        const d = detail.tournament;
+        const row = panelRow();
+
+        if (d.waitingCount > 0) {
+            const box = el('div', 'border-2 border-gray-700 bg-slate-800 p-4 mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3');
+            box.appendChild(el('p', 'text-sm font-bold text-gray-200', 'Results have been submitted and are waiting for approval.'));
+            box.appendChild(link('/admin/approvals', 'btn-solid btn-sm', 'Review results'));
+            pane.appendChild(box);
+        }
+
+        if (d.resultsCount > 0) {
+            const groups = placings();
+            const keys = Object.keys(groups);
+            keys.forEach(category => {
+                const section = el('section', 'mb-5');
+                section.appendChild(el('h3', 'text-sm font-black uppercase theme-primary-text mb-2', category));
+                const ul = el('ul', 'border-2 border-gray-700 divide-y-2 divide-gray-800');
+                if (!groups[category].length) {
+                    ul.appendChild(el('li', 'px-3 py-2 text-xs text-gray-400 font-semibold', 'No points in this category.'));
+                }
+                groups[category].forEach(p => {
+                    const li = el('li', 'px-3 py-2 flex items-center gap-3');
+                    const text = el('div', 'min-w-0 flex-1');
+                    text.appendChild(el('p', 'text-sm font-black text-white break-words', p.team));
+                    text.appendChild(el('p', 'text-xs font-bold text-gray-400', p.placing));
+                    li.appendChild(text);
+                    li.appendChild(el('span', 'text-sm font-black theme-primary-text whitespace-nowrap', p.points.toLocaleString('en-GB') + ' pts'));
+                    ul.appendChild(li);
+                });
+                section.appendChild(ul);
+                pane.appendChild(section);
+            });
+            pane.appendChild(link('/tournament-details?id=' + idParam(d.id), 'btn-plain', 'Full results page', 'arrow'));
+            return;
+        }
+
+        if (d.waitingCount > 0) return;
+
+        // No results yet
+        const empty = el('div', 'text-center py-6');
+        const ring = el('div', 'tt-ring mb-4');
+        ring.appendChild(icon('trophy', 'w-8 h-8'));
+        empty.appendChild(ring);
+        empty.appendChild(el('p', 'text-base font-black uppercase text-white', 'No results submitted yet'));
+        if (d.isPast) {
+            empty.appendChild(el('p', 'text-sm font-semibold text-gray-400 mt-2',
+                'The tournament was ' + (d.daysSince === 1 ? '1 day' : d.daysSince.toLocaleString('en-GB') + ' days') + ' ago. Players in it have not received their points.'));
+        }
+        pane.appendChild(empty);
+
+        if (row.status === 'due') {
+            const box = el('div', 'border-2 border-gray-700 bg-slate-800 p-4 mt-2');
+            box.appendChild(el('h3', 'text-sm font-black uppercase theme-primary-text mb-1', 'Remind the organiser'));
+            const last = el('p', 'text-sm font-semibold text-gray-300 mb-3');
+            last.id = 'remindLast';
+            last.textContent = 'Emails the person who created it, with a link to submit results. Last reminder: ' + (d.lastReminder ? formatDateTime(d.lastReminder) : 'never') + '.';
+            box.appendChild(last);
+            const send = button('btn-outline', 'Send reminder', 'mail');
+            send.addEventListener('click', () => remindOrganiser(row, send));
+            box.appendChild(send);
+            pane.appendChild(box);
+            pane.appendChild(el('p', 'text-xs font-semibold text-gray-400 mt-3',
+                'If the tournament did not go ahead, change its status to Cancelled from the menu so it stops showing as due.'));
+        }
+    }
+
+    // ---------- News posts ----------
+    function renderNews() {
+        const pane = document.getElementById('paneNews');
+        pane.textContent = '';
+        const posts = detail.posts || [];
+        const row = panelRow();
+        const canPost = can('content.all_news_gallery') || (can('content.own_news_gallery') && row.isOwn);
+
+        if (!posts.length) {
+            pane.appendChild(el('p', 'text-sm font-bold text-gray-400 mb-4', 'No news posts are linked to this tournament yet.'));
+        } else {
+            const ul = el('ul', 'border-2 border-gray-700 divide-y-2 divide-gray-800 mb-4');
+            posts.forEach(p => {
+                const li = el('li');
+                const inner = canPost
+                    ? link('/clubadmin/edit-post?id=' + idParam(p.id), 'flex items-center gap-3 px-3 py-3 hover:bg-slate-800')
+                    : el('div', 'flex items-center gap-3 px-3 py-3');
+                inner.appendChild(icon('news', 'w-5 h-5 flex-shrink-0 text-gray-500'));
+                const text = el('div', 'min-w-0 flex-1');
+                text.appendChild(el('p', 'text-sm font-black text-white break-words', p.title));
+                const meta = el('div', 'flex flex-wrap items-center gap-2 mt-0.5');
+                if (p.date) meta.appendChild(el('span', 'text-xs font-bold text-gray-400', formatDate(p.date)));
+                if (!p.published) meta.appendChild(el('span', 'tt-chip', 'Draft'));
+                if (!p.visible) meta.appendChild(el('span', 'tt-chip', 'Hidden'));
+                text.appendChild(meta);
+                inner.appendChild(text);
+                if (canPost) inner.appendChild(icon('chevron', 'w-4 h-4 flex-shrink-0 text-gray-500'));
+                li.appendChild(inner);
+                ul.appendChild(li);
+            });
+            pane.appendChild(ul);
+        }
+        if (canPost) {
+            pane.appendChild(link('/clubadmin/create-post?id=' + idParam(row.id), 'btn-outline', 'Post news about this tournament', 'plus'));
+        }
+    }
+
+    // ---------- History ----------
+    async function renderHistory() {
+        const pane = document.getElementById('paneHistory');
+        const id = openId;
+        if (historyRows === null) {
+            pane.textContent = '';
+            pane.appendChild(el('p', 'text-sm font-bold text-gray-400 uppercase py-6 text-center', 'Loading...'));
+            try {
+                const data = await getJson(API + '?action=history&id=' + idParam(id));
+                if (openId !== id) return;
+                if (!data.success) {
+                    pane.textContent = '';
+                    pane.appendChild(el('p', 'text-sm font-bold text-gray-400', data.message || 'The history could not be loaded.'));
+                    return;
+                }
+                historyRows = data.history || [];
+            } catch (e) {
+                console.error('History error:', e);
+                if (openId === id) {
+                    pane.textContent = '';
+                    pane.appendChild(el('p', 'text-sm font-bold text-gray-400', 'The history could not be loaded.'));
+                }
+                return;
+            }
+            if (paneName !== 'history') return;
+        }
+        pane.textContent = '';
+        if (!historyRows.length) {
+            pane.appendChild(el('p', 'text-sm font-bold text-gray-400', 'Nothing has been recorded for this tournament yet.'));
+            return;
+        }
+        const ol = el('ol', 'border-l-4 border-gray-700 pl-4 space-y-4');
+        historyRows.forEach(h => {
+            const li = el('li');
+            li.appendChild(el('p', 'text-xs font-bold text-gray-500', formatDateTime(h.when)));
+            li.appendChild(el('p', 'text-sm font-black text-white', h.who + ': ' + h.action));
+            if (h.details) li.appendChild(el('p', 'text-xs font-semibold text-gray-400 break-words', h.details));
+            ol.appendChild(li);
+        });
+        pane.appendChild(ol);
+    }
+
+    // ============================================
+    // ACTIONS
+    // ============================================
+    function afterChange(message, kind) {
+        if (openId) {
+            showMsg('tpMessage', message, kind);
+            if (kind !== 'error') loadPanel(openId);
+        } else {
+            showMsg('pageMessage', message, kind);
+        }
+        if (kind !== 'error') loadList(true);
+    }
+
+    async function approveTournament(t, btn) {
+        const ok = await askConfirm('Approve tournament', 'Approve "' + t.name + '"? It will show on the website and the organiser is emailed.', 'Approve');
+        if (!ok) return;
+        if (btn) btn.disabled = true;
+        try {
+            const result = await sendJson('/api/approvals.php', 'POST', { type: 'tournament', id: t.id, action: 'approve' });
+            afterChange(result.message || (result.success ? 'Tournament approved.' : 'The tournament could not be approved.'), result.success ? 'ok' : 'error');
+        } catch (e) {
+            console.error('Approve error:', e);
+            afterChange('The tournament could not be approved.', 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    let rejecting = null;
+    function openReject(t) {
+        rejecting = t;
+        document.getElementById('rejectName').textContent = t.name;
+        document.getElementById('rejectReason').value = '';
+        document.getElementById('rejectMessage').classList.add('hidden');
+        document.getElementById('rejectYes').disabled = false;
+        openDialog('rejectDialog', 'rejectReason');
+    }
+
+    document.getElementById('rejectYes').addEventListener('click', async function () {
+        if (!rejecting) return;
+        const t = rejecting;
+        this.disabled = true;
+        try {
+            const result = await sendJson('/api/approvals.php', 'POST', {
+                type: 'tournament', id: t.id, action: 'reject',
+                comments: document.getElementById('rejectReason').value.trim()
+            });
+            if (!result.success) {
+                const box = document.getElementById('rejectMessage');
+                box.textContent = result.message || 'The tournament could not be rejected.';
+                box.classList.remove('hidden');
+                return;
+            }
+            closeDialog('rejectDialog');
+            afterChange(result.message || 'Tournament rejected.', 'ok');
+        } catch (e) {
+            console.error('Reject error:', e);
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    async function remindOrganiser(t, btn) {
+        if (btn) btn.disabled = true;
+        try {
+            const result = await sendJson(API, 'POST', { action: 'remindOrganiser', tournamentId: t.id });
+            afterChange(result.message || (result.success ? 'The reminder has been sent.' : 'The reminder could not be sent.'), result.success ? 'ok' : 'error');
+        } catch (e) {
+            console.error('Remind error:', e);
+            afterChange('The reminder could not be sent.', 'error');
+        } finally {
+            if (btn && document.contains(btn)) btn.disabled = false;
+        }
+    }
+
+    // ---------- Change status ----------
+    let statusTarget = null;
+    function openStatusDialog(t) {
+        statusTarget = t;
+        document.getElementById('statusName').textContent = t.name;
+        document.getElementById('statusNow').textContent = 'Now: ' + (t.storedStatus || '');
+        const box = document.getElementById('statusChoices');
+        box.textContent = '';
+        ['Approved', 'Completed', 'Cancelled'].filter(s => s !== t.storedStatus).forEach((s, i) => {
+            const label = el('label', 'flex items-center gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer');
+            const input = el('input', 'choice');
+            input.type = 'radio';
+            input.name = 'newStatus';
+            input.value = s;
+            if (i === 0) input.checked = true;
+            input.addEventListener('change', syncStatusReason);
+            label.appendChild(input);
+            label.appendChild(el('span', 'text-sm font-bold text-white', s));
+            box.appendChild(label);
+        });
+        document.getElementById('statusReason').value = '';
+        document.getElementById('statusMessage').classList.add('hidden');
+        document.getElementById('statusYes').disabled = false;
+        syncStatusReason();
+        openDialog('statusDialog');
+    }
+
+    function chosenStatus() {
+        const r = document.querySelector('input[name="newStatus"]:checked');
+        return r ? r.value : '';
+    }
+
+    function syncStatusReason() {
+        document.getElementById('statusReasonWrap').classList.toggle('hidden', chosenStatus() !== 'Cancelled');
+    }
+
+    document.getElementById('statusYes').addEventListener('click', async function () {
+        if (!statusTarget) return;
+        const status = chosenStatus();
+        const reason = document.getElementById('statusReason').value.trim();
+        const box = document.getElementById('statusMessage');
+        if (status === 'Cancelled' && !reason) {
+            box.textContent = 'Please give a reason for cancelling the tournament.';
+            box.classList.remove('hidden');
+            document.getElementById('statusReason').focus();
+            return;
+        }
+        this.disabled = true;
+        try {
+            const result = await sendJson(API, 'POST', { action: 'changeStatus', tournamentId: statusTarget.id, status: status, reason: reason });
+            if (!result.success) {
+                box.textContent = result.message || 'The status could not be changed.';
+                box.classList.remove('hidden');
+                return;
+            }
+            closeDialog('statusDialog');
+            afterChange(result.message || 'Status changed.', 'ok');
+        } catch (e) {
+            console.error('Change status error:', e);
+            box.textContent = 'The status could not be changed.';
+            box.classList.remove('hidden');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    // ---------- Delete ----------
+    async function deleteTournament(t) {
+        const ok = await askConfirm('Delete tournament', 'Delete "' + t.name + '"? This cannot be undone.', 'Delete');
+        if (!ok) return;
+        try {
+            const res = await authenticatedFetch(API + '?id=' + idParam(t.id), { method: 'DELETE' });
+            const result = await res.json().catch(() => ({ success: false }));
+            if (!result.success) {
+                afterChange(result.message || 'The tournament could not be deleted.', 'error');
+                return;
+            }
+            if (openId === t.id) closeTournament(false);
+            showMsg('pageMessage', 'Tournament deleted.', 'ok');
+            loadList(true);
+        } catch (e) {
+            console.error('Delete error:', e);
+            afterChange('The tournament could not be deleted.', 'error');
+        }
+    }
+
+    // ============================================
+    // CREATE TOURNAMENT (the shared form in a panel)
+    // ============================================
+    const createPanel = document.getElementById('createPanel');
+    const createBackdrop = document.getElementById('createBackdrop');
+
+    function openCreate() {
+        if (!can('tournaments.organise_own') && !can('tournaments.manage_all')) return;
+        if (panelIsOpen()) closeTournament(false);
+        const f = getForm();
+        document.getElementById('createSlot').appendChild(f.host);
+        f.tf.reset();
+        f.loadedFrom = null;
+        showMsg('createMessage', '');
+        hideCreateDuplicates();
+        document.getElementById('createSubmit').disabled = false;
+        pushLayer(createPanel, closeCreate, document.getElementById('createBtn'));
+        createBackdrop.classList.remove('hidden');
+        createPanel.classList.remove('hidden');
+        requestAnimationFrame(() => createPanel.classList.add('is-open'));
+        document.getElementById('createClose').focus();
+    }
+
+    function closeCreate() {
+        if (!layers.some(l => l.node === createPanel)) return;
+        createPanel.classList.remove('is-open');
+        createBackdrop.classList.add('hidden');
+        setTimeout(() => { if (!createPanel.classList.contains('is-open')) createPanel.classList.add('hidden'); }, 230);
+        const layer = popLayer(createPanel);
+        if (layer && layer.returnFocus && document.contains(layer.returnFocus)) layer.returnFocus.focus();
+    }
+
+    // ---------- Similar tournaments (same date or within 3 days, similar name) ----------
+    let createWarnedKey = '';
+
+    async function similarTournaments(name, date) {
+        name = String(name || '').trim();
+        date = String(date || '');
+        if (name.length < 3 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+        try {
+            const data = await getJson(API + '?' + new URLSearchParams({ action: 'similar', name: name.slice(0, 200), date: date }).toString());
+            return data && data.success && Array.isArray(data.similar) ? data.similar : [];
+        } catch (e) {
+            console.error('Similar tournaments error:', e);
+            return []; // the check never blocks creating
+        }
+    }
+
+    function showCreateDuplicates(similar) {
+        const ul = document.getElementById('createDuplicatesList');
+        ul.textContent = '';
+        similar.forEach(t => {
+            const li = el('li', 'px-3 py-2');
+            li.appendChild(el('p', 'text-sm font-black text-white break-words', t.name));
+            li.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [formatDate(t.date), t.organiser].filter(Boolean).join(' • ')));
+            const line = el('div', 'flex flex-wrap items-center gap-2 mt-1');
+            line.appendChild(statusTag(t.status));
+            line.appendChild(el('span', 'text-xs font-semibold text-gray-400', countsText(t)));
+            li.appendChild(line);
+            ul.appendChild(li);
+        });
+        const box = document.getElementById('createDuplicates');
+        box.classList.remove('hidden');
+        box.scrollIntoView({ block: 'nearest' });
+    }
+
+    function hideCreateDuplicates() {
+        createWarnedKey = '';
+        document.getElementById('createDuplicates').classList.add('hidden');
+    }
+
+    document.getElementById('createBtn').addEventListener('click', openCreate);
+    document.getElementById('createClose').addEventListener('click', closeCreate);
+    document.getElementById('createCancel').addEventListener('click', closeCreate);
+    createBackdrop.addEventListener('click', closeCreate);
+
+    document.getElementById('createForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const tf = getForm().tf;
+        showMsg('createMessage', '');
+        const error = tf.validate();
+        if (error) { showMsg('createMessage', error, 'error'); return; }
+        const submit = document.getElementById('createSubmit');
+        submit.disabled = true;
+        try {
+            const formData = tf.buildFormData();
+            // Duplicate check, as a warning only: shown once for a name and date
+            const checkKey = String(formData.get('name') || '').trim().toLowerCase() + '|' + String(formData.get('tournamentDate') || '');
+            if (checkKey !== createWarnedKey) {
+                const similar = await similarTournaments(formData.get('name'), formData.get('tournamentDate'));
+                if (similar.length) {
+                    createWarnedKey = checkKey;
+                    showCreateDuplicates(similar);
+                    submit.disabled = false;
+                    return;
+                }
+            }
+            document.getElementById('createDuplicates').classList.add('hidden');
+            const res = await authenticatedFetch(API, { method: 'POST', body: formData });
+            const result = await res.json().catch(() => ({ success: false }));
+            if (!result.success) {
+                showMsg('createMessage', result.message || 'The tournament could not be created.', 'error');
+                submit.disabled = false;
+                return;
+            }
+            closeCreate();
+            showMsg('pageMessage', result.status === 'Approved'
+                ? 'Tournament created and approved.'
+                : 'Tournament created. It is waiting approval.', 'ok');
+            loadList(true);
+        } catch (err) {
+            console.error('Create tournament error:', err);
+            showMsg('createMessage', 'The tournament could not be created. Please try again.', 'error');
+            submit.disabled = false;
+        }
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+# ============================================
+# BROADCAST DOWNLOADS - files linked from broadcast emails
+# Stored under random names. Only PDF, JPG, PNG and Word files are served,
+# always as a download.
+# ============================================
+
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+    Require all denied
+    <FilesMatch "\.(pdf|jpg|png|docx)$">
+        Require all granted
+    </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+    <FilesMatch "\.(pdf|jpg|png|docx)$">
+        Order deny,allow
+        Allow from all
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Content-Disposition "attachment"
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>

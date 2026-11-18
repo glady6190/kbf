@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Notification - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+
+        .field-input { width: 100%; background: #1e293b; border: 4px solid #374151; color: #fff; padding: .625rem .875rem; font-weight: 700; font-size: .875rem; }
+        .field-input:focus { outline: none; border-color: var(--theme-primary); }
+
+        .tab-btn { padding: .625rem 1rem; font-weight: 900; text-transform: uppercase; font-size: .75rem; color: #9ca3af; border: 2px solid #374151; background: #0f172a; }
+        .tab-btn:hover { color: #fff; }
+        .tab-btn[aria-selected="true"] { background: var(--theme-primary); color: #0F172A; border-color: var(--theme-primary); }
+        .tab-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        .drop-zone { border: 2px dashed #4b5563; background: #0f172a; }
+        .drop-zone:hover, .drop-zone.drag { border-color: var(--theme-primary); }
+        .drop-zone:focus-within { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+
+        .choice { accent-color: var(--theme-primary); width: 18px; height: 18px; flex-shrink: 0; }
+
+        @media (max-width: 768px) {
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <a href="/admin/notifications" class="inline-flex items-center gap-2 mb-4 text-xs font-black uppercase text-gray-400 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                All notifications
+            </a>
+            <h1 id="eventTitle" class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Notification</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p id="eventDescription" class="text-gray-400 font-bold uppercase text-xs sm:text-sm"></p>
+        </div>
+
+        <!-- Control centre layout -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0">
+
+        <div id="pageLoading" class="py-16 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+
+        <div id="pageContent" class="hidden">
+            <div id="tabs" class="hidden flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Emails for this event"></div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[1fr_18rem] gap-6">
+                <!-- ============================ -->
+                <!-- EDITING AN EMAIL -->
+                <!-- ============================ -->
+                <div class="space-y-6 min-w-0">
+                    <section id="emailPanel" class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" role="tabpanel" aria-labelledby="emailHeading">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h2 id="emailHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Email</h2>
+                            <span id="emailState" class="text-xs font-bold uppercase text-gray-400"></span>
+                        </div>
+                        <p id="emailOffNote" class="hidden text-xs font-bold text-amber-400">This email is switched off on the Notifications page, so it is not sent at the moment.</p>
+
+                        <div>
+                            <label for="subjectInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Subject</label>
+                            <input type="text" id="subjectInput" class="field-input" maxlength="255" autocomplete="off">
+                        </div>
+
+                        <div>
+                            <span class="block text-xs font-black theme-primary-text uppercase mb-2" id="messageLabel">Message</span>
+                            <div id="editorHost" aria-labelledby="messageLabel"></div>
+                            <p class="text-xs text-gray-500 font-semibold mt-2">The KBF-UK header, colours and footer are added to every email automatically.</p>
+                        </div>
+
+                        <!-- Attachments -->
+                        <div>
+                            <span class="block text-xs font-black theme-primary-text uppercase mb-2">Attachments</span>
+                            <ul id="attachmentList" class="flex flex-wrap gap-2 mb-3"></ul>
+                            <label id="dropZone" class="drop-zone flex flex-col items-center justify-center gap-1 p-4 text-center cursor-pointer transition">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                <span class="text-xs font-black uppercase text-gray-200">Add a file</span>
+                                <span class="text-xs text-gray-400 font-semibold">PDF, JPG, PNG or Word, up to <span id="attachmentLimitMb">5</span> MB in total.</span>
+                                <input type="file" id="fileInput" class="sr-only" accept=".pdf,.jpg,.jpeg,.png,.docx,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                            </label>
+                            <p class="text-xs text-gray-500 font-semibold mt-2">Files are saved as soon as they are added or removed.</p>
+                        </div>
+                    </section>
+
+                    <!-- ============================ -->
+                    <!-- ADMIN RECIPIENTS -->
+                    <!-- ============================ -->
+                    <section id="adminPanel" class="hidden bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-4" aria-labelledby="adminHeading">
+                        <h2 id="adminHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Admin recipients</h2>
+                        <p id="adminPermissionNote" class="text-xs sm:text-sm text-gray-300 font-semibold"></p>
+                        <fieldset>
+                            <legend class="sr-only">Who receives the admin email</legend>
+                            <div id="candidateList" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                        </fieldset>
+                        <p class="text-xs font-bold text-gray-400">If nobody is ticked, Super Admins receive it.</p>
+
+                        <fieldset class="pt-2">
+                            <legend class="block text-xs font-black theme-primary-text uppercase mb-2">How it is sent</legend>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                                    <input type="radio" name="delivery" value="immediate" class="choice mt-0.5">
+                                    <span class="text-sm font-bold text-white">Send straight away</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                                    <input type="radio" name="delivery" value="daily" class="choice mt-0.5">
+                                    <span>
+                                        <span class="block text-sm font-bold text-white">One summary email a day</span>
+                                        <span class="block text-xs text-gray-400 font-semibold mt-0.5">Sent each night with everything since the last summary.</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </fieldset>
+                        <p id="volumeNote" class="hidden p-3 border-2 border-amber-500 bg-amber-500/10 text-xs sm:text-sm font-semibold text-amber-200" role="status"></p>
+                    </section>
+
+                    <!-- ============================ -->
+                    <!-- AUTOMATIC REMINDER (results_overdue only) -->
+                    <!-- ============================ -->
+                    <section id="reminderPanel" class="hidden bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-2" aria-labelledby="reminderHeading">
+                        <h2 id="reminderHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Automatic reminder</h2>
+                        <label for="reminderDaysInput" class="block text-xs font-black theme-primary-text uppercase">Send automatically this many days after the tournament</label>
+                        <input type="number" id="reminderDaysInput" class="field-input sm:max-w-[10rem]" min="1" max="60" step="1" inputmode="numeric" aria-describedby="reminderDaysHint">
+                        <p id="reminderDaysHint" class="text-xs text-gray-400 font-semibold">Only one automatic reminder is sent per tournament.</p>
+                    </section>
+
+                    <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
+                    <ul id="warningList" class="hidden space-y-1 p-3 sm:p-4 border-2 sm:border-4 border-amber-500 bg-amber-500/10 text-amber-200 text-xs sm:text-sm font-semibold" role="status"></ul>
+                    <p id="readOnlyNote" class="hidden text-xs font-bold uppercase text-amber-400">Not available while viewing as someone else</p>
+
+                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                        <a href="/admin/notifications" class="w-full sm:w-auto text-center px-6 py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 font-black uppercase text-xs sm:text-sm hover:border-gray-500 transition">Cancel</a>
+                        <button type="button" id="saveBtn" class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save email</button>
+                    </div>
+                </div>
+
+                <!-- ============================ -->
+                <!-- RIGHT COLUMN -->
+                <!-- ============================ -->
+                <div class="space-y-6">
+                    <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-5" aria-labelledby="phHeading">
+                        <h2 id="phHeading" class="text-sm font-black theme-primary-text uppercase mb-3">Placeholders</h2>
+                        <p class="text-xs text-gray-400 font-semibold mb-3">Replaced with the real details when the email is sent.</p>
+                        <dl id="placeholderList" class="space-y-2"></dl>
+                    </section>
+
+                    <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-5 space-y-2" aria-labelledby="checkHeading">
+                        <h2 id="checkHeading" class="text-sm font-black theme-primary-text uppercase mb-1">Check before saving</h2>
+                        <button type="button" id="previewBtn" class="w-full flex items-center gap-2 px-3 py-2.5 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition disabled:opacity-40">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            Preview with sample details
+                        </button>
+                        <button type="button" id="testBtn" class="w-full flex items-center gap-2 px-3 py-2.5 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition disabled:opacity-40">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Send a test to me
+                        </button>
+                        <button type="button" id="restoreBtn" class="w-full flex items-center gap-2 px-3 py-2.5 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition disabled:opacity-40">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Restore the original wording
+                        </button>
+                        <p id="checkMessage" class="hidden text-xs font-bold pt-1" role="status"></p>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        </main>
+        </div>
+    </div>
+
+    <!-- Preview dialog -->
+    <div id="previewDialog" class="hidden fixed inset-0 z-[70] bg-black/80 p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="mx-auto max-w-3xl bg-slate-900 border-4 border-gray-700">
+            <div class="flex items-start justify-between gap-4 p-4 border-b-2 border-gray-700">
+                <div class="min-w-0">
+                    <h2 id="previewTitle" class="text-sm font-black uppercase theme-primary-text">Preview with sample details</h2>
+                    <p class="text-xs text-gray-300 font-semibold mt-1 break-words">Subject: <span id="previewSubject" class="text-white"></span></p>
+                </div>
+                <button type="button" id="previewClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close preview">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <iframe id="previewFrame" title="Email preview" sandbox="" class="w-full bg-white" style="height:70vh;border:0"></iframe>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script src="/js/kbf-editor.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): control.notifications
+    // ============================================
+    KBFShell.startControl({ section: 'notifications' }).then(function (user) {
+        window.kbfUser = user;
+        loadEvent();
+    });
+
+    const API = '/api/control-notifications.php';
+    const escapeHtml = KBFShell.escapeHtml;
+    const eventKey = new URLSearchParams(window.location.search).get('key') || '';
+
+    let eventData = null;
+    let emails = [];          // [{audience, tabLabel, subject, bodyHtml, attachments, enabled}]
+    let current = 0;          // index of the email being edited
+    let editor = null;
+    let canEdit = true;
+    let dailyLimit = 100;
+
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    async function postJson(body) {
+        const res = await authenticatedFetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    }
+
+    function showSave(text, ok) {
+        const box = document.getElementById('saveMessage');
+        box.textContent = text;
+        box.setAttribute('role', ok ? 'status' : 'alert');
+        box.className = 'p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (ok
+            ? 'border-green-500 bg-green-500/20 text-green-400'
+            : 'border-red-500 bg-red-500/20 text-red-400');
+    }
+
+    function showCheck(text, ok) {
+        const p = document.getElementById('checkMessage');
+        p.textContent = text;
+        p.className = 'text-xs font-bold pt-1 ' + (ok ? 'text-green-400' : 'text-red-400');
+    }
+
+    function showWarnings(list) {
+        const ul = document.getElementById('warningList');
+        ul.innerHTML = '';
+        (list || []).forEach(w => {
+            const li = document.createElement('li');
+            li.textContent = w;
+            ul.appendChild(li);
+        });
+        ul.classList.toggle('hidden', !(list && list.length));
+    }
+
+    function formatSize(bytes) {
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+        return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    }
+
+    // ============================================
+    // LOAD
+    // ============================================
+    async function loadEvent() {
+        try {
+            const res = await authenticatedFetch(API + '?action=event&key=' + encodeURIComponent(eventKey));
+            const data = await res.json();
+            if (!data.success) {
+                document.getElementById('pageLoading').textContent = data.message || 'Could not load this notification';
+                return;
+            }
+            eventData = data;
+            emails = (data.emails || []).map(e => Object.assign({}, e));
+            canEdit = data.canEdit !== false;
+            dailyLimit = parseInt(data.dailyLimit, 10) || 100;
+            if (data.attachmentLimit) {
+                document.getElementById('attachmentLimitMb').textContent = String(Math.round(data.attachmentLimit / 1048576));
+            }
+
+            document.title = data.event.label + ' - Notifications - Admin';
+            document.getElementById('eventTitle').textContent = data.event.label;
+            document.getElementById('eventDescription').textContent = data.event.description;
+
+            renderPlaceholders(data.placeholders || []);
+            editor = KBFEditor.create(document.getElementById('editorHost'), {
+                label: 'Message',
+                placeholders: data.placeholders || []
+            });
+
+            renderTabs();
+            showEmail(0);
+            renderAdmin(data.admin);
+            renderReminder(data.reminderDays);
+
+            if (!canEdit) {
+                document.getElementById('readOnlyNote').classList.remove('hidden');
+                ['saveBtn', 'testBtn', 'restoreBtn', 'fileInput', 'reminderDaysInput'].forEach(id => { document.getElementById(id).disabled = true; });
+            }
+            if (!emails.length) {
+                document.getElementById('emailPanel').classList.add('hidden');
+                ['previewBtn', 'testBtn', 'restoreBtn'].forEach(id => { document.getElementById(id).disabled = true; });
+            }
+
+            document.getElementById('pageLoading').classList.add('hidden');
+            document.getElementById('pageContent').classList.remove('hidden');
+        } catch (e) {
+            console.error('Load notification error:', e);
+            document.getElementById('pageLoading').textContent = 'Could not load this notification';
+        }
+    }
+
+    function renderPlaceholders(list) {
+        const dl = document.getElementById('placeholderList');
+        dl.innerHTML = '';
+        list.forEach(p => {
+            const wrap = document.createElement('div');
+            wrap.innerHTML = '<dt class="font-mono text-xs font-bold theme-primary-text">{' + escapeHtml(p.key) + '}</dt>' +
+                '<dd class="text-xs text-gray-400 font-semibold">' + escapeHtml(p.description) + '</dd>';
+            dl.appendChild(wrap);
+        });
+    }
+
+    // ============================================
+    // TABS (one per email of this event)
+    // ============================================
+    function renderTabs() {
+        const tabs = document.getElementById('tabs');
+        tabs.innerHTML = '';
+        if (emails.length < 2) {
+            tabs.classList.add('hidden');
+            return;
+        }
+        tabs.classList.remove('hidden');
+        emails.forEach((e, i) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'tab-btn';
+            b.id = 'tab-' + e.audience;
+            b.setAttribute('role', 'tab');
+            b.setAttribute('aria-controls', 'emailPanel');
+            b.textContent = e.tabLabel;
+            b.addEventListener('click', () => { keepCurrent(); showEmail(i); });
+            b.addEventListener('keydown', ev => {
+                if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+                    ev.preventDefault();
+                    const next = (i + (ev.key === 'ArrowRight' ? 1 : emails.length - 1)) % emails.length;
+                    keepCurrent();
+                    showEmail(next);
+                    document.getElementById('tab-' + emails[next].audience).focus();
+                }
+            });
+            tabs.appendChild(b);
+        });
+    }
+
+    // Remember what is typed before switching tabs
+    function keepCurrent() {
+        if (!emails[current] || !editor) return;
+        emails[current].subject = document.getElementById('subjectInput').value;
+        emails[current].bodyHtml = editor.getHtml();
+    }
+
+    function showEmail(i) {
+        current = i;
+        const e = emails[i];
+        if (!e) return;
+        document.querySelectorAll('#tabs [role="tab"]').forEach((b, idx) => {
+            b.setAttribute('aria-selected', idx === i ? 'true' : 'false');
+            b.tabIndex = idx === i ? 0 : -1;
+        });
+        document.getElementById('emailPanel').setAttribute('aria-labelledby', emails.length > 1 ? 'tab-' + e.audience : 'emailHeading');
+        document.getElementById('emailHeading').textContent = e.tabLabel;
+        document.getElementById('emailState').textContent = e.custom ? 'Changed wording' : 'Original wording';
+        document.getElementById('emailOffNote').classList.toggle('hidden', !!e.enabled);
+        document.getElementById('subjectInput').value = e.subject;
+        editor.setHtml(e.bodyHtml);
+        renderAttachments();
+        document.getElementById('checkMessage').classList.add('hidden');
+    }
+
+    // ============================================
+    // ATTACHMENTS
+    // ============================================
+    function renderAttachments() {
+        const ul = document.getElementById('attachmentList');
+        ul.innerHTML = '';
+        const list = (emails[current] && emails[current].attachments) || [];
+        list.forEach(a => {
+            const li = document.createElement('li');
+            li.className = 'flex items-center gap-2 pl-3 pr-1 py-1 bg-slate-800 border-2 border-gray-700 text-xs font-bold text-gray-200 max-w-full';
+            const name = document.createElement('span');
+            name.className = 'truncate max-w-[14rem]';
+            name.textContent = a.name;
+            const size = document.createElement('span');
+            size.className = 'text-gray-400 whitespace-nowrap';
+            size.textContent = formatSize(a.size);
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'p-1 text-gray-400 hover:text-red-400 disabled:opacity-40';
+            remove.setAttribute('aria-label', 'Remove ' + a.name);
+            remove.disabled = !canEdit;
+            remove.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+            remove.addEventListener('click', () => removeAttachment(a.id));
+            li.appendChild(name);
+            li.appendChild(size);
+            li.appendChild(remove);
+            ul.appendChild(li);
+        });
+    }
+
+    async function uploadFile(file) {
+        if (!file || !canEdit) return;
+        const total = ((emails[current] && emails[current].attachments) || []).reduce((s, a) => s + a.size, 0);
+        const limit = eventData.attachmentLimit || 5242880;
+        if (total + file.size > limit) {
+            showSave('Attachments can be up to ' + Math.round(limit / 1048576) + ' MB in total for each email.', false);
+            return;
+        }
+        const form = new FormData();
+        form.append('action', 'uploadAttachment');
+        form.append('key', eventKey);
+        form.append('audience', emails[current].audience);
+        form.append('file', file);
+        try {
+            const res = await authenticatedFetch(API, { method: 'POST', body: form });
+            const data = await res.json();
+            if (!data.success) {
+                showSave(data.message || 'The file could not be added.', false);
+                return;
+            }
+            emails[current].attachments = data.attachments || [];
+            renderAttachments();
+            showSave(data.message || 'File added', true);
+        } catch (e) {
+            console.error('Upload error:', e);
+            showSave('The file could not be added. Please try again.', false);
+        }
+    }
+
+    async function removeAttachment(id) {
+        try {
+            const data = await postJson({ action: 'removeAttachment', id: id });
+            if (!data.success) {
+                showSave(data.message || 'The file could not be removed.', false);
+                return;
+            }
+            emails[current].attachments = data.attachments || [];
+            renderAttachments();
+            showSave(data.message || 'File removed', true);
+        } catch (e) {
+            console.error('Remove attachment error:', e);
+            showSave('The file could not be removed. Please try again.', false);
+        }
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        fileInput.value = '';
+        uploadFile(file);
+    });
+    const dropZone = document.getElementById('dropZone');
+    ['dragenter', 'dragover'].forEach(t => dropZone.addEventListener(t, e => { e.preventDefault(); dropZone.classList.add('drag'); }));
+    ['dragleave', 'drop'].forEach(t => dropZone.addEventListener(t, e => { e.preventDefault(); dropZone.classList.remove('drag'); }));
+    dropZone.addEventListener('drop', e => {
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        uploadFile(file);
+    });
+
+    // ============================================
+    // ADMIN RECIPIENTS
+    // ============================================
+    function renderAdmin(admin) {
+        if (!admin) return;
+        document.getElementById('adminPanel').classList.remove('hidden');
+        document.getElementById('adminPermissionNote').textContent =
+            'Active staff who can "' + (admin.permissionLabel || admin.permission) + '".';
+
+        const list = document.getElementById('candidateList');
+        list.innerHTML = '';
+        if (!admin.candidates.length) {
+            list.innerHTML = '<p class="text-xs text-gray-400 font-semibold">Nobody holds this permission yet.</p>';
+        }
+        admin.candidates.forEach(c => {
+            const label = document.createElement('label');
+            label.className = 'flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer';
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.className = 'choice mt-0.5';
+            box.value = String(c.userId);
+            box.checked = admin.chosen.indexOf(c.userId) !== -1;
+            box.disabled = !canEdit;
+            box.addEventListener('change', updateVolume);
+            const text = document.createElement('span');
+            text.className = 'min-w-0';
+            const name = document.createElement('span');
+            name.className = 'block text-sm font-bold text-white';
+            name.textContent = c.name + (c.isSuperAdmin ? ' (Super Admin)' : '');
+            const email = document.createElement('span');
+            email.className = 'block text-xs text-gray-400 font-semibold break-all';
+            email.textContent = c.email;
+            text.appendChild(name);
+            text.appendChild(email);
+            label.appendChild(box);
+            label.appendChild(text);
+            list.appendChild(label);
+        });
+
+        document.querySelectorAll('input[name="delivery"]').forEach(r => {
+            r.checked = r.value === admin.delivery;
+            r.disabled = !canEdit;
+            r.addEventListener('change', updateVolume);
+        });
+        updateVolume();
+    }
+
+    // ============================================
+    // AUTOMATIC REMINDER (results_overdue only)
+    // ============================================
+    function renderReminder(days) {
+        const panel = document.getElementById('reminderPanel');
+        if (days === null || days === undefined) {
+            panel.classList.add('hidden');
+            return;
+        }
+        document.getElementById('reminderDaysInput').value = String(parseInt(days, 10) || 7);
+        panel.classList.remove('hidden');
+    }
+
+    function chosenReminderDays() {
+        const raw = document.getElementById('reminderDaysInput').value.trim();
+        return /^\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
+    }
+
+    function chosenRecipients() {
+        return Array.from(document.querySelectorAll('#candidateList input[type="checkbox"]:checked')).map(b => parseInt(b.value, 10));
+    }
+
+    function chosenDelivery() {
+        const r = document.querySelector('input[name="delivery"]:checked');
+        return r ? r.value : 'immediate';
+    }
+
+    // How many emails a day "straight away" could mean
+    function updateVolume() {
+        const note = document.getElementById('volumeNote');
+        const n = chosenRecipients().length;
+        if (chosenDelivery() !== 'immediate' || n < 2) {
+            note.classList.add('hidden');
+            return;
+        }
+        const tenTimes = n * 10;
+        note.textContent = 'Each time this happens, ' + n + ' emails are sent. If it happens 10 times in a day, that is ' +
+            tenTimes + ' emails, out of your daily limit of ' + dailyLimit + '. Choose "One summary email a day" to send each person one email instead.';
+        note.classList.remove('hidden');
+    }
+
+    // ============================================
+    // PREVIEW, TEST AND RESTORE
+    // ============================================
+    function currentDraft() {
+        keepCurrent();
+        const e = emails[current];
+        return { key: eventKey, audience: e.audience, subject: e.subject, bodyHtml: e.bodyHtml };
+    }
+
+    document.getElementById('previewBtn').addEventListener('click', async function () {
+        if (!emails.length) return;
+        this.disabled = true;
+        try {
+            const data = await postJson(Object.assign({ action: 'preview' }, currentDraft()));
+            if (!data.success) {
+                showCheck(data.message || 'Could not make the preview.', false);
+                return;
+            }
+            showWarnings(data.warnings);
+            document.getElementById('previewSubject').textContent = data.subject;
+            document.getElementById('previewFrame').srcdoc = data.html;
+            document.getElementById('previewDialog').classList.remove('hidden');
+            document.getElementById('previewClose').focus();
+        } catch (e) {
+            console.error('Preview error:', e);
+            showCheck('Could not make the preview.', false);
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    function closePreview() {
+        document.getElementById('previewDialog').classList.add('hidden');
+        document.getElementById('previewBtn').focus();
+    }
+    document.getElementById('previewClose').addEventListener('click', closePreview);
+    document.getElementById('previewDialog').addEventListener('click', e => { if (e.target.id === 'previewDialog') closePreview(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !document.getElementById('previewDialog').classList.contains('hidden')) closePreview();
+    });
+
+    document.getElementById('testBtn').addEventListener('click', async function () {
+        if (!emails.length || !canEdit) return;
+        this.disabled = true;
+        try {
+            const data = await postJson(Object.assign({ action: 'sendTest' }, currentDraft()));
+            showWarnings(data.warnings);
+            showCheck(data.message || (data.success ? 'Test sent' : 'The test could not be sent.'), !!data.success);
+        } catch (e) {
+            console.error('Test email error:', e);
+            showCheck('The test could not be sent.', false);
+        } finally {
+            this.disabled = !canEdit;
+        }
+    });
+
+    document.getElementById('restoreBtn').addEventListener('click', async function () {
+        if (!emails.length || !canEdit) return;
+        if (!confirm('Put back the original subject and wording for "' + emails[current].tabLabel + '"? Your changes to this email will be lost.')) return;
+        this.disabled = true;
+        try {
+            const data = await postJson({ action: 'restoreTemplate', key: eventKey, audience: emails[current].audience });
+            if (!data.success) {
+                showCheck(data.message || 'Could not restore the original wording.', false);
+                return;
+            }
+            emails[current].subject = data.subject;
+            emails[current].bodyHtml = data.bodyHtml;
+            emails[current].custom = false;
+            showEmail(current);
+            showCheck(data.message || 'The original wording is back', true);
+        } catch (e) {
+            console.error('Restore error:', e);
+            showCheck('Could not restore the original wording.', false);
+        } finally {
+            this.disabled = !canEdit;
+        }
+    });
+
+    // ============================================
+    // SAVE
+    // ============================================
+    document.getElementById('saveBtn').addEventListener('click', async function () {
+        if (!canEdit) return;
+        keepCurrent();
+        const templates = {};
+        for (const e of emails) {
+            if (!e.subject.trim()) {
+                showEmail(emails.indexOf(e));
+                showSave(e.tabLabel + ': the subject is required.', false);
+                document.getElementById('subjectInput').focus();
+                return;
+            }
+            templates[e.audience] = { subject: e.subject, bodyHtml: e.bodyHtml };
+        }
+        const body = { action: 'saveEvent', key: eventKey, templates: templates };
+        if (eventData.admin) {
+            body.recipients = chosenRecipients();
+            body.delivery = chosenDelivery();
+        }
+        if (eventData.reminderDays !== null && eventData.reminderDays !== undefined) {
+            const days = chosenReminderDays();
+            if (!(days >= 1 && days <= 60)) {
+                showSave('Days after the tournament must be a whole number from 1 to 60.', false);
+                document.getElementById('reminderDaysInput').focus();
+                return;
+            }
+            body.reminderDays = days;
+        }
+
+        this.disabled = true;
+        try {
+            const data = await postJson(body);
+            if (!data.success) {
+                if (data.audience) {
+                    const idx = emails.findIndex(e => e.audience === data.audience);
+                    if (idx >= 0) showEmail(idx);
+                }
+                showSave(data.message || 'Could not save the email.', false);
+                return;
+            }
+            showWarnings(data.warnings);
+            showSave(data.message || 'Email saved', true);
+            // Reload so "Changed wording" and the cleaned message show
+            const keep = current;
+            const res = await authenticatedFetch(API + '?action=event&key=' + encodeURIComponent(eventKey));
+            const fresh = await res.json();
+            if (fresh.success) {
+                eventData = fresh;
+                emails = (fresh.emails || []).map(e => Object.assign({}, e));
+                showEmail(Math.min(keep, emails.length - 1));
+            }
+        } catch (e) {
+            console.error('Save email error:', e);
+            showSave('Could not save the email. Please try again.', false);
+        } finally {
+            this.disabled = !canEdit;
+        }
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Settings - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+        .theme-on-primary { color: #0F172A; }
+        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
+        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+
+        .field { width: 100%; background: #1e293b; border: 4px solid #374151; color: #fff; padding: .625rem .875rem; font-weight: 700; font-size: .875rem; }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field[aria-invalid="true"] { border-color: #ef4444; }
+        .field:disabled { opacity: .6; cursor: not-allowed; }
+        .field-number { max-width: 9rem; }
+        .label { display: block; font-size: .75rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .5rem; }
+        .hint { font-size: .75rem; color: #9ca3af; font-weight: 600; margin-top: .375rem; }
+
+        /* On/off switch */
+        .switch { position: relative; display: inline-flex; width: 44px; height: 24px; background: #334155; border: 2px solid #4b5563; transition: background-color .2s ease; flex-shrink: 0; }
+        .switch::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #94a3b8; transition: transform .2s ease, background-color .2s ease; }
+        .switch[aria-checked="true"] { background: var(--theme-primary); border-color: var(--theme-primary); }
+        .switch[aria-checked="true"]::after { transform: translateX(20px); background: #0F172A; }
+        .switch:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .switch:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* Maintenance panel: fixed amber on every theme */
+        .amber-panel { border-color: #f59e0b; }
+        .amber-tag { background: #f59e0b; color: #0F172A; }
+        .switch.amber[aria-checked="true"] { background: #f59e0b; border-color: #f59e0b; }
+
+        @media (max-width: 768px) {
+            .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
+            .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Site</span> settings</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+            <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Contact details, registration, the home page and upload limits</p>
+        </div>
+
+        <!-- Control centre layout -->
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <aside id="kbf-control-nav" class="lg:w-60 lg:flex-shrink-0"></aside>
+        <main class="flex-1 min-w-0">
+
+        <div id="pageLoading" class="py-16 text-center text-gray-400 font-bold uppercase text-sm">Loading...</div>
+
+        <form id="settingsForm" class="hidden space-y-6 sm:space-y-8" novalidate>
+            <!-- ============================ -->
+            <!-- CONTACT AND LINKS -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6" aria-labelledby="contactHeading">
+                <h2 id="contactHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-4">Contact and links</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="label" for="contact_email">General email</label>
+                        <input class="field" type="email" id="contact_email" autocomplete="off" aria-describedby="contact_email-hint">
+                        <p class="hint" id="contact_email-hint">Footer, contact and sponsorship enquiries.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="security_email">Security email</label>
+                        <input class="field" type="email" id="security_email" autocomplete="off" aria-describedby="security_email-hint">
+                        <p class="hint" id="security_email-hint">Shown in password emails.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="whatsapp_link">WhatsApp group link</label>
+                        <input class="field" type="url" id="whatsapp_link" autocomplete="off" aria-describedby="whatsapp_link-hint">
+                        <p class="hint" id="whatsapp_link-hint">Sent to approved players.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="site_base_url">Website address</label>
+                        <input class="field" type="url" id="site_base_url" autocomplete="off" aria-describedby="site_base_url-hint">
+                        <p class="hint" id="site_base_url-hint">Used to build links in emails. No slash at the end.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="social_facebook">Facebook page (optional)</label>
+                        <input class="field" type="url" id="social_facebook" autocomplete="off" placeholder="https://www.facebook.com/..." aria-describedby="social_facebook-hint">
+                        <p class="hint" id="social_facebook-hint">Shown in the footer when filled in.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="social_instagram">Instagram page (optional)</label>
+                        <input class="field" type="url" id="social_instagram" autocomplete="off" placeholder="https://www.instagram.com/..." aria-describedby="social_instagram-hint">
+                        <p class="hint" id="social_instagram-hint">Shown in the footer when filled in.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- REGISTRATION -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="registrationHeading">
+                <h2 id="registrationHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Registration</h2>
+                <div class="flex items-start gap-4 p-3 bg-slate-800 border-2 border-gray-700">
+                    <button type="button" class="switch mt-0.5" role="switch" id="registration_open" aria-checked="true" aria-labelledby="registration_open-label" aria-describedby="registration_open-hint"></button>
+                    <div>
+                        <span id="registration_open-label" class="block text-sm font-black text-white">Registration is open</span>
+                        <span id="registration_open-hint" class="hint block">When off, the register page shows the message below instead of the form.</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="label" for="registration_closed_message">Message when closed</label>
+                    <textarea class="field" id="registration_closed_message" rows="2" maxlength="300"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                        <label class="label" for="default_grade_id">Default grade for players added by an admin</label>
+                        <select class="field" id="default_grade_id" aria-describedby="default_grade_id-hint"></select>
+                        <p class="hint" id="default_grade_id-hint">Applicants still choose their own grade.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="min_player_age">Youngest age allowed</label>
+                        <input class="field field-number" type="number" id="min_player_age" min="5" max="21" step="1" inputmode="numeric" aria-describedby="min_player_age-hint">
+                        <p class="hint" id="min_player_age-hint">Checked against the year of birth.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="registration_limit_per_ip_hour">Registrations per internet address per hour</label>
+                        <input class="field field-number" type="number" id="registration_limit_per_ip_hour" min="1" max="100" step="1" inputmode="numeric" aria-describedby="registration_limit_per_ip_hour-hint">
+                        <p class="hint" id="registration_limit_per_ip_hour-hint">Stops automated sign-ups.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- HOME PAGE -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="homeHeading">
+                <h2 id="homeHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Home page</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="label" for="ticker_speed">Ticker speed</label>
+                        <input class="field field-number" type="number" id="ticker_speed" min="20" max="150" step="1" inputmode="numeric" aria-describedby="ticker_speed-hint">
+                        <p class="hint" id="ticker_speed-hint">Pixels per second for the upcoming tournaments bar.</p>
+                    </div>
+                    <div>
+                        <label class="label" for="sponsor_rotate_seconds">Seconds per sponsor</label>
+                        <input class="field field-number" type="number" id="sponsor_rotate_seconds" min="2" max="30" step="1" inputmode="numeric" aria-describedby="sponsor_rotate_seconds-hint">
+                        <p class="hint" id="sponsor_rotate_seconds-hint">How long each sponsor stays in the spotlight.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-3 bg-slate-800 border-2 border-gray-700">
+                    <button type="button" class="switch" role="switch" id="show_promotions_strip" aria-checked="true" aria-labelledby="show_promotions_strip-label"></button>
+                    <span id="show_promotions_strip-label" class="text-sm font-black text-white">Show the promotions strip</span>
+                </div>
+            </section>
+
+            <!-- ============================ -->
+            <!-- UPLOAD LIMITS -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-6 space-y-5" aria-labelledby="uploadHeading">
+                <h2 id="uploadHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Upload limits</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" id="uploadFields"></div>
+                <p id="serverLimitWarning" class="hidden p-3 border-2 border-amber-500 bg-amber-500/10 text-xs sm:text-sm font-semibold text-amber-200" role="note"></p>
+            </section>
+
+            <!-- ============================ -->
+            <!-- MAINTENANCE MODE (Super Admin only) -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 amber-panel p-4 sm:p-6 space-y-5" aria-labelledby="maintenanceHeading">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 id="maintenanceHeading" class="text-lg sm:text-xl lg:text-2xl font-black text-amber-400 uppercase">Maintenance mode</h2>
+                    <span class="amber-tag px-2 py-1 text-xs font-black uppercase">Super Admin only</span>
+                </div>
+                <p id="maintenanceReadOnly" class="hidden text-xs font-bold text-amber-300">Only a Super Admin can change these.</p>
+                <div class="flex items-start gap-4 p-3 bg-slate-800 border-2 border-gray-700">
+                    <button type="button" class="switch amber mt-0.5" role="switch" id="maintenance_mode" aria-checked="false" aria-labelledby="maintenance_mode-label" aria-describedby="maintenance_mode-hint"></button>
+                    <div>
+                        <span id="maintenance_mode-label" class="block text-sm font-black text-white">Show visitors a back-soon page</span>
+                        <span id="maintenance_mode-hint" class="hint block">Staff can still sign in and use the whole site.</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="label" for="maintenance_message" style="color:#fbbf24">Message</label>
+                    <textarea class="field" id="maintenance_message" rows="2" maxlength="300"></textarea>
+                </div>
+            </section>
+
+            <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
+            <p id="readOnlyNote" class="hidden text-xs font-bold uppercase text-amber-400">Not available while viewing as someone else</p>
+
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+                <p class="text-xs text-gray-400 font-semibold sm:mr-auto">Changes apply straight away.</p>
+                <button type="submit" id="saveBtn" class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save changes</button>
+            </div>
+        </form>
+
+        </main>
+        </div>
+    </div>
+
+    <script src="/js/admin-shell.js"></script>
+    <script>
+    // ============================================
+    // PAGE GUARD (shared shell, control centre): control.site_settings
+    // ============================================
+    KBFShell.startControl({ section: 'site' }).then(function (user) {
+        window.kbfUser = user;
+        load();
+    });
+
+    const API = '/api/control-site.php';
+    const TEXT_KEYS = ['contact_email', 'security_email', 'whatsapp_link', 'site_base_url', 'social_facebook', 'social_instagram',
+        'registration_closed_message', 'default_grade_id', 'min_player_age', 'registration_limit_per_ip_hour',
+        'ticker_speed', 'sponsor_rotate_seconds'];
+    const SWITCH_KEYS = ['registration_open', 'show_promotions_strip'];
+    const UPLOADS = [
+        { key: 'upload_mb_photo', label: 'Player photos' },
+        { key: 'upload_mb_news', label: 'News images' },
+        { key: 'upload_mb_gallery', label: 'Gallery photos' },
+        { key: 'upload_mb_poster', label: 'Tournament posters' },
+        { key: 'upload_mb_sponsor', label: 'Sponsor logos' },
+        { key: 'upload_mb_email_attachments', label: 'Email attachments in total' }
+    ];
+
+    let saved = null;
+    let isSuper = false;
+    let canEdit = true;
+
+    function getCSRFToken() {
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    function showMessage(text, ok) {
+        const box = document.getElementById('saveMessage');
+        box.textContent = text;
+        box.setAttribute('role', ok ? 'status' : 'alert');
+        box.className = 'p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (ok
+            ? 'border-green-500 bg-green-500/20 text-green-400'
+            : 'border-red-500 bg-red-500/20 text-red-400');
+    }
+
+    function setSwitch(id, on) {
+        document.getElementById(id).setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+
+    function switchOn(id) {
+        return document.getElementById(id).getAttribute('aria-checked') === 'true';
+    }
+
+    // ============================================
+    // BUILD AND LOAD
+    // ============================================
+    function buildUploadFields() {
+        const wrap = document.getElementById('uploadFields');
+        wrap.innerHTML = '';
+        UPLOADS.forEach(u => {
+            const div = document.createElement('div');
+            const label = document.createElement('label');
+            label.className = 'label';
+            label.htmlFor = u.key;
+            label.textContent = u.label;
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            const input = document.createElement('input');
+            input.className = 'field field-number';
+            input.type = 'number';
+            input.id = u.key;
+            input.min = '1';
+            input.max = '50';
+            input.step = '1';
+            input.inputMode = 'numeric';
+            input.addEventListener('input', updateServerWarning);
+            const unit = document.createElement('span');
+            unit.className = 'text-xs font-bold text-gray-400 uppercase';
+            unit.textContent = 'MB';
+            row.appendChild(input);
+            row.appendChild(unit);
+            div.appendChild(label);
+            div.appendChild(row);
+            wrap.appendChild(div);
+        });
+    }
+
+    async function load() {
+        buildUploadFields();
+        try {
+            const res = await authenticatedFetch(API);
+            const data = await res.json();
+            if (!data.success) {
+                document.getElementById('pageLoading').textContent = data.message || 'Could not load the site settings';
+                return;
+            }
+            saved = data;
+            isSuper = data.isSuperAdmin === true;
+            canEdit = data.canEdit !== false;
+
+            const select = document.getElementById('default_grade_id');
+            select.innerHTML = '';
+            data.grades.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = String(g.id);
+                opt.textContent = g.shortName + ' - ' + g.name;
+                select.appendChild(opt);
+            });
+
+            fill(data.settings);
+
+            // Who may change what
+            document.querySelectorAll('#settingsForm input, #settingsForm textarea, #settingsForm select, #settingsForm .switch').forEach(el => {
+                el.disabled = !canEdit;
+            });
+            const maintenanceLocked = !canEdit || !isSuper;
+            document.getElementById('maintenance_mode').disabled = maintenanceLocked;
+            document.getElementById('maintenance_message').disabled = maintenanceLocked;
+            document.getElementById('maintenanceReadOnly').classList.toggle('hidden', isSuper);
+            document.getElementById('readOnlyNote').classList.toggle('hidden', canEdit);
+            document.getElementById('saveBtn').disabled = !canEdit;
+
+            document.getElementById('pageLoading').classList.add('hidden');
+            document.getElementById('settingsForm').classList.remove('hidden');
+        } catch (e) {
+            console.error('Load site settings error:', e);
+            document.getElementById('pageLoading').textContent = 'Could not load the site settings';
+        }
+    }
+
+    function fill(s) {
+        TEXT_KEYS.forEach(k => { document.getElementById(k).value = s[k] != null ? s[k] : ''; });
+        UPLOADS.forEach(u => { document.getElementById(u.key).value = s[u.key] != null ? s[u.key] : ''; });
+        SWITCH_KEYS.forEach(k => setSwitch(k, String(s[k]) === '1'));
+        setSwitch('maintenance_mode', String(s.maintenance_mode) === '1');
+        document.getElementById('maintenance_message').value = s.maintenance_message || '';
+        updateServerWarning();
+    }
+
+    // "The server itself accepts files up to {n} MB."
+    function updateServerWarning() {
+        const box = document.getElementById('serverLimitWarning');
+        const limit = saved && saved.serverUploadLimitMb ? Number(saved.serverUploadLimitMb) : null;
+        if (!limit) { box.classList.add('hidden'); return; }
+        const n = Number.isInteger(limit) ? String(limit) : limit.toFixed(1);
+        box.textContent = 'The server itself accepts files up to ' + n + ' MB. Higher values above have no effect until the hosting limit is raised.';
+        const anyHigher = UPLOADS.some(u => Number(document.getElementById(u.key).value) > limit);
+        box.classList.toggle('hidden', !anyHigher && limit >= 50);
+        box.classList.toggle('border-red-500', anyHigher);
+    }
+
+    // Switches toggle on click
+    ['registration_open', 'show_promotions_strip', 'maintenance_mode'].forEach(id => {
+        const sw = document.getElementById(id);
+        sw.addEventListener('click', () => {
+            if (sw.disabled) return;
+            setSwitch(id, !switchOn(id));
+            document.getElementById('saveMessage').classList.add('hidden');
+        });
+    });
+
+    // ============================================
+    // SAVE
+    // ============================================
+    function collect() {
+        const out = {};
+        TEXT_KEYS.forEach(k => { out[k] = document.getElementById(k).value.trim(); });
+        UPLOADS.forEach(u => { out[u.key] = document.getElementById(u.key).value.trim(); });
+        SWITCH_KEYS.forEach(k => { out[k] = switchOn(k) ? '1' : '0'; });
+        if (isSuper) {
+            out.maintenance_mode = switchOn('maintenance_mode') ? '1' : '0';
+            out.maintenance_message = document.getElementById('maintenance_message').value.trim();
+        }
+        return out;
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!canEdit) return;
+        document.querySelectorAll('[aria-invalid="true"]').forEach(el => el.removeAttribute('aria-invalid'));
+
+        const settings = collect();
+        if (isSuper && settings.maintenance_mode === '1' && String(saved.settings.maintenance_mode) !== '1') {
+            if (!confirm('Switch on maintenance mode? Visitors will see the back-soon page until it is switched off. Staff can still sign in and use the whole site.')) return;
+        }
+
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        try {
+            const res = await authenticatedFetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save', settings: settings })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                if (data.field) {
+                    const el = document.getElementById(data.field);
+                    if (el) { el.setAttribute('aria-invalid', 'true'); el.focus(); }
+                }
+                showMessage(data.message || 'Could not save the changes', false);
+                return;
+            }
+            showMessage(data.message || 'Changes saved', true);
+            // Reload so the page shows exactly what was stored
+            const fresh = await (await authenticatedFetch(API)).json();
+            if (fresh.success) { saved = fresh; fill(fresh.settings); }
+        } catch (err) {
+            console.error('Save site settings error:', err);
+            showMessage('Could not save the changes. Please try again.', false);
+        } finally {
+            btn.disabled = !canEdit;
+        }
+    });
+    </script>
+    <script src="/js/session-manager.js"></script>
+</body>
+</html>

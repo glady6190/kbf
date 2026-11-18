@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Grading - KBF-UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        /* Theme variations */
+        [data-theme="emerald"] {
+            --theme-primary: #10b981;
+            --theme-secondary: #059669;
+            --theme-light: #34d399;
+        }
+        
+        [data-theme="cyan"] {
+            --theme-primary: #06b6d4;
+            --theme-secondary: #0891b2;
+            --theme-light: #22d3ee;
+        }
+        
+        [data-theme="yellow"] {
+            --theme-primary: #f4f916;
+            --theme-secondary: #eab308;
+            --theme-light: #fef08a;
+        }
+        
+        [data-theme="orange"] {
+            --theme-primary: #f97316;
+            --theme-secondary: #ea580c;
+            --theme-light: #fb923c;
+        }
+        
+        .theme-primary-bg {
+            background-color: var(--theme-primary);
+        }
+        
+        .theme-primary-text {
+            color: var(--theme-primary);
+        }
+        
+        .theme-primary-border {
+            border-color: var(--theme-primary);
+        }
+        
+        .theme-switcher-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .theme-switcher-btn:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+        
+        .theme-switcher-btn.active {
+            border-color: white;
+            box-shadow: 0 0 15px currentColor;
+        }
+        
+        .theme-switcher-btn.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .brutal-shadow {
+            box-shadow: 6px 6px 0px var(--theme-primary);
+        }
+        
+        .brutal-shadow:hover {
+            box-shadow: 8px 8px 0px var(--theme-primary);
+            transform: translate(-2px, -2px);
+        }
+        
+        /* Dropdown Menu Styles */
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #1e293b;
+    border: 4px solid;
+    border-color: var(--theme-primary);
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid #374151;
+}
+
+.dropdown-menu a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu a:hover {
+    background-color: #0f172a;
+    color: var(--theme-primary);
+    padding-left: 30px;
+}
+
+.dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    font-size: 0.6rem;
+    margin-left: 5px;
+    transition: transform 0.3s;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.dropdown:hover .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Mobile Dropdown */
+.mobile-dropdown-menu {
+    display: none;
+    background-color: #0f172a;
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+}
+
+.mobile-dropdown-menu.active {
+    display: block;
+}
+
+.mobile-dropdown-menu a {
+    display: block;
+    padding: 10px 20px;
+    color: #9ca3af;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-left: 3px solid #374151;
+    margin: 5px 0;
+    transition: all 0.2s;
+}
+
+.mobile-dropdown-menu a:hover {
+    border-left-color: var(--theme-primary);
+    color: var(--theme-primary);
+    padding-left: 25px;
+}
+
+/* ============================================
+   GRADING PAGE (theme colour comes only from --theme-primary)
+   ============================================ */
+.gr-head-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.gr-ring {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: #0B1324;
+    border: 3px solid var(--theme-primary);
+    box-shadow: 0 0 22px var(--theme-primary);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--theme-primary) 33%, transparent);
+    color: var(--theme-primary);
+}
+
+.gr-ring svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* A. Season card */
+.gr-season {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 18px 22px;
+    border: 4px solid #374151;
+    background: #0F172A;
+}
+
+.gr-season-label {
+    display: block;
+    color: var(--theme-primary);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+
+.gr-season-name {
+    display: block;
+    margin-top: 4px;
+    color: #FFFFFF;
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.15;
+    text-transform: uppercase;
+}
+
+.gr-season-reset {
+    display: block;
+    margin-top: 4px;
+    color: #9CA3AF;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* B. How grading works */
+.gr-help {
+    background: #0F172A;
+    border-bottom: 4px solid #374151;
+}
+
+.gr-help-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 18px 0;
+    background: transparent;
+    border: 0;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.gr-help-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: var(--theme-primary);
+}
+
+.gr-help-label {
+    flex: 1;
+    transition: color 0.2s ease;
+}
+
+.gr-help-chev {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--theme-primary);
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+}
+
+.gr-help-toggle[aria-expanded="true"] .gr-help-chev {
+    transform: rotate(-90deg);
+}
+
+.gr-help-toggle:hover .gr-help-label {
+    color: var(--theme-primary);
+}
+
+.gr-help-toggle:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 2px;
+}
+
+.gr-help-panel {
+    padding: 4px 0 28px;
+}
+
+.gr-help-panel[hidden] {
+    display: none;
+}
+
+.gr-steps {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.gr-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px;
+    border: 4px solid #374151;
+    background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+}
+
+.gr-step-title {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.gr-step-text {
+    margin: 6px 0 0;
+    color: #9CA3AF;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.gr-help-boxes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.gr-box {
+    padding: 18px;
+    border: 4px solid #374151;
+    background: #111827;
+}
+
+.gr-box-title {
+    margin: 0 0 14px;
+    color: var(--theme-primary);
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.gr-points {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.gr-points li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 2px solid #1F2937;
+    color: #E5E7EB;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.gr-points li:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.gr-points strong {
+    color: var(--theme-primary);
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.gr-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.gr-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #475569;
+    color: #CBD5E1;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.gr-chip.is-top {
+    background: var(--theme-primary);
+    border-color: var(--theme-primary);
+    color: #0F172A;
+}
+
+.gr-grades-text {
+    margin: 0;
+    color: #9CA3AF;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+/* C. Grade tabs (one swipeable row below lg, equal tiles at lg and up) */
+.gr-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding: 0 8px 10px 0;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.gr-tab {
+    flex: 0 0 auto;
+    min-width: 78px;
+    padding: 10px 12px;
+    border: 4px solid #374151;
+    border-radius: 0;
+    background: #0F172A;
+    color: #FFFFFF;
+    text-align: center;
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition: border-color 0.2s ease;
+}
+
+.gr-tab-letter {
+    display: block;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.gr-tab-count {
+    display: block;
+    margin-top: 4px;
+    color: #9CA3AF;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.gr-tab:hover {
+    border-color: var(--theme-primary);
+}
+
+.gr-tab.is-active {
+    background: var(--theme-primary);
+    border-color: var(--theme-primary);
+    color: #0F172A;
+    box-shadow: 6px 6px 0 var(--theme-primary);
+}
+
+.gr-tab.is-active .gr-tab-count {
+    color: #0F172A;
+}
+
+.gr-tab:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: -7px;
+}
+
+/* D. Grade leaders */
+.gr-leaders {
+    margin-bottom: 28px;
+}
+
+.gr-leaders[hidden] {
+    display: none;
+}
+
+.gr-section-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 16px;
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.gr-section-title::after {
+    content: '';
+    flex: 1;
+    border-top: 2px solid #374151;
+}
+
+.gr-section-title span {
+    color: var(--theme-primary);
+}
+
+.gr-leader-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+}
+
+.gr-leader {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    border: 4px solid #374151;
+    background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+    text-decoration: none;
+    transition: border-color 0.2s ease;
+}
+
+.gr-leader:hover,
+.gr-leader:focus-visible {
+    border-color: var(--theme-primary);
+}
+
+.gr-leader:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 3px;
+}
+
+.gr-place {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    background: var(--theme-primary);
+    color: #0F172A;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.gr-place svg {
+    width: 14px;
+    height: 14px;
+}
+
+.gr-leader-who {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gr-leader-text {
+    min-width: 0;
+}
+
+.gr-leader-name {
+    display: block;
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.15;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+
+.gr-leader-loc {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    color: #9CA3AF;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.gr-leader-loc svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--theme-primary);
+}
+
+.gr-leader-stats {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.gr-leader-pts {
+    display: block;
+    color: var(--theme-primary);
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.gr-leader-unit {
+    display: block;
+    margin-top: 4px;
+    color: #9CA3AF;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.gr-promo-note {
+    display: block;
+    color: #CBD5E1;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.gr-leader-stats .gr-promo-note {
+    text-align: right;
+}
+
+.gr-promo-note.is-eligible {
+    color: var(--theme-primary);
+}
+
+/* Progress bar (list and leader cards) */
+.gr-bar {
+    display: block;
+    height: 8px;
+    background: #1F2937;
+    overflow: hidden;
+}
+
+.gr-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--theme-primary);
+}
+
+/* Avatar */
+.gr-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 3px solid var(--theme-primary);
+    background: #0B1324;
+    color: var(--theme-primary);
+    font-size: 14px;
+    font-weight: 900;
+    overflow: hidden;
+}
+
+.gr-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* E. Search and sort bar */
+.gr-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.gr-search {
+    position: relative;
+    display: block;
+    flex: 1;
+    min-width: 0;
+}
+
+.gr-search svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    color: #9CA3AF;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.gr-search input {
+    width: 100%;
+    padding: 13px 14px 13px 46px;
+    border: 4px solid #374151;
+    border-radius: 0;
+    background: #111827;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.gr-search input::placeholder {
+    color: #6B7280;
+}
+
+.gr-search input:focus {
+    outline: none;
+    border-color: var(--theme-primary);
+}
+
+.gr-tools-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.gr-count {
+    margin: 0;
+    color: #9CA3AF;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.gr-sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gr-sort[hidden] {
+    display: none;
+}
+
+.gr-sort-label {
+    color: #9CA3AF;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.gr-sort-opts {
+    display: flex;
+}
+
+.gr-sort-btn {
+    padding: 7px 12px;
+    border: 3px solid #374151;
+    background: #0F172A;
+    color: #CBD5E1;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.gr-sort-btn + .gr-sort-btn {
+    border-left: 0;
+}
+
+.gr-sort-btn.is-active {
+    background: var(--theme-primary);
+    border-color: var(--theme-primary);
+    color: #0F172A;
+}
+
+.gr-sort-btn:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 2px;
+}
+
+/* F. The list (compact rows below lg, full columns at lg and up) */
+.gr-list-wrap {
+    border: 4px solid #374151;
+    background: #0F172A;
+}
+
+.gr-list-head {
+    display: none;
+}
+
+.gr-row {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-top: 2px solid #1F2937;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.gr-rows > .gr-row:first-child {
+    border-top: 0;
+}
+
+.gr-row:hover {
+    background: #111827;
+}
+
+.gr-row:focus-visible {
+    outline: 3px solid var(--theme-primary);
+    outline-offset: -3px;
+}
+
+.gr-rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: #1F2937;
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.gr-rank.is-top {
+    background: var(--theme-primary);
+    color: #0F172A;
+}
+
+.gr-rank.is-empty {
+    background: transparent;
+    border: 3px solid #1F2937;
+}
+
+.gr-player {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gr-player .gr-avatar {
+    display: none;
+}
+
+.gr-player-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.gr-name {
+    display: block;
+    overflow: hidden;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gr-id {
+    display: none;
+}
+
+.gr-meta {
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    color: #9CA3AF;
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gr-meta b {
+    color: var(--theme-primary);
+    font-weight: 800;
+}
+
+.gr-mobile-bar {
+    display: block;
+    max-width: 220px;
+    margin-top: 8px;
+}
+
+.gr-season-cell {
+    text-align: right;
+}
+
+.gr-pts {
+    display: block;
+    color: var(--theme-primary);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.gr-bar-block,
+.gr-loc,
+.gr-career,
+.gr-finals,
+.gr-chev {
+    display: none;
+}
+
+.gr-more {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    border-top: 2px solid #1F2937;
+    text-align: center;
+}
+
+.gr-more-text {
+    margin: 0;
+    color: #9CA3AF;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.gr-more-btn {
+    padding: 10px 20px;
+    border: 4px solid var(--theme-primary);
+    background: transparent;
+    color: var(--theme-primary);
+    font-size: 14px;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.gr-more-btn:hover {
+    background: var(--theme-primary);
+    color: #0F172A;
+}
+
+.gr-more-btn:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 3px;
+}
+
+.gr-more-btn[hidden] {
+    display: none;
+}
+
+.gr-sentinel {
+    height: 1px;
+}
+
+/* G. Floating back-to-top */
+.gr-top {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 4px solid #374151;
+    background: #0F172A;
+    color: var(--theme-primary);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, border-color 0.2s ease;
+}
+
+.gr-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.gr-top svg {
+    width: 20px;
+    height: 20px;
+}
+
+.gr-top:hover,
+.gr-top:focus-visible {
+    border-color: var(--theme-primary);
+}
+
+.gr-top:focus-visible {
+    outline: 3px solid #FFFFFF;
+    outline-offset: 3px;
+}
+
+@media (min-width: 1024px) {
+    .gr-head-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 40px;
+    }
+    .gr-season {
+        align-self: center;
+        flex-shrink: 0;
+    }
+    .gr-steps {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .gr-help-boxes {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+    }
+    .gr-tabs {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 12px;
+        margin-bottom: 32px;
+        padding: 0 6px 6px 0;
+        overflow: visible;
+    }
+    .gr-tab {
+        min-width: 0;
+        padding: 16px 8px;
+    }
+    .gr-tab-letter {
+        font-size: 30px;
+    }
+    .gr-tab-count {
+        font-size: 12px;
+    }
+    .gr-leader-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .gr-toolbar {
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+    }
+    .gr-tools-right {
+        flex-shrink: 0;
+        justify-content: flex-end;
+        gap: 20px;
+    }
+    .gr-list-head,
+    .gr-row {
+        grid-template-columns: 64px minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(250px, 1.6fr) 100px 70px 20px;
+        gap: 16px;
+        padding: 14px 22px;
+    }
+    .gr-list-head {
+        display: grid;
+        align-items: center;
+        background: #1F2937;
+        color: var(--theme-primary);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .gr-player .gr-avatar {
+        display: flex;
+    }
+    .gr-name {
+        font-size: 16px;
+    }
+    .gr-id {
+        display: block;
+        margin-top: 3px;
+        color: var(--theme-primary);
+        font-size: 12px;
+        font-weight: 800;
+    }
+    .gr-meta,
+    .gr-mobile-bar {
+        display: none;
+    }
+    .gr-loc {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        color: #CBD5E1;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .gr-loc svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--theme-primary);
+    }
+    .gr-loc span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .gr-season-cell {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        text-align: left;
+    }
+    .gr-pts {
+        min-width: 52px;
+        font-size: 22px;
+    }
+    .gr-bar-block {
+        display: block;
+        width: 150px;
+    }
+    .gr-bar-block .gr-promo-note {
+        margin-top: 5px;
+        font-size: 11px;
+    }
+    .gr-career,
+    .gr-finals {
+        display: block;
+        color: #E5E7EB;
+        font-size: 15px;
+        font-weight: 800;
+    }
+    .gr-chev {
+        display: block;
+        width: 20px;
+        height: 20px;
+        color: var(--theme-primary);
+    }
+    .gr-top {
+        right: 24px;
+        bottom: 24px;
+    }
+}
+    </style>
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <!-- Navigation -->
+ 
+<nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <a href="/" class="flex items-center space-x-4 hover:opacity-90 transition">
+                <div class="relative">
+                    <div class="absolute inset-0 theme-primary-bg rounded-full blur-md opacity-40"></div>
+                    <div class="relative w-16 h-16 rounded-full border-1 theme-primary-border overflow-hidden bg-white"
+                         style="box-shadow: 0 0 12px var(--theme-primary);">
+                        <img src="/assets/images/logo/KBF-Logo.jpeg"
+                             alt="KBF-UK Logo"
+                             class="w-full h-full object-contain">
+                    </div>
+                </div>
+                <div>
+                    <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
+                    <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                </div>
+            </a>
+            
+            <div class="hidden md:flex items-center space-x-2">
+                <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
+                <a href="/rankings" class="text-white font-black px-5 py-2 border-b-4 theme-primary-border uppercase text-sm tracking-wider">Grading</a>
+                <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
+                <a href="/gallery" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Gallery</a>
+                
+                <!-- Dropdown More Menu -->
+                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
+                        More
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="/news">News</a>
+                        <a href="/register">Register</a>
+                    </div>
+                </div>
+                
+                <!-- Theme Switcher -->
+                <div class="flex items-center space-x-2 ml-4 pl-4 border-l-2 border-gray-700">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+                
+                <div class="ml-4">
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
+                        Login
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Mobile menu button -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-btn" class="theme-primary-text p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
+            <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
+            <a href="/tournaments" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Tournaments</a>
+            <a href="/gallery" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Gallery</a>
+            
+            <!-- Mobile Dropdown More -->
+            <div>
+                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                    More
+                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                </button>
+                <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
+                    <a href="/news">News</a>
+                    <a href="/register">Register</a>
+                </div>
+            </div>
+            
+            <!-- Mobile Theme Switcher -->
+            <div class="px-3 py-4 border-t-2 border-gray-700">
+                <p class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-3">Choose Theme</p>
+                <div class="flex items-center space-x-3">
+                    <button onclick="changeTheme('emerald')" class="theme-switcher-btn bg-emerald-500 active" data-theme="emerald" title="Emerald Theme"></button>
+                    <button onclick="changeTheme('cyan')" class="theme-switcher-btn bg-cyan-500" data-theme="cyan" title="Cyan Theme"></button>
+                    <button onclick="changeTheme('yellow')" class="theme-switcher-btn bg-yellow-400" data-theme="yellow" title="Yellow Theme"></button>
+                    <button onclick="changeTheme('orange')" class="theme-switcher-btn bg-orange-500" data-theme="orange" title="Orange Theme"></button>
+                </div>
+            </div>
+            
+            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+        </div>
+    </div>
+</nav>
+
+    <!-- Page Header -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-4 theme-primary-border py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="gr-head-inner">
+                <div>
+                    <h1 class="text-5xl font-black uppercase mb-3">
+                        <span class="theme-primary-text">Player</span> Grading
+                    </h1>
+                    <div class="h-2 w-32 theme-primary-bg mb-4"></div>
+                    <p class="text-xl text-gray-300 font-bold uppercase">View Players by Category & Performance</p>
+                </div>
+
+                <!-- A. Season card -->
+                <div class="gr-season">
+                    <span class="gr-ring">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                    </span>
+                    <div>
+                        <span class="gr-season-label">Current season</span>
+                        <span id="gr-season-name" class="gr-season-name"></span>
+                        <span id="gr-season-reset" class="gr-season-reset"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- B. How grading works -->
+    <section class="gr-help" aria-label="How grading works">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <button type="button" id="gr-help-toggle" class="gr-help-toggle" aria-expanded="false" aria-controls="gr-help-panel">
+                <svg class="gr-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                <span class="gr-help-label">How grading works</span>
+                <svg class="gr-help-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+
+            <div id="gr-help-panel" class="gr-help-panel" hidden>
+                <ol class="gr-steps">
+                    <li class="gr-step">
+                        <span class="gr-ring">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                        </span>
+                        <div>
+                            <h3 class="gr-step-title">1. Register</h3>
+                            <p class="gr-step-text">Sign up online. Once you are approved, your KBF ID arrives by email.</p>
+                        </div>
+                    </li>
+                    <li class="gr-step">
+                        <span class="gr-ring">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></svg>
+                        </span>
+                        <div>
+                            <h3 class="gr-step-title">2. Play and earn points</h3>
+                            <p class="gr-step-text">Enter KBF tournaments. Reaching the quarter-finals or better earns points.</p>
+                        </div>
+                    </li>
+                    <li class="gr-step">
+                        <span class="gr-ring">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                        </span>
+                        <div>
+                            <h3 class="gr-step-title">3. Move up a grade</h3>
+                            <p id="gr-step3-text" class="gr-step-text">Reach your grade's promotion target in a season and you become eligible for promotion.</p>
+                        </div>
+                    </li>
+                </ol>
+
+                <div class="gr-help-boxes">
+                    <div class="gr-box">
+                        <h3 class="gr-box-title">Points per tournament</h3>
+                        <ul class="gr-points">
+                            <li>Winner <strong><span id="gr-pts-winner">&ndash;</span> pts</strong></li>
+                            <li>Runner-up <strong><span id="gr-pts-runner">&ndash;</span> pts</strong></li>
+                            <li>Semi-finalist <strong><span id="gr-pts-semi">&ndash;</span> pts</strong></li>
+                            <li>Quarter-finalist <strong><span id="gr-pts-quarter">&ndash;</span> pts</strong></li>
+                        </ul>
+                    </div>
+                    <div class="gr-box">
+                        <h3 id="gr-grades-heading" class="gr-box-title">Grades</h3>
+                        <div id="gr-chips" class="gr-chips"></div>
+                        <p id="gr-grades-text" class="gr-grades-text">When a new season starts, season points are reset. Career points are never reset.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        <!-- C. Grade tabs (All + one per category in DisplayOrder) -->
+        <div id="gr-tabs" class="gr-tabs" role="group" aria-label="Choose a grade"></div>
+
+        <!-- D. Grade leaders -->
+        <section id="gr-leaders" class="gr-leaders" aria-labelledby="gr-leaders-title" hidden>
+            <h2 id="gr-leaders-title" class="gr-section-title">Grade&nbsp;<span id="gr-leaders-grade"></span>&nbsp;leaders</h2>
+            <div id="gr-leader-grid" class="gr-leader-grid"></div>
+        </section>
+
+        <!-- E. Search and sort -->
+        <div class="gr-toolbar">
+            <label class="gr-search">
+                <span class="sr-only">Search players</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="searchInput" placeholder="Search by name, KBF ID or location" autocomplete="off">
+            </label>
+            <div class="gr-tools-right">
+                <p id="gr-count" class="gr-count" aria-live="polite"></p>
+                <div id="gr-sort" class="gr-sort" role="group" aria-labelledby="gr-sort-label" hidden>
+                    <span id="gr-sort-label" class="gr-sort-label">Sort</span>
+                    <div class="gr-sort-opts">
+                        <button type="button" class="gr-sort-btn is-active" data-sort="id" aria-pressed="true">KBF ID</button>
+                        <button type="button" class="gr-sort-btn" data-sort="name" aria-pressed="false">A to Z</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- F. Players list -->
+        <div class="gr-list-wrap">
+            <div id="loadingMessage" class="text-center py-16 text-gray-400 font-bold uppercase">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 mb-4" style="border-top-color: var(--theme-primary);"></div>
+                <p>Loading players...</p>
+            </div>
+            <div id="gr-list" hidden>
+                <div class="gr-list-head" aria-hidden="true">
+                    <span id="gr-col-first">Rank</span>
+                    <span>Player</span>
+                    <span>Location</span>
+                    <span>Season points</span>
+                    <span>Career points</span>
+                    <span>Finals</span>
+                    <span></span>
+                </div>
+                <div id="gr-rows" class="gr-rows"></div>
+                <div id="gr-sentinel" class="gr-sentinel" aria-hidden="true"></div>
+                <div id="gr-more" class="gr-more">
+                    <p id="gr-more-text" class="gr-more-text" aria-live="polite"></p>
+                    <button type="button" id="gr-more-btn" class="gr-more-btn">Show more</button>
+                </div>
+            </div>
+            <div id="noPlayersMessage" class="hidden text-center py-16">
+                <div class="inline-flex items-center justify-center w-24 h-24 theme-primary-bg border-4 border-gray-700 mb-6">
+                    <svg class="w-12 h-12 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 uppercase">No Players Found</h3>
+                <p class="text-gray-400 font-bold uppercase">Try a different category or search</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- G. Floating back-to-top -->
+    <button type="button" id="gr-top" class="gr-top" aria-label="Back to top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+    </button>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Call to action -->
+            <div class="kf-cta">
+                <div>
+                    <h2 class="kf-cta-title">Ready to get <span>on court?</span></h2>
+                    <p class="kf-cta-copy">Register as a player and start earning points at KBF tournaments.</p>
+                </div>
+                <div class="kf-cta-actions">
+                    <a href="/tournaments" class="kf-btn kf-btn-outline">Upcoming tournaments</a>
+                    <a href="/register" class="kf-btn kf-btn-solid">
+                        Register
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
+    <script>
+    // ============================================
+    // SETTINGS
+    // ============================================
+    // Points, thresholds and seasons come from /api/public-settings.php
+    // (managed on the admin Grading and seasons page), never fixed here.
+    const PAGE_SIZE = 30;
+
+    // Static Lucide icon markup (constants only, never player data)
+    const ICONS = {
+        trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+        pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+        chevron: '<path d="m9 18 6-6-6-6"/>'
+    };
+
+    // ============================================
+    // STATE
+    // ============================================
+    let categoryList = [];      // categories from /api/categories.php, sorted by DisplayOrder ascending (best grade first)
+    let playersByGrade = {};    // ShortName -> [player]
+    let currentCategory = 'All';
+    let allSort = 'id';         // "All" tab sort: 'id' (KBF ID number) or 'name' (A to Z)
+    let searchTerm = '';
+    let viewEntries = [];       // [{ player, rank }] for the current tab / sort / search
+    let shownCount = 0;
+    let listObserver = null;
+    let publicSettings = null;  // from /api/public-settings.php
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function changeTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('badminton-theme', theme);
+
+        document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-theme') === theme) {
+                btn.classList.add('active');
+            }
+        });
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+        }
+    }
+
+    function toggleMobileDropdown() {
+        const dropdown = document.getElementById('mobile-dropdown-content');
+        const arrow = document.getElementById('mobile-dropdown-arrow');
+        dropdown.classList.toggle('active');
+        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+    }
+
+    // Element builder: all player values go in via textContent, never innerHTML
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+    }
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        if (className) svg.setAttribute('class', className);
+        svg.innerHTML = ICONS[name];
+        return svg;
+    }
+
+    function toInt(value) {
+        const n = parseInt(value, 10);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function formatNumber(n) {
+        return Number(n).toLocaleString('en-GB');
+    }
+
+    function plural(n, word) {
+        return formatNumber(n) + ' ' + word + (n === 1 ? '' : 's');
+    }
+
+    function ordinal(n) {
+        const mod100 = n % 100;
+        if (mod100 >= 11 && mod100 <= 13) return n + 'th';
+        switch (n % 10) {
+            case 1: return n + 'st';
+            case 2: return n + 'nd';
+            case 3: return n + 'rd';
+            default: return n + 'th';
+        }
+    }
+
+    function byName(a, b) {
+        return a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' });
+    }
+
+    // Number inside a KBF ID ("KBF0042" -> 42); players without one go last
+    function kbfNumber(player) {
+        const match = player.kbfId.match(/\d+/);
+        return match ? parseInt(match[0], 10) : Number.POSITIVE_INFINITY;
+    }
+
+    // Only site paths or https addresses are used as image sources
+    function safePhoto(path) {
+        if (typeof path !== 'string') return null;
+        const value = path.trim();
+        if (/^\/(?!\/)[^\s"'<>]*$/.test(value) || /^https:\/\/[^\s"'<>]+$/i.test(value)) return value;
+        return null;
+    }
+
+    function initials(player) {
+        const first = player.first.charAt(0);
+        const last = player.last.charAt(0);
+        return (first + last).toUpperCase() || '?';
+    }
+
+    function profileHref(player) {
+        return '/player-profile?id=' + encodeURIComponent(player.userId);
+    }
+
+    function normalisePlayer(user, grade) {
+        const first = String(user.FirstName || '').trim();
+        const last = String(user.LastName || '').trim();
+        const player = {
+            userId: user.UserId,
+            kbfId: String(user.PlayerId || '').trim(),
+            first: first,
+            last: last,
+            name: (first + ' ' + last).trim(),
+            location: String(user.Location || '').trim(),
+            photo: safePhoto(user.ProfilePhoto),
+            season: toInt(user.TotalPoints),
+            career: toInt(user.CareerPoints),
+            finals: toInt(user.FinalsInCurrentCategory),
+            grade: grade
+        };
+        player.search = (player.name + ' ' + player.kbfId + ' ' + player.location).toLowerCase();
+        return player;
+    }
+
+    // ============================================
+    // SEASON (A)
+    // ============================================
+    // Season name and next reset date, worked out on the server with the same
+    // rules as the season reset job
+    function renderSeason() {
+        const season = publicSettings && publicSettings.season;
+        if (!season) return;
+        document.getElementById('gr-season-name').textContent = season.currentName;
+        document.getElementById('gr-season-reset').textContent = 'Season points reset on ' + season.nextResetLabel;
+    }
+
+    // "January and July", "March, July and November"
+    function monthList(names) {
+        if (names.length <= 1) return names.join('');
+        return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+    }
+
+    function renderResetSentence() {
+        const season = publicSettings && publicSettings.season;
+        if (!season) return;
+        const starts = season.startMonthNames || [];
+        const lead = starts.length === 1
+            ? 'A new season starts every ' + starts[0] + '. '
+            : 'New seasons start in ' + monthList(starts) + '. ';
+        document.getElementById('gr-grades-text').textContent = lead +
+            'When a new season starts, players on ' + formatNumber(season.floorTrigger) + ' points or more restart on ' +
+            formatNumber(season.floorValue) + ' and everyone else restarts on 0. Career points are never reset.';
+    }
+
+    // ============================================
+    // GRADES AND PROMOTION
+    // ============================================
+    function topGrade() {
+        return categoryList.length ? categoryList[0].ShortName : null;
+    }
+
+    // Promotion threshold for a grade; null for the top grade (no promotion)
+    // or when it is not known
+    function promotionThreshold(grade) {
+        if (grade === topGrade()) return null;
+        const fromSettings = publicSettings && Array.isArray(publicSettings.grades)
+            ? publicSettings.grades.find(g => g.shortName === grade) : null;
+        if (fromSettings && Number(fromSettings.promotionThreshold) > 0) return Number(fromSettings.promotionThreshold);
+        const category = categoryList.find(c => c.ShortName === grade);
+        const value = category ? Number(category.PromotionThreshold) : NaN;
+        return value > 0 ? value : null;
+    }
+
+    function progressFor(player) {
+        const threshold = promotionThreshold(player.grade);
+        if (threshold === null) return null;
+        const pct = Math.max(0, Math.min(100, (player.season / threshold) * 100));
+        const remaining = threshold - player.season;
+        return {
+            pct: pct,
+            eligible: remaining <= 0,
+            note: remaining <= 0 ? 'Eligible for promotion' : formatNumber(remaining) + ' to promotion'
+        };
+    }
+
+    function createBar(progress) {
+        const bar = el('span', 'gr-bar');
+        bar.setAttribute('aria-hidden', 'true');
+        const fill = el('span', 'gr-bar-fill');
+        fill.style.width = progress.pct.toFixed(1) + '%';
+        bar.appendChild(fill);
+        return bar;
+    }
+
+    function createPromoNote(progress) {
+        return el('span', 'gr-promo-note' + (progress.eligible ? ' is-eligible' : ''), progress.note);
+    }
+
+    function createAvatar(player) {
+        const avatar = el('span', 'gr-avatar');
+        avatar.setAttribute('aria-hidden', 'true');
+        const showInitials = () => { avatar.textContent = initials(player); };
+        if (player.photo) {
+            const img = document.createElement('img');
+            img.src = player.photo;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.addEventListener('error', showInitials);
+            avatar.appendChild(img);
+        } else {
+            showInitials();
+        }
+        return avatar;
+    }
+
+    // ============================================
+    // HOW GRADING WORKS (B)
+    // ============================================
+    function numberWord(n) {
+        const words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+        return words[n] || String(n);
+    }
+
+    function renderHelpGrades() {
+        const grades = categoryList.map(c => c.ShortName);
+        const chips = document.getElementById('gr-chips');
+        chips.textContent = '';
+        grades.forEach((grade, i) => chips.appendChild(el('span', 'gr-chip' + (i === 0 ? ' is-top' : ''), grade)));
+        if (grades.length) {
+            document.getElementById('gr-grades-heading').textContent =
+                numberWord(grades.length) + ' grade' + (grades.length === 1 ? '' : 's') + ', ' + grades[0] + ' is the highest';
+        }
+
+        // Step 3 uses the real threshold when every grade shares one
+        if (categoryList.length > 1) {
+            const thresholds = new Set(categoryList.slice(1).map(c => promotionThreshold(c.ShortName)).filter(v => v !== null));
+            const step3 = document.getElementById('gr-step3-text');
+            if (thresholds.size === 1) {
+                step3.textContent = 'Reach ' + formatNumber([...thresholds][0]) + ' points in a season and you become eligible for promotion.';
+            } else {
+                step3.textContent = "Reach your grade's promotion target in a season and you become eligible for promotion.";
+            }
+        }
+    }
+
+    // Points per placing from the public settings
+    function renderPoints() {
+        const pts = publicSettings && publicSettings.pointsPerPlacing;
+        if (!pts) return;
+        const values = {
+            'gr-pts-winner': pts.winners,
+            'gr-pts-runner': pts.runnersUp,
+            'gr-pts-semi': pts.semiFinalists,
+            'gr-pts-quarter': pts.quarterFinalists
+        };
+        Object.keys(values).forEach(id => {
+            const n = Number(values[id]);
+            if (Number.isFinite(n) && n >= 0) document.getElementById(id).textContent = formatNumber(n);
+        });
+    }
+
+    async function loadPublicSettings() {
+        try {
+            const res = await fetch('/api/public-settings.php', { credentials: 'include' });
+            const data = await res.json();
+            if (data && data.success) publicSettings = data;
+        } catch (error) {
+            console.error('Error loading grading settings:', error);
+        }
+    }
+
+    document.getElementById('gr-help-toggle').addEventListener('click', function() {
+        const panel = document.getElementById('gr-help-panel');
+        const open = this.getAttribute('aria-expanded') !== 'true';
+        this.setAttribute('aria-expanded', open ? 'true' : 'false');
+        panel.hidden = !open;
+    });
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        changeTheme(savedTheme);
+        init();
+    });
+
+    async function init() {
+        // Categories and public settings before rendering tabs / loading players
+        await Promise.all([loadCategories(), loadPublicSettings()]);
+        renderSeason();
+        renderResetSentence();
+        renderPoints();
+        renderHelpGrades();
+        renderTabs();
+        loadAllPlayers();
+    }
+
+    async function loadCategories() {
+        try {
+            const response = await fetch('/api/categories.php', { credentials: 'include' });
+            const data = await response.json();
+            if (data.success) {
+                categoryList = data.categories.slice().sort((a, b) => Number(a.DisplayOrder) - Number(b.DisplayOrder));
+            }
+        } catch (error) {
+            console.error('Error loading categories:', error);
+        }
+    }
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+        const menu = document.getElementById('mobile-menu');
+        menu.classList.toggle('hidden');
+    });
+
+    // ============================================
+    // GRADE TABS (C)
+    // ============================================
+    function renderTabs() {
+        const container = document.getElementById('gr-tabs');
+        container.textContent = '';
+        const tabs = [{ key: 'All', label: 'All' }].concat(categoryList.map(c => ({ key: c.ShortName, label: c.ShortName })));
+        tabs.forEach(tab => {
+            const button = el('button', 'gr-tab' + (tab.key === currentCategory ? ' is-active' : ''));
+            button.type = 'button';
+            button.dataset.category = tab.key;
+            button.setAttribute('aria-pressed', tab.key === currentCategory ? 'true' : 'false');
+            button.appendChild(el('span', 'gr-tab-letter', tab.label));
+            button.appendChild(el('span', 'gr-tab-count', '– players'));
+            button.addEventListener('click', () => switchCategory(tab.key));
+            container.appendChild(button);
+        });
+    }
+
+    function updateTabCounts() {
+        document.querySelectorAll('#gr-tabs .gr-tab').forEach(tab => {
+            const key = tab.dataset.category;
+            const count = key === 'All'
+                ? categoryList.reduce((sum, c) => sum + (playersByGrade[c.ShortName] || []).length, 0)
+                : (playersByGrade[key] || []).length;
+            tab.querySelector('.gr-tab-count').textContent = plural(count, 'player');
+        });
+    }
+
+    // Keep the active tile visible in the swipeable row (below lg) without scrolling the page
+    function scrollActiveTabIntoView() {
+        const container = document.getElementById('gr-tabs');
+        const active = container.querySelector('.gr-tab.is-active');
+        if (!active || container.scrollWidth <= container.clientWidth) return;
+        const target = active.offsetLeft - (container.clientWidth - active.offsetWidth) / 2;
+        container.scrollTo({ left: Math.max(0, target), behavior: 'auto' });
+    }
+
+    function switchCategory(category) {
+        currentCategory = category;
+        document.querySelectorAll('#gr-tabs .gr-tab').forEach(tab => {
+            const active = tab.dataset.category === category;
+            tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        scrollActiveTabIntoView();
+        refreshView();
+    }
+
+    // ============================================
+    // DATA LOADING
+    // ============================================
+    async function loadAllPlayers() {
+        try {
+            const results = await Promise.all(categoryList.map(async category => {
+                const response = await fetch(`/api/users.php?category=${encodeURIComponent(category.ShortName)}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    console.warn(`Failed to load category ${category.ShortName}:`, data.message);
+                    return [category.ShortName, []];
+                }
+                return [category.ShortName, data.users.map(u => normalisePlayer(u, category.ShortName))];
+            }));
+
+            results.forEach(([grade, players]) => { playersByGrade[grade] = players; });
+            updateTabCounts();
+            refreshView();
+        } catch (error) {
+            console.error('Error loading players:', error);
+            const loading = document.getElementById('loadingMessage');
+            loading.textContent = '';
+            loading.appendChild(el('p', 'text-red-400 font-bold uppercase', 'Error loading players. Please try again later.'));
+        }
+    }
+
+    // ============================================
+    // ORDERING AND RANKS (F)
+    // ============================================
+    // Grade tab: season points high to low, then name. Level players share a rank and
+    // the next rank skips (1, 1, 3). Players on 0 points follow in A to Z order, unranked.
+    function rankedGrade(grade) {
+        const players = playersByGrade[grade] || [];
+        const scored = players.filter(p => p.season > 0).sort((a, b) => (b.season - a.season) || byName(a, b));
+        const unscored = players.filter(p => p.season <= 0).sort(byName);
+        const entries = [];
+        let previousPoints = null;
+        let previousRank = 0;
+        scored.forEach((player, i) => {
+            const rank = player.season === previousPoints ? previousRank : i + 1;
+            previousPoints = player.season;
+            previousRank = rank;
+            entries.push({ player: player, rank: rank });
+        });
+        unscored.forEach(player => entries.push({ player: player, rank: null }));
+        return entries;
+    }
+
+    // All tab: no ranks; sorted by KBF ID number (default) or A to Z
+    function allEntries() {
+        const players = categoryList.flatMap(c => playersByGrade[c.ShortName] || []);
+        players.sort(allSort === 'name'
+            ? byName
+            : (a, b) => (kbfNumber(a) - kbfNumber(b)) || byName(a, b));
+        return players.map(player => ({ player: player, rank: null }));
+    }
+
+    // ============================================
+    // VIEW (tab + sort + search)
+    // ============================================
+    function refreshView() {
+        const isAll = currentCategory === 'All';
+        const query = searchTerm.trim().toLowerCase();
+        const ranked = isAll ? null : rankedGrade(currentCategory);
+        const base = isAll ? allEntries() : ranked;
+        viewEntries = query ? base.filter(e => e.player.search.includes(query)) : base;
+
+        // Count and sort switch
+        document.getElementById('gr-count').textContent = isAll
+            ? plural(viewEntries.length, 'player')
+            : plural(viewEntries.length, 'player') + ' in grade ' + currentCategory;
+        document.getElementById('gr-sort').hidden = !isAll;
+        document.getElementById('gr-col-first').textContent = isAll ? 'Grade' : 'Rank';
+
+        renderLeaders(isAll || query ? null : ranked);
+
+        // List
+        document.getElementById('loadingMessage').classList.add('hidden');
+        const list = document.getElementById('gr-list');
+        const empty = document.getElementById('noPlayersMessage');
+        document.getElementById('gr-rows').textContent = '';
+        shownCount = 0;
+
+        if (viewEntries.length === 0) {
+            list.hidden = true;
+            empty.classList.remove('hidden');
+            return;
+        }
+        empty.classList.add('hidden');
+        list.hidden = false;
+        renderBatch();
+    }
+
+    // ============================================
+    // GRADE LEADERS (D)
+    // ============================================
+    function renderLeaders(ranked) {
+        const section = document.getElementById('gr-leaders');
+        const grid = document.getElementById('gr-leader-grid');
+        grid.textContent = '';
+        const leaders = ranked ? ranked.filter(e => e.rank !== null).slice(0, 3) : [];
+        if (leaders.length === 0) {
+            section.hidden = true;
+            return;
+        }
+        document.getElementById('gr-leaders-grade').textContent = currentCategory;
+        leaders.forEach(entry => {
+            const joint = ranked.filter(e => e.rank === entry.rank).length > 1;
+            grid.appendChild(createLeaderCard(entry, (joint ? 'Joint ' : '') + ordinal(entry.rank)));
+        });
+        section.hidden = false;
+    }
+
+    function createLeaderCard(entry, placeText) {
+        const player = entry.player;
+        const card = el('a', 'gr-leader');
+        card.href = profileHref(player);
+        card.setAttribute('aria-label', placeText + ', ' + player.name + ', ' + plural(player.season, 'season point'));
+
+        const place = el('span', 'gr-place');
+        place.appendChild(icon('trophy'));
+        place.appendChild(el('span', '', placeText));
+        card.appendChild(place);
+
+        const who = el('span', 'gr-leader-who');
+        who.appendChild(createAvatar(player));
+        const text = el('span', 'gr-leader-text');
+        text.appendChild(el('span', 'gr-leader-name', player.name));
+        if (player.location) {
+            const loc = el('span', 'gr-leader-loc');
+            loc.appendChild(icon('pin'));
+            loc.appendChild(el('span', '', player.location));
+            text.appendChild(loc);
+        }
+        who.appendChild(text);
+        card.appendChild(who);
+
+        const progress = progressFor(player);
+        const stats = el('span', 'gr-leader-stats');
+        const pts = el('span');
+        pts.appendChild(el('span', 'gr-leader-pts', formatNumber(player.season)));
+        pts.appendChild(el('span', 'gr-leader-unit', 'Season points'));
+        stats.appendChild(pts);
+        if (progress) stats.appendChild(createPromoNote(progress));
+        card.appendChild(stats);
+        if (progress) card.appendChild(createBar(progress));
+
+        return card;
+    }
+
+    // ============================================
+    // LIST ROWS (F)
+    // ============================================
+    function createRow(entry) {
+        const player = entry.player;
+        const isAll = currentCategory === 'All';
+        const progress = progressFor(player);
+
+        const row = el('a', 'gr-row');
+        row.href = profileHref(player);
+        row.setAttribute('aria-label', player.name +
+            (isAll ? ', grade ' + player.grade : (entry.rank !== null ? ', rank ' + entry.rank : '')) +
+            ', ' + plural(player.season, 'season point'));
+
+        // Rank box (grade tab) or grade box (All tab)
+        let box;
+        if (isAll) {
+            box = el('span', 'gr-rank', player.grade);
+        } else if (entry.rank === null) {
+            box = el('span', 'gr-rank is-empty');
+        } else {
+            box = el('span', 'gr-rank' + (entry.rank <= 3 ? ' is-top' : ''), String(entry.rank));
+        }
+        box.setAttribute('aria-hidden', 'true');
+        row.appendChild(box);
+
+        // Player: avatar, name, ID (desktop) / ID + location line and bar (mobile)
+        const cell = el('span', 'gr-player');
+        cell.appendChild(createAvatar(player));
+        const text = el('span', 'gr-player-text');
+        text.appendChild(el('span', 'gr-name', player.name));
+        if (player.kbfId) text.appendChild(el('span', 'gr-id', 'ID: ' + player.kbfId));
+        const meta = el('span', 'gr-meta');
+        if (player.kbfId) meta.appendChild(el('b', '', player.kbfId));
+        if (player.kbfId && player.location) meta.appendChild(document.createTextNode(' · '));
+        if (player.location) meta.appendChild(document.createTextNode(player.location));
+        if (meta.childNodes.length) text.appendChild(meta);
+        if (progress) {
+            const mobileBar = el('span', 'gr-mobile-bar');
+            mobileBar.appendChild(createBar(progress));
+            text.appendChild(mobileBar);
+        }
+        cell.appendChild(text);
+        row.appendChild(cell);
+
+        // Location (desktop)
+        const loc = el('span', 'gr-loc');
+        if (player.location) {
+            loc.appendChild(icon('pin'));
+            loc.appendChild(el('span', '', player.location));
+        }
+        row.appendChild(loc);
+
+        // Season points (+ bar and promotion note on desktop)
+        const season = el('span', 'gr-season-cell');
+        season.appendChild(el('span', 'gr-pts', formatNumber(player.season)));
+        if (progress) {
+            const block = el('span', 'gr-bar-block');
+            block.appendChild(createBar(progress));
+            block.appendChild(createPromoNote(progress));
+            season.appendChild(block);
+        }
+        row.appendChild(season);
+
+        row.appendChild(el('span', 'gr-career', formatNumber(player.career)));
+        row.appendChild(el('span', 'gr-finals', formatNumber(player.finals)));
+        row.appendChild(icon('chevron', 'gr-chev'));
+
+        return row;
+    }
+
+    // ============================================
+    // LOADING AS YOU SCROLL (G)
+    // ============================================
+    function renderBatch(focusFirstNew) {
+        const rows = document.getElementById('gr-rows');
+        const start = shownCount;
+        const end = Math.min(shownCount + PAGE_SIZE, viewEntries.length);
+        const fragment = document.createDocumentFragment();
+        for (let i = start; i < end; i++) {
+            fragment.appendChild(createRow(viewEntries[i]));
+        }
+        rows.appendChild(fragment);
+        shownCount = end;
+        updateMoreBar();
+
+        if (focusFirstNew && rows.children[start]) {
+            rows.children[start].focus();
+        }
+
+        // Re-observe so a sentinel that is still in view loads the next batch too
+        const sentinel = document.getElementById('gr-sentinel');
+        if (listObserver) {
+            listObserver.unobserve(sentinel);
+            if (shownCount < viewEntries.length) listObserver.observe(sentinel);
+        }
+    }
+
+    function updateMoreBar() {
+        const total = viewEntries.length;
+        const text = document.getElementById('gr-more-text');
+        const button = document.getElementById('gr-more-btn');
+        if (shownCount < total) {
+            text.textContent = 'Showing ' + formatNumber(shownCount) + ' of ' + plural(total, 'player');
+            button.hidden = false;
+        } else {
+            text.textContent = 'All ' + plural(total, 'player') + ' shown';
+            button.hidden = true;
+        }
+    }
+
+    if ('IntersectionObserver' in window) {
+        listObserver = new IntersectionObserver(entries => {
+            if (entries.some(e => e.isIntersecting) && shownCount < viewEntries.length) {
+                renderBatch(false);
+            }
+        }, { rootMargin: '0px 0px 400px 0px' });
+    }
+
+    document.getElementById('gr-more-btn').addEventListener('click', () => renderBatch(true));
+
+    // ============================================
+    // SEARCH AND SORT (E)
+    // ============================================
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        refreshView();
+    });
+
+    document.querySelectorAll('#gr-sort .gr-sort-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            if (allSort === button.dataset.sort) return;
+            allSort = button.dataset.sort;
+            document.querySelectorAll('#gr-sort .gr-sort-btn').forEach(b => {
+                const active = b.dataset.sort === allSort;
+                b.classList.toggle('is-active', active);
+                b.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            refreshView();
+        });
+    });
+
+    // ============================================
+    // FLOATING BACK-TO-TOP (G)
+    // ============================================
+    (function () {
+        const topButton = document.getElementById('gr-top');
+        const update = () => topButton.classList.toggle('is-visible', window.scrollY > window.innerHeight);
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+        update();
+        topButton.addEventListener('click', () => {
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+        });
+    })();
+</script>
+    <!-- Footer contact and social links from Site settings -->
+    <script src="/js/site-settings.js"></script>
+</body>
+</html>
