@@ -254,6 +254,13 @@
     var storage = makeStorage('localStorage');
     storage.session = makeStorage('sessionStorage');
 
+    // The orange theme was replaced by violet: a visitor who chose orange
+    // keeps a coloured theme (violet, saved) instead of the default. Every
+    // page loads this file before it reads the saved theme.
+    if (storage.get('badminton-theme', '') === 'orange') {
+        storage.set('badminton-theme', 'violet');
+    }
+
     // Replace the contents of target (an element or its id) with a short
     // "could not be loaded" message and a "Try again" button that calls
     // retry. Text is set with textContent. Returns the message element.

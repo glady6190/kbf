@@ -99,7 +99,7 @@
         { key: 'emerald', label: 'Emerald', colour: '#10b981' },
         { key: 'cyan', label: 'Cyan', colour: '#06b6d4' },
         { key: 'yellow', label: 'Yellow', colour: '#f4f916' },
-        { key: 'orange', label: 'Orange', colour: '#f97316' }
+        { key: 'violet', label: 'Violet', colour: '#A78BFA' }
     ];
 
     var ICONS = {

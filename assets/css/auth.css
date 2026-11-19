@@ -17,7 +17,7 @@
 [data-theme="emerald"] { --theme-primary: #10b981; }
 [data-theme="cyan"] { --theme-primary: #06b6d4; }
 [data-theme="yellow"] { --theme-primary: #f4f916; }
-[data-theme="orange"] { --theme-primary: #f97316; }
+[data-theme="violet"] { --theme-primary: #A78BFA; }
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -359,7 +359,7 @@ a.auth-logo-mark:focus-visible { outline: 3px solid var(--theme-primary); outlin
 .theme-dot-emerald { --dot: #10b981; }
 .theme-dot-cyan { --dot: #06b6d4; }
 .theme-dot-yellow { --dot: #f4f916; }
-.theme-dot-orange { --dot: #f97316; }
+.theme-dot-violet { --dot: #A78BFA; }
 
 /* ---------- phones ---------- */
 @media (max-width: 480px) {

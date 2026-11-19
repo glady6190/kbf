@@ -10,7 +10,7 @@
         [data-theme="emerald"] { --theme-primary: #10b981; }
         [data-theme="cyan"] { --theme-primary: #06b6d4; }
         [data-theme="yellow"] { --theme-primary: #f4f916; }
-        [data-theme="orange"] { --theme-primary: #f97316; }
+        [data-theme="violet"] { --theme-primary: #A78BFA; }
         * { box-sizing: border-box; }
         html, body { margin: 0; min-height: 100%; }
         body {
@@ -65,13 +65,13 @@
         <p id="maintenanceMessage">We are making some improvements. Please check back shortly.</p>
         <p class="small">Staff can still <a href="/login">sign in</a>.</p>
     </main>
-    <script src="/js/escape.js?v=2611191347"></script>
+    <script src="/js/escape.js?v=2611191351"></script>
     <script>
     (function () {
         // Remembered colour theme, as on the rest of the site
         // (KBF.storage never throws; the page still works without the helper)
         var theme = window.KBF && KBF.storage ? KBF.storage.get('badminton-theme', null) : null;
-        if (['emerald', 'cyan', 'yellow', 'orange'].indexOf(theme) !== -1) {
+        if (['emerald', 'cyan', 'yellow', 'violet'].indexOf(theme) !== -1) {
             document.body.setAttribute('data-theme', theme);
         }
 

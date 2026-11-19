@@ -24,7 +24,7 @@ module.exports = {
         'bg-emerald-500',
         'bg-cyan-500',
         'bg-yellow-400',
-        'bg-orange-500'
+        'bg-violet-400'
     ],
     theme: {
         extend: {}

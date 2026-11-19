@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2-step verification - KBF-UK</title>
-    <link rel="stylesheet" href="/assets/css/auth.css?v=2611191347">
+    <link rel="stylesheet" href="/assets/css/auth.css?v=2611191351">
 </head>
 <body class="auth-body" data-theme="emerald">
     <div class="auth-shell">
@@ -85,8 +85,8 @@
         </main>
     </div>
 
-    <script src="/js/escape.js?v=2611191347"></script>
-    <script src="/js/code-input.js?v=2611191347"></script>
+    <script src="/js/escape.js?v=2611191351"></script>
+    <script src="/js/code-input.js?v=2611191351"></script>
     <script>
     (function () {
         'use strict';
@@ -127,7 +127,7 @@
 
         function applySavedTheme() {
             var theme = KBF.storage.get('badminton-theme', 'emerald');
-            if (['emerald', 'cyan', 'yellow', 'orange'].indexOf(theme) === -1) theme = 'emerald';
+            if (['emerald', 'cyan', 'yellow', 'violet'].indexOf(theme) === -1) theme = 'emerald';
             document.body.setAttribute('data-theme', theme);
         }
 
