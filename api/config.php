@@ -1,6 +1,29 @@
 <?php
 // Include-only: refuse to run when requested directly
 if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
+
+// UK time everywhere: PHP's "today", season boundaries and the career-only
+// cutoff use Europe/London; the database session is set to the same offset
+// below, so NOW() and CURDATE() agree with PHP.
+date_default_timezone_set('Europe/London');
+
+// Log a message only once a day (per message), so a missing setting is
+// reported clearly without filling the error log. The marker files live in
+// storage/ (blocked from the web). Falls back to logging every time when
+// storage/ cannot be written.
+function kbfLogOnce($message) {
+    $dir = dirname(__DIR__) . '/storage/log-once';
+    $marker = $dir . '/' . md5((string) $message);
+    if (is_file($marker) && filemtime($marker) > time() - 86400) {
+        return;
+    }
+    error_log('KBF: ' . $message);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    @touch($marker);
+}
+
 // Load environment variables from .env file (never commit .env to version control)
 (function() {
     $envFile = dirname(__DIR__) . '/.env';
@@ -24,6 +47,27 @@ define('DB_NAME', getenv('DB_NAME') ?: '');
 define('DB_USER', getenv('DB_USER') ?: '');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 
+// Required .env values: a clear message (names only, never values) when one
+// is missing. The site then falls back safely: no database connection
+// ("Service temporarily unavailable"), no emails sent, registration
+// refused, 2-step setup unavailable, or an empty fingerprint salt.
+(function () {
+    $required = [
+        'DB_NAME' => 'the site cannot connect to the database',
+        'DB_USER' => 'the site cannot connect to the database',
+        'DB_PASS' => 'the site cannot connect to the database',
+        'SESSION_FINGERPRINT_SALT' => 'sessions use an empty fingerprint salt',
+        'SMTP_PASSWORD' => 'no email can be sent',
+        'RECAPTCHA_SECRET_KEY' => 'every registration is refused',
+        'TWO_FACTOR_KEY' => 'nobody can set up 2-step verification',
+    ];
+    foreach ($required as $key => $effect) {
+        if ((string) getenv($key) === '') {
+            kbfLogOnce('.env value ' . $key . ' is missing: ' . $effect . '. Add it to .env (see .env.example).');
+        }
+    }
+})();
+
 define('ALLOWED_ORIGINS', [
     'https://kbf-uk.org'
 ]);
@@ -40,6 +84,10 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
+    // The same behaviour on any server: UK time (PHP's current offset, e.g.
+    // +01:00 in summer, +00:00 in winter) and a known sql_mode. Times stored
+    // before this were written in UTC and are left as they are.
+    $pdo->exec("SET time_zone = '" . date('P') . "', sql_mode = 'NO_ENGINE_SUBSTITUTION'");
 } catch(PDOException $e) {
     error_log('Database connection failed: ' . $e->getMessage());
     die(json_encode(['error' => 'Service temporarily unavailable']));

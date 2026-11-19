@@ -27,13 +27,21 @@ ALTER TABLE Tournaments
 -- --------------------------------------------
 -- 2. 'Cancelled' status
 -- Only when Status is an ENUM without 'Cancelled'. The column keeps its
--- other values, whether it allows NULL, and its default.
+-- other values, whether it allows NULL, its default, its character set and
+-- collation, and its comment. (On the live database Status is VARCHAR(50),
+-- so nothing changes there.) The table is found whatever the case of its
+-- stored name.
 -- --------------------------------------------
+SET @kbf_tbl := (
+    SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'tournaments'
+    LIMIT 1
+);
 SET @kbf_status_type := (
     SELECT COLUMN_TYPE
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'Tournaments'
+      AND TABLE_NAME = @kbf_tbl
       AND COLUMN_NAME = 'Status'
       AND DATA_TYPE = 'enum'
       AND COLUMN_TYPE NOT LIKE '%''Cancelled''%'
@@ -41,25 +49,38 @@ SET @kbf_status_type := (
 SET @kbf_status_null := (
     SELECT IS_NULLABLE
     FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Tournaments' AND COLUMN_NAME = 'Status'
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
 );
 SET @kbf_status_default := (
     SELECT COLUMN_DEFAULT
     FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Tournaments' AND COLUMN_NAME = 'Status'
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
+);
+SET @kbf_status_charset := (
+    SELECT CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME, ' COLLATE ', COLLATION_NAME)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
+      AND CHARACTER_SET_NAME IS NOT NULL AND COLLATION_NAME IS NOT NULL
+);
+SET @kbf_status_comment := (
+    SELECT COLUMN_COMMENT
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
 );
 
 SET @kbf_sql := IF(
     @kbf_status_type IS NULL,
     'SELECT ''Tournaments.Status already accepts Cancelled'' AS info',
     CONCAT(
-        'ALTER TABLE Tournaments MODIFY COLUMN Status ',
+        'ALTER TABLE `', @kbf_tbl, '` MODIFY COLUMN Status ',
         LEFT(@kbf_status_type, CHAR_LENGTH(@kbf_status_type) - 1), ',''Cancelled'')',
+        COALESCE(@kbf_status_charset, ''),
         IF(@kbf_status_null = 'YES', ' NULL', ' NOT NULL'),
         IF(@kbf_status_default IS NULL OR @kbf_status_default = 'NULL', '',
            CONCAT(' DEFAULT ',
                   IF(LEFT(@kbf_status_default, 1) = '''', @kbf_status_default,
-                     CONCAT('''', @kbf_status_default, ''''))))
+                     CONCAT('''', @kbf_status_default, '''')))),
+        IF(@kbf_status_comment IS NULL OR @kbf_status_comment = '', '', CONCAT(' COMMENT ', QUOTE(@kbf_status_comment)))
     )
 );
 PREPARE kbf_stmt FROM @kbf_sql;

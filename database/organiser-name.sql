@@ -32,20 +32,37 @@ WHERE (t.OrganiserName IS NULL OR TRIM(t.OrganiserName) = '')
   AND TRIM(CONCAT(COALESCE(u.FirstName, ''), ' ', COALESCE(u.LastName, ''))) <> '';
 
 -- 3. Make OrganizingClubId nullable, only when it is currently NOT NULL.
---    The column keeps its existing type; foreign keys are not touched.
+--    The column keeps its existing type, default and comment; foreign keys
+--    are not touched. The table is found whatever the case of its stored
+--    name, and the change uses that stored name.
+SET @kbf_tbl := (
+    SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'tournaments'
+    LIMIT 1
+);
 SET @kbf_club_col_type := (
     SELECT COLUMN_TYPE
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'Tournaments'
+      AND TABLE_NAME = @kbf_tbl
       AND COLUMN_NAME = 'OrganizingClubId'
       AND IS_NULLABLE = 'NO'
+);
+SET @kbf_club_default := (
+    SELECT COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'OrganizingClubId'
+);
+SET @kbf_club_comment := (
+    SELECT COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'OrganizingClubId'
 );
 
 SET @kbf_sql := IF(
     @kbf_club_col_type IS NULL,
     'SELECT ''OrganizingClubId is already nullable'' AS info',
-    CONCAT('ALTER TABLE Tournaments MODIFY COLUMN OrganizingClubId ', @kbf_club_col_type, ' NULL')
+    CONCAT('ALTER TABLE `', @kbf_tbl, '` MODIFY COLUMN OrganizingClubId ', @kbf_club_col_type, ' NULL',
+        IF(@kbf_club_default IS NULL OR @kbf_club_default = 'NULL', '', CONCAT(' DEFAULT ', @kbf_club_default)),
+        IF(@kbf_club_comment IS NULL OR @kbf_club_comment = '', '', CONCAT(' COMMENT ', QUOTE(@kbf_club_comment))))
 );
 
 PREPARE kbf_stmt FROM @kbf_sql;

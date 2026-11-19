@@ -81,8 +81,17 @@ function kbfIsValidSiteBaseUrl($value) {
 // every read. Every redirect and email link is built from this, never from
 // the request's Host header.
 function kbfSiteBaseUrl() {
-    $url = trim((string) kbfSetting('site_base_url', 'https://kbf-uk.org'));
-    return kbfIsValidSiteBaseUrl($url) ? $url : 'https://kbf-uk.org';
+    $raw = kbfSetting('site_base_url', null);
+    $url = trim((string) ($raw ?? ''));
+    if (kbfIsValidSiteBaseUrl($url)) {
+        return $url;
+    }
+    if (function_exists('kbfLogOnce')) {
+        kbfLogOnce($raw === null
+            ? 'Setting site_base_url is missing; links use https://kbf-uk.org. Set the Website address in Site settings.'
+            : 'Setting site_base_url is not a valid https address; links use https://kbf-uk.org. Fix the Website address in Site settings.');
+    }
+    return 'https://kbf-uk.org';
 }
 
 // The request's copy of the Settings table ($reset = true empties it)
@@ -101,7 +110,12 @@ function kbfSettingsCache($reset = false) {
                     $cache[(string) $row['SettingKey']] = $row['SettingValue'];
                 }
             } catch (PDOException $e) {
-                error_log('kbfSetting: could not load Settings: ' . $e->getMessage());
+                // Every setting falls back to its built-in default
+                if (function_exists('kbfLogOnce')) {
+                    kbfLogOnce('The Settings table could not be read (' . $e->getMessage() . '); every setting uses its built-in default.');
+                } else {
+                    error_log('kbfSetting: could not load Settings: ' . $e->getMessage());
+                }
             }
         }
     }

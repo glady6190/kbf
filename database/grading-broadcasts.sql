@@ -87,23 +87,43 @@ ALTER TABLE EmailBroadcasts
 -- Only when Status is an ENUM. Each missing value is added at the end; the
 -- column keeps its other values, whether it allows NULL, and its default.
 -- --------------------------------------------
+-- The column also keeps its character set, collation and comment, and the
+-- table is found whatever the case of its stored name. (On the live
+-- database Status is VARCHAR(20), so nothing changes there; old 'queued'
+-- broadcasts are settled by database/schema-fixes.sql.)
+SET @kbf_tbl := (
+    SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'emailbroadcasts'
+    LIMIT 1
+);
 SET @kbf_status_type := (
     SELECT COLUMN_TYPE
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'EmailBroadcasts'
+      AND TABLE_NAME = @kbf_tbl
       AND COLUMN_NAME = 'Status'
       AND DATA_TYPE = 'enum'
 );
 SET @kbf_status_null := (
     SELECT IS_NULLABLE
     FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'EmailBroadcasts' AND COLUMN_NAME = 'Status'
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
 );
 SET @kbf_status_default := (
     SELECT COLUMN_DEFAULT
     FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'EmailBroadcasts' AND COLUMN_NAME = 'Status'
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
+);
+SET @kbf_status_charset := (
+    SELECT CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME, ' COLLATE ', COLLATION_NAME)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
+      AND CHARACTER_SET_NAME IS NOT NULL AND COLLATION_NAME IS NOT NULL
+);
+SET @kbf_status_comment := (
+    SELECT COLUMN_COMMENT
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @kbf_tbl AND COLUMN_NAME = 'Status'
 );
 
 SET @kbf_new_type := @kbf_status_type;
@@ -124,12 +144,14 @@ SET @kbf_sql := IF(
     @kbf_status_type IS NULL OR @kbf_new_type = @kbf_status_type,
     'SELECT ''EmailBroadcasts.Status needs no change'' AS info',
     CONCAT(
-        'ALTER TABLE EmailBroadcasts MODIFY COLUMN Status ', @kbf_new_type,
+        'ALTER TABLE `', @kbf_tbl, '` MODIFY COLUMN Status ', @kbf_new_type,
+        COALESCE(@kbf_status_charset, ''),
         IF(@kbf_status_null = 'YES', ' NULL', ' NOT NULL'),
         IF(@kbf_status_default IS NULL OR @kbf_status_default = 'NULL', '',
            CONCAT(' DEFAULT ',
                   IF(LEFT(@kbf_status_default, 1) = '''', @kbf_status_default,
-                     CONCAT('''', @kbf_status_default, ''''))))
+                     CONCAT('''', @kbf_status_default, '''')))),
+        IF(@kbf_status_comment IS NULL OR @kbf_status_comment = '', '', CONCAT(' COMMENT ', QUOTE(@kbf_status_comment)))
     )
 );
 PREPARE kbf_stmt FROM @kbf_sql;

@@ -42,6 +42,7 @@ $dryRun = in_array('--dry-run', $argv, true);
 // Prevents two overlapping cron runs. A stale lock (older than 30 minutes,
 // from a crashed run) is reclaimed. Released on every exit path.
 // ============================================
+date_default_timezone_set('Europe/London'); // UK time, as api/config.php (loaded below)
 $lockFile = sys_get_temp_dir() . '/kbf-broadcast-sender.lock';
 $LOCK_STALE_SECONDS = 30 * 60; // 30 minutes
 

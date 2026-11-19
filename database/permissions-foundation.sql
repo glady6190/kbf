@@ -2,17 +2,21 @@
 -- KBF-UK: Per-user permissions - Stage 1 foundation
 -- Run in phpMyAdmin (MariaDB). Safe to run more than once:
 --   * CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS / INSERT IGNORE
---   * Each account is converted only once: every conversion step skips users
---     that already have an 'access_converted' row in AuditLog, so a second run
---     never re-grants access that was removed after the first run.
+--   * The account conversion (section 6) runs ONLY on the first run: every
+--     conversion step is skipped as soon as any 'access_converted' row
+--     exists in AuditLog. Staff added later through the Staff pages can
+--     never be given the old role presets by a re-run.
+--   * The conversion is marked done by ONE statement at the very end (6d).
+--     If an earlier step fails, fix the cause and run the whole file again:
+--     every step before 6d is idempotent and the re-run completes them.
 -- Nothing is dropped or deleted. Users.Role is left unchanged.
 --
 -- The 12 permission keys and the three role presets MUST match
 -- api/permissions.php exactly.
 --
--- NOTE: UserPermissions.UserId is INT to match Users.UserId. If Users.UserId is
--- INT UNSIGNED (or another type), change UserPermissions.UserId to the same
--- type before running, or the foreign key will be refused.
+-- Live database (checked): Users is InnoDB and Users.UserId is int(11)
+-- signed, matching UserPermissions.UserId, so the foreign keys are accepted.
+-- The Super Admin is KBF ID KBFUK001 (UserId 36, active, MainAdmin).
 -- ============================================
 
 
@@ -102,7 +106,8 @@ CREATE TABLE IF NOT EXISTS AuditLog (
 
 -- ============================================
 -- 6. CONVERT EXISTING ACCOUNTS (active or not)
--- "Not yet converted" = no 'access_converted' AuditLog row for the user.
+-- First run only: every step is skipped once any 'access_converted' row
+-- exists in AuditLog (written by 6d at the end).
 -- The Super Admin (PlayerId KBFUK001) gets the flag only, no labels or
 -- permission rows. Players get nothing.
 -- ============================================
@@ -111,10 +116,7 @@ CREATE TABLE IF NOT EXISTS AuditLog (
 UPDATE Users u
 SET u.IsSuperAdmin = 1
 WHERE u.PlayerId = 'KBFUK001'
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
 -- 6b. Labels
 -- MainAdmin label (every MainAdmin except the Super Admin)
@@ -123,10 +125,7 @@ SELECT u.UserId, 'MainAdmin'
 FROM Users u
 WHERE u.Role = 'MainAdmin'
   AND NOT (u.PlayerId <=> 'KBFUK001')
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
 -- ZonalAdmin label
 INSERT IGNORE INTO StaffRoles (UserId, RoleKey)
@@ -134,10 +133,7 @@ SELECT u.UserId, 'ZonalAdmin'
 FROM Users u
 WHERE u.Role = 'ZonalAdmin'
   AND NOT (u.PlayerId <=> 'KBFUK001')
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
 -- Organiser label (every ClubAdmin, and every ZonalAdmin with a club)
 INSERT IGNORE INTO StaffRoles (UserId, RoleKey)
@@ -146,10 +142,7 @@ FROM Users u
 WHERE (u.Role = 'ClubAdmin'
        OR (u.Role = 'ZonalAdmin' AND u.ClubId IS NOT NULL AND u.ClubId <> 0))
   AND NOT (u.PlayerId <=> 'KBFUK001')
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
 -- 6c. Permissions
 -- MainAdmin: all 12
@@ -165,10 +158,7 @@ WHERE u.Role = 'MainAdmin'
       'tournaments.organise_own', 'tournaments.approve', 'tournaments.manage_all',
       'content.own_news_gallery', 'content.all_news_gallery', 'content.sponsors', 'content.broadcasts'
   )
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
 -- ZonalAdmin: the three player permissions
 INSERT IGNORE INTO UserPermissions (UserId, PermissionKey, GrantedByUserId, GrantedDate)
@@ -180,10 +170,7 @@ WHERE u.Role = 'ZonalAdmin'
   AND p.PermissionKey IN (
       'players.approve_registrations', 'players.view_export', 'players.edit_details'
   )
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
 -- Organiser preset: every ClubAdmin, and every ZonalAdmin with a club
 INSERT IGNORE INTO UserPermissions (UserId, PermissionKey, GrantedByUserId, GrantedDate)
@@ -196,33 +183,17 @@ WHERE (u.Role = 'ClubAdmin'
   AND p.PermissionKey IN (
       'tournaments.organise_own', 'content.own_news_gallery'
   )
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
--- 6d. One audit row per converted account (run last; marks the account converted)
--- Super Admin
+-- 6d. One audit row per converted account, all written by ONE statement
+-- (run last). Its rows mark the conversion as done, so every step above is
+-- skipped on any later run.
 INSERT INTO AuditLog (ActorUserId, ActingAsUserId, Action, TargetType, TargetId, Details, IpAddress, CreatedDate)
 SELECT 0, NULL, 'access_converted', 'user', u.UserId,
-       CONCAT('Old role: ', COALESCE(u.Role, '(none)'), '; converted to Super Admin'),
+       IF(u.PlayerId <=> 'KBFUK001',
+          CONCAT('Old role: ', COALESCE(u.Role, '(none)'), '; converted to Super Admin'),
+          CONCAT('Old role: ', u.Role)),
        'migration', NOW()
 FROM Users u
-WHERE u.PlayerId = 'KBFUK001'
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
-
--- Every other MainAdmin, ZonalAdmin and ClubAdmin
-INSERT INTO AuditLog (ActorUserId, ActingAsUserId, Action, TargetType, TargetId, Details, IpAddress, CreatedDate)
-SELECT 0, NULL, 'access_converted', 'user', u.UserId,
-       CONCAT('Old role: ', u.Role),
-       'migration', NOW()
-FROM Users u
-WHERE u.Role IN ('MainAdmin', 'ZonalAdmin', 'ClubAdmin')
-  AND NOT (u.PlayerId <=> 'KBFUK001')
-  AND NOT EXISTS (
-      SELECT 1 FROM AuditLog a
-      WHERE a.Action = 'access_converted' AND a.TargetType = 'user' AND a.TargetId = u.UserId
-  );
+WHERE (u.PlayerId <=> 'KBFUK001' OR u.Role IN ('MainAdmin', 'ZonalAdmin', 'ClubAdmin'))
+  AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
