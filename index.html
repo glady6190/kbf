@@ -1945,11 +1945,7 @@
 
     // "2026-11-28" -> "Sat 28 Nov" (uppercased by CSS)
     function formatTickerDate(isoDate) {
-        const [year, month, day] = isoDate.split('-').map(Number);
-        const date = new Date(year, month - 1, day);
-        const weekday = date.toLocaleDateString('en-GB', { weekday: 'short' });
-        const monthName = date.toLocaleDateString('en-GB', { month: 'short' });
-        return `${weekday} ${day} ${monthName}`;
+        return KBF.formatDate(isoDate, { weekday: true, year: false });
     }
 
     function hideTicker() {
@@ -1994,7 +1990,7 @@
             location.className = 'ticker-location';
             location.appendChild(createTickerPin());
             const locationLabel = document.createElement('span');
-            locationLabel.textContent = locationText;
+            locationLabel.textContent = KBF.titleCase(locationText);
             location.appendChild(locationLabel);
             link.appendChild(location);
         }

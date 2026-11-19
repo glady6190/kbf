@@ -226,9 +226,7 @@ function goToCreatePost() {
                         Tournament: ${escapeHtml(post.TournamentName)}
                     </p>
                     <p class="text-gray-500 text-xs font-bold uppercase">
-                        Published: ${new Date(post.CreatedDate).toLocaleDateString('en-GB', { 
-                            year: 'numeric', month: 'short', day: 'numeric' 
-                        })}
+                        Published: ${escapeHtml(KBF.formatDate(post.CreatedDate))}
                     </p>
                 </div>
 

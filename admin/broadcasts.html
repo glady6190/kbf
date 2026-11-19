@@ -354,11 +354,9 @@
         box.classList.remove('hidden');
     }
 
+    // Shared date format from /js/escape.js
     function formatDate(value) {
-        if (!value) return '-';
-        const d = new Date(String(value).replace(' ', 'T'));
-        if (isNaN(d.getTime())) return '-';
-        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return KBF.formatDate(value, { fallback: '-' });
     }
 
     // UK wall-clock time of a Date as 'YYYY-MM-DDTHH:MM'
@@ -375,8 +373,7 @@
     function laterLabel(value) {
         const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value || '');
         if (!m) return '';
-        const day = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
-        return day.toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + m[4] + ':' + m[5];
+        return KBF.formatDate(m[1] + '-' + m[2] + '-' + m[3] + ' ' + m[4] + ':' + m[5], { weekday: true, time: true });
     }
 
     function estimateText(days) {

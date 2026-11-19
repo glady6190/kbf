@@ -449,16 +449,13 @@
         return isNaN(d.getTime()) ? null : d;
     }
 
+    // Shared date format from /js/escape.js ("27 Sep 2026", "27 Sep 2026, 14:05")
     function formatDate(value) {
-        const d = parseDate(value);
-        return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        return KBF.formatDate(parseDate(value));
     }
 
     function formatDateTime(value) {
-        const d = parseDate(value);
-        if (!d) return '';
-        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' +
-            d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        return KBF.formatDate(parseDate(value), { time: true });
     }
 
     function daysAgoText(n) {
@@ -479,7 +476,7 @@
     function dateTile(date, large) {
         const box = el('div', 'tt-date' + (large ? ' is-large' : ''));
         const d = parseDate(date);
-        box.appendChild(el('span', 'tt-date-month', d ? d.toLocaleDateString('en-GB', { month: 'short' }) : '-'));
+        box.appendChild(el('span', 'tt-date-month', d ? KBF.MONTHS_SHORT[d.getMonth()] : '-'));
         box.appendChild(el('span', 'tt-date-day', d ? String(d.getDate()) : '-'));
         if (d) box.setAttribute('title', formatDate(date));
         return box;

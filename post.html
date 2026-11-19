@@ -591,8 +591,8 @@
     };
 
     // ---------- dates (local calendar dates, never shifted by time zone) ----------
-    const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const WEEKDAYS_SHORT = KBF.WEEKDAYS_SHORT;
+    const MONTHS_SHORT = KBF.MONTHS_SHORT;
     function pad2(n) { return String(n).padStart(2, '0'); }
     function toYmd(value) {
         return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : '';
@@ -844,7 +844,7 @@
         nameEl.appendChild(nameLink);
         main.appendChild(nameEl);
 
-        const place = [t.venue, t.town].map(v => String(v || '').trim()).filter(Boolean).join(', ');
+        const place = [t.venue, t.town].map(v => KBF.titleCase(String(v || '').trim())).filter(Boolean).join(', ');
         if (place) {
             const placeEl = N.el('p', 'pp-tourney-place');
             placeEl.appendChild(svgIcon(ICON_PATHS.pin));

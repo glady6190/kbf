@@ -441,15 +441,13 @@
         return isNaN(d.getTime()) ? null : d;
     }
 
+    // Shared date format from /js/escape.js ("27 Sep 2026", "27 Sep 2026, 14:05")
     function formatDate(value) {
-        const d = parseDate(value);
-        return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        return KBF.formatDate(parseDate(value));
     }
 
     function formatDateTime(value) {
-        const d = parseDate(value);
-        if (!d) return '';
-        return formatDate(value) + ', ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        return KBF.formatDate(parseDate(value), { time: true });
     }
 
     function daysText(n) {
@@ -464,7 +462,7 @@
     function dateTile(date) {
         const box = el('div', 'ap-date');
         const d = parseDate(date);
-        box.appendChild(el('span', 'ap-date-month', d ? d.toLocaleDateString('en-GB', { month: 'short' }) : '-'));
+        box.appendChild(el('span', 'ap-date-month', d ? KBF.MONTHS_SHORT[d.getMonth()] : '-'));
         box.appendChild(el('span', 'ap-date-day', d ? String(d.getDate()) : '-'));
         return box;
     }
@@ -1237,7 +1235,7 @@
             regLink.appendChild(icon('external', 'w-4 h-4 flex-shrink-0'));
         }
         main.appendChild(infoList([
-            ['Date', parseDate(t.date) ? parseDate(t.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : t.date],
+            ['Date', KBF.formatDate(parseDate(t.date), { weekday: 'long', month: 'long', fallback: t.date })],
             ['Start time', t.startTime ? String(t.startTime).slice(0, 5) : ''],
             ['Venue', [t.venue, t.town, t.postCode].filter(Boolean).join(', ')],
             ['Organiser', t.organiser],

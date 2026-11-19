@@ -39,9 +39,12 @@ const KBF_TOURNAMENT_STATUS_LABELS = [
     'other' => 'Other',
 ];
 
-// One status key per tournament, as an SQL expression
+// One status key per tournament, as an SQL expression. Its value is built
+// from string literals, so it carries an explicit collation: comparing it
+// with a parameter (e.g. AdminStatus = ?) can never mix collations,
+// whatever the connection's own collation is.
 function kbfTournamentStatusSql() {
-    return "CASE
+    return "(CASE
         WHEN t.Status = 'Pending' THEN 'waiting'
         WHEN t.Status = 'Approved' AND DATE(t.TournamentDate) >= CURDATE() THEN 'upcoming'
         WHEN t.Status = 'Approved' AND NOT " . KBF_T_HAS_APPROVED_RESULTS . " AND " . KBF_T_HAS_WAITING_RESULTS . " THEN 'due_waiting'
@@ -50,7 +53,7 @@ function kbfTournamentStatusSql() {
         WHEN t.Status = 'Rejected' THEN 'rejected'
         WHEN t.Status = 'Cancelled' THEN 'cancelled'
         ELSE 'other'
-    END";
+    END) COLLATE utf8mb4_unicode_ci";
 }
 
 // The status key of one tournament, or null when it does not exist

@@ -91,10 +91,8 @@
         // Opens the first control centre section the person can use
         { key: 'settings', label: 'Settings', href: '/admin/security', controlCentre: true }
     ];
-    // Menu items in the header bar: fewer on small laptops (lg) so the row
-    // fits; the rest go under "More"
-    var MAX_BAR_ITEMS = 7;
-    var MAX_BAR_ITEMS_LG = 4;
+    // Menu items in the header bar: as many as fit (fitHeaderMenu), the rest
+    // go under "More"
 
     // Same colours as --theme-primary in each page's theme styles
     var THEMES = [
@@ -161,11 +159,22 @@
             '.kbf-theme-btn:hover .kbf-theme-dot{transform:scale(1.1);border-color:#fff;}' +
             '.kbf-theme-btn.kbf-active .kbf-theme-dot{border-color:#fff;box-shadow:0 0 0 2px #0F172A,0 0 8px rgba(255,255,255,.6);}' +
             '.kbf-theme-btn:focus-visible{outline:2px solid #fff;outline-offset:-4px;}' +
-            // Header bar on small laptops (1024-1279px): fewer links, rest under More
-            '.kbf-xl-only{display:none !important;}' +
-            '@media (min-width:1280px){.kbf-xl-only{display:inline-flex !important;}.kbf-below-xl{display:none !important;}' +
-                '.kbf-nav-link.kbf-active-lg{background:transparent;color:#9ca3af;font-weight:700;}}' +
-            '@media (max-width:1279.98px){.kbf-nav-link.kbf-active-lg{background:var(--theme-primary);color:#0F172A;font-weight:900;}}' +
+            // Round logo with the theme-colour ring and soft glow, as on the public header
+            '.kbf-logo{position:relative;display:block;width:44px;height:44px;flex-shrink:0;}' +
+            '@media (min-width:640px){.kbf-logo{width:48px;height:48px;}}' +
+            '.kbf-logo-glow{position:absolute;inset:0;border-radius:9999px;background:var(--theme-primary);filter:blur(10px);opacity:.4;}' +
+            '.kbf-logo-ring{position:relative;display:block;width:100%;height:100%;border-radius:9999px;border:3px solid var(--theme-primary);box-shadow:0 0 12px var(--theme-primary);background:#fff;overflow:hidden;}' +
+            '.kbf-logo-ring img{display:block;width:100%;height:100%;object-fit:contain;}' +
+            // The bar never wraps or overlaps: fitHeaderMenu() moves items under More
+            '.kbf-bar{flex-wrap:nowrap;}' +
+            '.kbf-bar > *{flex-shrink:0;}' +
+            // "KBF-UK Admin" text only from 1280px on desktop (the logo stays);
+            // phones and tablets (no bar) keep it
+            '@media (min-width:1024px) and (max-width:1279.98px){.kbf-brand-text{display:none;}}' +
+            // The menu (hamburger) and control-centre section buttons only
+            // where the full menu or the sidebar is hidden (the shell's own
+            // display rules would otherwise beat lg:hidden)
+            '@media (min-width:1024px){[data-kbf-mobile-toggle],[data-kbf-cc-toggle]{display:none !important;}}' +
             '.kbf-drop-themes{display:flex;align-items:center;gap:.25rem;padding:.25rem .5rem .25rem .875rem;border-bottom:2px solid #374151;}' +
             '.kbf-drop-themes-label{flex:1;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;}' +
             '.kbf-drop .kbf-theme-btn{width:44px;padding:0;justify-content:center;}' +
@@ -328,27 +337,21 @@
     // ---------- header ----------
     function renderHeader(user, active) {
         var items = visibleMenu(user);
-        var barItems = items.slice(0, MAX_BAR_ITEMS);
-        // Small laptops (lg, below xl) show MAX_BAR_ITEMS_LG items in the bar
-        // and move the next ones under "More"
-        var moreItems = items.slice(MAX_BAR_ITEMS_LG);
-        var moreActive = moreItems.some(function (i, n) {
-            return i.key === active && n + MAX_BAR_ITEMS_LG >= MAX_BAR_ITEMS;
-        });
-        var moreActiveLg = moreItems.some(function (i) { return i.key === active; });
-
-        var bar = barItems.map(function (i, n) {
-            var cls = 'kbf-nav-link' + (i.key === active ? ' kbf-active' : '') + (n >= MAX_BAR_ITEMS_LG ? ' kbf-xl-only' : '');
-            return '<a href="' + i.href + '" class="' + cls + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
+        // Every item is in the bar and in "More"; fitHeaderMenu() shows as
+        // many as fit in the bar at the current width and the rest under
+        // "More", so the logo, title, menu and account button never overlap
+        var bar = items.map(function (i, n) {
+            var cls = 'kbf-nav-link' + (i.key === active ? ' kbf-active' : '');
+            return '<a href="' + i.href + '" class="' + cls + '" data-kbf-bar-item="' + n + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
         }).join('');
 
-        var more = moreItems.length ?
-            '<div class="relative' + (items.length <= MAX_BAR_ITEMS ? ' kbf-below-xl' : '') + '" data-kbf-dropdown>' +
-                '<button type="button" class="kbf-nav-link flex items-center gap-1' + (moreActive ? ' kbf-active' : (moreActiveLg ? ' kbf-active-lg' : '')) + '" data-kbf-toggle aria-haspopup="true" aria-expanded="false">More ' + icon('chevron', 'w-3 h-3') + '</button>' +
+        var more = items.length ?
+            '<div class="relative hidden" data-kbf-dropdown data-kbf-more-wrap>' +
+                '<button type="button" class="kbf-nav-link flex items-center gap-1" data-kbf-toggle data-kbf-more-btn aria-haspopup="true" aria-expanded="false">More ' + icon('chevron', 'w-3 h-3') + '</button>' +
                 '<div class="kbf-drop hidden" data-kbf-menu>' +
-                    moreItems.map(function (i, n) {
-                        var cls = (i.key === active ? 'kbf-active' : '') + (n + MAX_BAR_ITEMS_LG < MAX_BAR_ITEMS ? ' kbf-below-xl' : '');
-                        return '<a href="' + i.href + '"' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
+                    items.map(function (i, n) {
+                        var cls = i.key === active ? ' class="kbf-active"' : '';
+                        return '<a href="' + i.href + '"' + cls + ' data-kbf-more-item="' + n + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
                     }).join('') +
                 '</div>' +
             '</div>' : '';
@@ -382,11 +385,12 @@
             '<nav class="bg-slate-900 border-b-4 theme-primary-border shadow-2xl" style="border-color:var(--theme-primary)">' +
                 '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">' +
                     '<div class="flex justify-between items-center h-16 sm:h-20 gap-4">' +
-                        '<a href="/admin/dashboard" class="flex items-center gap-3 min-w-0">' +
-                            '<img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo" class="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0">' +
-                            '<span class="text-base sm:text-xl font-black uppercase whitespace-nowrap">KBF-UK Admin</span>' +
+                        '<a href="/admin/dashboard" class="flex items-center gap-3 min-w-0 flex-shrink-0" aria-label="KBF-UK Admin dashboard">' +
+                            '<span class="kbf-logo" aria-hidden="true"><span class="kbf-logo-glow"></span>' +
+                                '<span class="kbf-logo-ring"><img src="/assets/images/logo/KBF-Logo.jpeg" alt=""></span></span>' +
+                            '<span class="kbf-brand-text text-base sm:text-xl font-black uppercase whitespace-nowrap">KBF-UK Admin</span>' +
                         '</a>' +
-                        '<div class="hidden lg:flex items-center gap-1 flex-1 justify-center min-w-0">' + bar + more + '</div>' +
+                        '<div class="hidden lg:flex items-center gap-1 flex-1 justify-center min-w-0 kbf-bar" data-kbf-bar>' + bar + more + '</div>' +
                         '<div class="hidden lg:flex items-center gap-3 flex-shrink-0">' +
                             account +
                         '</div>' +
@@ -426,6 +430,71 @@
         host.querySelectorAll('[data-kbf-label]').forEach(function (el) { el.textContent = user.mainLabel; });
 
         wireHeader(host);
+
+        // Fit the menu to the space now, and again whenever it changes
+        fitHeaderMenu(host);
+        if (!window.__kbfFitBound) {
+            window.__kbfFitBound = true;
+            var fitTimer = null;
+            window.addEventListener('resize', function () {
+                clearTimeout(fitTimer);
+                fitTimer = setTimeout(function () { fitHeaderMenu(document.getElementById('kbf-admin-header')); }, 100);
+            });
+            window.addEventListener('load', function () { fitHeaderMenu(document.getElementById('kbf-admin-header')); });
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(function () { fitHeaderMenu(document.getElementById('kbf-admin-header')); });
+            }
+        }
+    }
+
+    // Show as many menu items in the header bar as fit beside the logo, title
+    // and account button; the rest go under "More" (the item for the current
+    // page is never hidden in both places). Below 1024px the bar is hidden
+    // and the phone menu is used instead.
+    function fitHeaderMenu(host) {
+        if (!host) return;
+        var bar = host.querySelector('[data-kbf-bar]');
+        if (!bar) return;
+        var barItems = Array.prototype.slice.call(bar.querySelectorAll('[data-kbf-bar-item]'));
+        var moreWrap = bar.querySelector('[data-kbf-more-wrap]');
+        var moreItems = Array.prototype.slice.call(bar.querySelectorAll('[data-kbf-more-item]'));
+        var moreBtn = bar.querySelector('[data-kbf-more-btn]');
+
+        // Start with everything in the bar
+        barItems.forEach(function (a) { a.style.display = ''; });
+        moreItems.forEach(function (a) { a.style.display = 'none'; });
+        if (moreWrap) moreWrap.classList.add('hidden');
+        if (moreBtn) moreBtn.classList.remove('kbf-active');
+        if (window.getComputedStyle(bar).display === 'none') return;
+
+        // Move the last items under More until the row fits
+        var visible = barItems.length;
+        // Total width of the shown items (and gaps) against the bar's width;
+        // measured directly, because a centred row that overflows spills out
+        // on both sides
+        var fits = function () {
+            var gap = parseFloat(window.getComputedStyle(bar).columnGap) || 0;
+            var total = 0;
+            var shown = 0;
+            Array.prototype.forEach.call(bar.children, function (child) {
+                if (child.offsetParent === null && window.getComputedStyle(child).display === 'none') return;
+                if (child.classList.contains('hidden')) return;
+                total += child.getBoundingClientRect().width;
+                shown++;
+            });
+            total += gap * Math.max(0, shown - 1);
+            return total <= bar.clientWidth + 1;
+        };
+        if (fits()) return;
+        if (moreWrap) moreWrap.classList.remove('hidden');
+        while (visible > 0 && !fits()) {
+            visible--;
+            barItems[visible].style.display = 'none';
+            if (moreItems[visible]) moreItems[visible].style.display = '';
+        }
+        // "More" shows as current when the current page is inside it
+        var activeHidden = barItems.some(function (a, n) { return n >= visible && a.classList.contains('kbf-active'); });
+        if (moreBtn && activeHidden) moreBtn.classList.add('kbf-active');
     }
 
     function closeAllDropdowns(except) {

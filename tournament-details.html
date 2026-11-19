@@ -36,7 +36,7 @@
         .tr-pts { font-size: .72rem; font-weight: 900; color: #9ca3af; text-transform: uppercase; white-space: nowrap; }
         .tr-card.is-win .tr-pts { color: var(--theme-primary); }
         .tr-player { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem .65rem; background: #1e293b; border: 2px solid #374151; min-width: 0; }
-        .tr-name { font-weight: 800; font-size: .875rem; color: #fff; min-width: 0; overflow-wrap: anywhere; }
+        .tr-name { font-weight: 800; font-size: .875rem; color: #fff; min-width: 0; overflow-wrap: anywhere; text-transform: uppercase; }
         .tr-card.is-win .tr-name { font-size: 1rem; }
         .tr-name a { color: #fff; text-decoration: none; }
         .tr-name a:hover { color: var(--theme-primary); text-decoration: underline; }
@@ -171,6 +171,13 @@
         }
         @media (min-width: 1024px) {
             .td-poster-frame { height: 580px; }
+        }
+        /* No poster: on phones the date tile stays short so the details show on the first screen */
+        @media (max-width: 767px) {
+            .td-poster-frame.td-frame-tile,
+            .td-poster-frame:has(> .t-datetile) { height: 220px; }
+            .td-poster-frame .t-datetile-lg { gap: 6px; }
+            .td-poster-frame .t-datetile-lg .t-dt-day { font-size: 110px; }
         }
         .td-fullsize {
             display: flex;
@@ -611,10 +618,11 @@
 
     // escapeHtml comes from /js/escape.js
 
-    const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    // Fixed English names from /js/escape.js (never browser locale output)
+    const WEEKDAYS_SHORT = KBF.WEEKDAYS_SHORT;
+    const WEEKDAYS_LONG = KBF.WEEKDAYS_LONG;
+    const MONTHS_SHORT = KBF.MONTHS_SHORT;
+    const MONTHS_LONG = KBF.MONTHS_LONG;
 
     function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -827,6 +835,8 @@
     function onPosterUnavailable() {
         const link = document.getElementById('posterFullSize');
         if (link) link.remove();
+        const frame = document.querySelector('.td-poster-frame');
+        if (frame) frame.classList.add('td-frame-tile');
     }
 
     function infoRowHtml(iconName, label, valueHtml, extraHtml) {
@@ -852,7 +862,7 @@
         // Poster panel
         const poster = safeImagePath(t.PosterUrl);
         document.getElementById('posterPanel').innerHTML = `
-            <div class="td-poster-frame">${posterOrTileHtml(t, true)}</div>
+            <div class="td-poster-frame${poster ? '' : ' td-frame-tile'}">${posterOrTileHtml(t, true)}</div>
             ${poster ? `<a id="posterFullSize" href="${escapeHtml(poster)}" target="_blank" rel="noopener" class="td-fullsize">View full size ${svgIcon('external')}</a>` : ''}`;
 
         // Facts
@@ -869,14 +879,15 @@
         if (venue || town || postcode) {
             const mapQuery = [venue, postcode || town].filter(Boolean).join(', ');
             const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery);
-            const townLine = [town, postcode].filter(Boolean).join(' ');
-            rows.push(infoRowHtml('pin', 'Venue', escapeHtml(venue || town),
+            // Display only: venue and town in title case, postcode in capitals
+            const townLine = [KBF.titleCase(town), postcode.toUpperCase()].filter(Boolean).join(' ');
+            rows.push(infoRowHtml('pin', 'Venue', escapeHtml(KBF.titleCase(venue || town)),
                 (venue && townLine ? `<div class="td-row-sub">${escapeHtml(townLine)}</div>` : '') +
                 `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener" class="td-link">Open in Google Maps ${svgIcon('external')}</a>`));
         }
 
         if (t.ClubName) {
-            rows.push(infoRowHtml('building', 'Organiser', escapeHtml(t.ClubName)));
+            rows.push(infoRowHtml('building', 'Organiser', escapeHtml(KBF.titleCase(t.ClubName))));
         }
 
         if (t.EntryFee) {

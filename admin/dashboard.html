@@ -225,7 +225,7 @@
     // DATES (API dates are "YYYY-MM-DD"; today is UK time)
     // ============================================
     const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MONTH_SHORT = KBF.MONTHS_SHORT;
 
     function ymd(value) {
         const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''));
@@ -237,7 +237,7 @@
     function ukNow() {
         const parts = {};
         new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long',
+            timeZone: 'Europe/London', day: 'numeric', month: 'numeric',
             year: 'numeric', hour: 'numeric', hourCycle: 'h23'
         }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
         return parts;
@@ -338,7 +338,7 @@
     function renderGreetingHeader(data) {
         const now = ukNow();
         document.getElementById('todayDate').textContent =
-            (now.weekday + ' ' + now.day + ' ' + now.month + ' ' + now.year).toUpperCase();
+            KBF.formatDate(new Date(), { timeZone: 'Europe/London', weekday: 'long', month: 'long' }).toUpperCase();
         const hour = Number(now.hour);
         document.getElementById('greetWords').textContent =
             hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');

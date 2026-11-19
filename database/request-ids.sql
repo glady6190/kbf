@@ -19,7 +19,7 @@
 
 CREATE TABLE IF NOT EXISTS RequestIds (
     UserId       INT          NOT NULL,
-    RequestId    VARCHAR(64)  CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    RequestId    VARCHAR(64)  NOT NULL,
     Scope        VARCHAR(40)  NOT NULL,
     RecordId     VARCHAR(64)  NULL DEFAULT NULL,
     ResponseJson MEDIUMTEXT   NULL DEFAULT NULL,
@@ -27,3 +27,17 @@ CREATE TABLE IF NOT EXISTS RequestIds (
     PRIMARY KEY (UserId, RequestId),
     KEY idx_requestids_created (CreatedDate)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- A table made by an earlier version of this script had RequestId in
+-- ascii / ascii_bin: it now uses utf8mb4_unicode_ci like every other text
+-- column (only when it still differs; the ids are kept)
+SET @kbf_sql := IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RequestIds' AND COLUMN_NAME = 'RequestId'
+       AND COLLATION_NAME <> 'utf8mb4_unicode_ci') > 0,
+    'ALTER TABLE RequestIds MODIFY COLUMN RequestId VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL',
+    'SELECT ''RequestIds.RequestId already utf8mb4_unicode_ci'' AS info'
+);
+PREPARE kbf_stmt FROM @kbf_sql;
+EXECUTE kbf_stmt;
+DEALLOCATE PREPARE kbf_stmt;

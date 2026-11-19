@@ -83,10 +83,11 @@
             Number(match[4] || 0), Number(match[5] || 0), Number(match[6] || 0));
     }
 
-    // "TUE 26 MAY 2026"
+    // "TUE 26 MAY 2026" (the shared KBF.formatDate format, in capitals)
     function formatDate(post) {
         var date = post instanceof Date ? post : postDate(post);
         if (!date || isNaN(date.getTime())) return '';
+        if (window.KBF && window.KBF.formatDate) return window.KBF.formatDate(date, { weekday: true }).toUpperCase();
         return DAYS[date.getDay()] + ' ' + date.getDate() + ' ' + MONTHS[date.getMonth()] + ' ' + date.getFullYear();
     }
 

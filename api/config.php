@@ -87,6 +87,10 @@ try {
     // The same behaviour on any server: UK time (PHP's current offset, e.g.
     // +01:00 in summer, +00:00 in winter) and a known sql_mode. Times stored
     // before this were written in UTC and are left as they are.
+    // The connection itself uses utf8mb4_unicode_ci, the collation of every
+    // table, so string literals and parameters always match the columns
+    // (PDO's "charset=utf8mb4" alone gives utf8mb4_general_ci).
+    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     $pdo->exec("SET time_zone = '" . date('P') . "', sql_mode = 'NO_ENGINE_SUBSTITUTION'");
 } catch(PDOException $e) {
     error_log('Database connection failed: ' . $e->getMessage());

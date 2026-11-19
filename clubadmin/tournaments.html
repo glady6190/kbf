@@ -262,9 +262,7 @@
                         <div>
                             <p class="text-gray-400 uppercase text-xs font-bold mb-1">Tournament Date</p>
                             <p class="text-white font-bold">
-                                ${new Date(tournament.TournamentDate).toLocaleDateString('en-GB', { 
-                                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-                                })}
+                                ${escapeHtml(KBF.formatDate(tournament.TournamentDate, { weekday: 'long', month: 'long' }))}
                             </p>
                         </div>
                     </div>

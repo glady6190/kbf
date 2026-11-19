@@ -304,9 +304,8 @@
 
         function formatDate(value) {
             if (!value) return '';
-            var d = new Date(String(value).replace(' ', 'T'));
-            if (isNaN(d.getTime())) return String(value);
-            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            // The shared format with fixed English months (never "Sept")
+            return KBF.formatDate(value, { fallback: String(value) });
         }
 
         function groupKey(secret) {
@@ -663,7 +662,7 @@
         });
 
         $('downloadCodes').addEventListener('click', function () {
-            var today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            var today = KBF.formatDate(new Date());
             var lines = [
                 'KBF-UK backup codes for 2-step verification',
                 'Account: ' + (accountName || ''),

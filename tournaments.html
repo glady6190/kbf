@@ -1065,10 +1065,11 @@
 
     // escapeHtml comes from /js/escape.js
 
-    const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    // Fixed English names from /js/escape.js (never browser locale output)
+    const WEEKDAYS_SHORT = KBF.WEEKDAYS_SHORT;
+    const WEEKDAYS_LONG = KBF.WEEKDAYS_LONG;
+    const MONTHS_SHORT = KBF.MONTHS_SHORT;
+    const MONTHS_LONG = KBF.MONTHS_LONG;
 
     function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -1368,8 +1369,8 @@
         }
 
         const dateText = escapeHtml(formatShortDate(state.date)) + (time ? ` <span class="t-info-muted">&middot; ${escapeHtml(time)}</span>` : '');
-        const venueText = escapeHtml(tournament.Venue) +
-            (tournament.Location ? ` <span class="t-info-muted">${escapeHtml(tournament.Location)}</span>` : '');
+        const venueText = escapeHtml(KBF.titleCase(tournament.Venue)) +
+            (tournament.Location ? ` <span class="t-info-muted">${escapeHtml(KBF.titleCase(tournament.Location))}</span>` : '');
 
         return `
             <article class="t-card">
@@ -1394,7 +1395,7 @@
                     </div>
                     <div class="t-info-row">
                         <span class="t-info-icon">${svgIcon('building')}</span>
-                        <span>${escapeHtml(tournament.ClubName)}</span>
+                        <span>${escapeHtml(KBF.titleCase(tournament.ClubName))}</span>
                     </div>
                 </div>
             </article>
@@ -1408,7 +1409,7 @@
         const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
         const todayDate = today.getDate();
         
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthNames = MONTHS_LONG;
         document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
         // This month's tournaments (loaded once; drawn again when they arrive)
         const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -1491,8 +1492,7 @@
         const container = document.getElementById('selectedDayTournaments');
         const dateText = document.getElementById('selectedDateText');
         const list = document.getElementById('selectedDayTournamentsList');
-        const date = new Date(dateStr + 'T00:00:00');
-        dateText.textContent = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        dateText.textContent = formatLongDate(dateStr);
         list.innerHTML = tournaments.map(tournament => createTournamentCard(tournament)).join('');
         container.classList.remove('hidden');
         container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

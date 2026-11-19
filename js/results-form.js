@@ -566,9 +566,9 @@
             dateBox.textContent = '';
             var tile = el('div', 'rf-date');
             var d = parseDate(t.date);
-            tile.appendChild(el('span', 'rf-date-month', d ? d.toLocaleDateString('en-GB', { month: 'short' }) : '-'));
+            tile.appendChild(el('span', 'rf-date-month', d ? KBF.MONTHS_SHORT[d.getMonth()] : '-'));
             tile.appendChild(el('span', 'rf-date-day', d ? String(d.getDate()) : '-'));
-            if (d) tile.title = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            if (d) tile.title = KBF.formatDate(d, { weekday: 'long', month: 'long' });
             dateBox.appendChild(tile);
             venueLine.textContent = '';
             venueLine.appendChild(icon('pin', 'w-4 h-4 flex-shrink-0 text-gray-500'));
@@ -786,7 +786,7 @@
             if (!d) return;
             var when = parseDate(d.savedAt);
             draftText.textContent = 'Continue your saved draft from ' + (when
-                ? when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ', ' + when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                ? KBF.formatDate(when, { year: false, time: true })
                 : 'earlier') + '?';
             draftPending = true;
             draftOffer.classList.remove('hidden');
@@ -1396,7 +1396,7 @@
             var n = player && player.kind === 'player' ? careerNotes[player.id] : null;
             if (!n || !pts) return '';
             var d = parseDate(n.date);
-            var when = d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : n.date;
+            var when = KBF.formatDate(d, { fallback: n.date });
             var tail = 'These ' + pts + ' points go to career points only.';
             if (n.kind === 'promotion') return fullName(player) + ' was promoted on ' + when + '. ' + tail;
             if (n.kind === 'grade') return fullName(player) + ' moved to grade ' + (n.grade || 'another grade') + ' on ' + when + '. ' + tail;

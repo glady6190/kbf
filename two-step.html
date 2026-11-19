@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2-step verification - KBF-UK</title>
     <link rel="stylesheet" href="/assets/css/auth.css">
-    <style>
-        .backup-input { text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 900; font-size: 18px; letter-spacing: .15em; text-transform: uppercase; }
-        .verify-step { margin: 0 0 6px; text-align: center; color: var(--theme-primary); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
-    </style>
 </head>
 <body class="auth-body" data-theme="emerald">
     <main class="auth-wrap">
@@ -20,7 +16,7 @@
                 </span>
             </div>
 
-            <p class="verify-step">2-step verification</p>
+            <p class="auth-step">2-step verification</p>
             <h1 id="verifyHeading" class="auth-title">Enter your code</h1>
             <p id="verifyIntro" class="auth-intro">Open your authenticator app and enter the 6-digit code for KBF-UK.</p>
 
@@ -36,7 +32,7 @@
                 <div id="backupCodeArea" class="auth-field hidden">
                     <label for="backupCode" class="auth-label">Backup code</label>
                     <input id="backupCode" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
-                           class="auth-input backup-input" placeholder="ABCDE-FGHJK" aria-describedby="backupHint">
+                           class="auth-input auth-input-code" placeholder="ABCDE-FGHJK" aria-describedby="backupHint">
                     <p id="backupHint" class="auth-hint">Each backup code works once.</p>
                 </div>
 

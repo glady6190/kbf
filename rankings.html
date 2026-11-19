@@ -440,7 +440,13 @@
     overflow-x: auto;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+    /* Still swipeable, but no grey scrollbar under the tabs */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.gr-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .gr-tab {
@@ -1668,7 +1674,8 @@
             first: first,
             last: last,
             name: (first + ' ' + last).trim(),
-            location: String(user.Location || '').trim(),
+            // Display only: town in title case (shared helper in /js/escape.js)
+            location: KBF.titleCase(String(user.Location || '').trim()),
             photo: safePhoto(user.ProfilePhoto),
             season: toInt(user.TotalPoints),
             career: toInt(user.CareerPoints),

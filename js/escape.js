@@ -14,6 +14,12 @@
  * Image helpers (also globals): imageVariant, imgVariantAttrs,
  * setImageVariant. Images using a resized copy carry data-fallback with the
  * original url; a document 'error' listener swaps to it once.
+ *
+ * Dates: KBF.formatDate(value, opts) -> "27 Sep 2026" (fixed English month
+ * names; see the notes on formatDate), KBF.formatTime, KBF.parseDate and the
+ * arrays KBF.MONTHS_SHORT / MONTHS_LONG / WEEKDAYS_SHORT / WEEKDAYS_LONG.
+ * Text: KBF.titleCase (also global titleCase) for venues, towns and
+ * organiser names on the public site.
  */
 (function (window) {
     'use strict';
@@ -275,7 +281,173 @@
         return box;
     }
 
+    // ---- Dates -----------------------------------------------------------
+    // One date format for the whole site, with fixed English month names
+    // (browser locale output can give "Sept"). Never use toLocaleDateString
+    // or Intl month names for display; use these instead.
+    var MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+        'August', 'September', 'October', 'November', 'December'];
+    var WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    var WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // 'YYYY-MM-DD', 'YYYY-MM-DD HH:MM[:SS]' or with a 'T': no zone given
+    var WALL_CLOCK = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?$/;
+
+    // Zone to show a value in: wall-clock strings are already local times
+    // (stored as UK times), so opts.timeZone only applies to instants.
+    function zoneFor(value, timeZone) {
+        if (!timeZone) return '';
+        if (typeof value === 'string' && WALL_CLOCK.test(value.trim())) return '';
+        return timeZone;
+    }
+
+    // Read a date value as a Date. 'YYYY-MM-DD' and 'YYYY-MM-DD HH:MM[:SS]'
+    // (also with a 'T') are read as local wall-clock times, not shifted from
+    // UTC. Values with a Z or +hh:mm offset, numbers and Date objects are
+    // read as instants. Returns null when the value is not a date.
+    function parseDate(value) {
+        if (value === null || value === undefined || value === '') return null;
+        if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+        if (typeof value === 'number') {
+            var fromNumber = new Date(value);
+            return isNaN(fromNumber.getTime()) ? null : fromNumber;
+        }
+        var text = String(value).trim();
+        var m = WALL_CLOCK.exec(text);
+        if (m) {
+            var local = new Date(+m[1], +m[2] - 1, +m[3], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
+            // Reject impossible dates such as 2026-02-31
+            if (isNaN(local.getTime()) || local.getMonth() !== +m[2] - 1) return null;
+            return local;
+        }
+        var parsed = new Date(text);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Wall-clock parts of a Date, in the browser's zone or in opts.timeZone
+    // (such as 'Europe/London' or 'UTC'; numeric parts only).
+    function dateParts(date, timeZone) {
+        if (timeZone && window.Intl && Intl.DateTimeFormat) {
+            try {
+                var parts = {};
+                new Intl.DateTimeFormat('en-GB', {
+                    timeZone: timeZone, year: 'numeric', month: 'numeric', day: 'numeric',
+                    hour: 'numeric', minute: 'numeric', hourCycle: 'h23'
+                }).formatToParts(date).forEach(function (p) { parts[p.type] = p.value; });
+                var y = +parts.year, mo = +parts.month - 1, d = +parts.day;
+                return {
+                    year: y, month: mo, day: d,
+                    weekday: new Date(Date.UTC(y, mo, d)).getUTCDay(),
+                    hour: (+parts.hour) % 24, minute: +parts.minute
+                };
+            } catch (e) { /* unknown zone: use the browser's */ }
+        }
+        return {
+            year: date.getFullYear(), month: date.getMonth(), day: date.getDate(),
+            weekday: date.getDay(), hour: date.getHours(), minute: date.getMinutes()
+        };
+    }
+
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+    // Format a date for display: "27 Sep 2026".
+    // opts.weekday: true or 'short' -> "Sat 27 Sep 2026", 'long' -> "Saturday 27 Sep 2026"
+    // opts.month:   'long' -> "27 September 2026" (default 'short')
+    // opts.year:    false leaves the year out -> "27 Sep"
+    // opts.time:    true adds the time -> "27 Sep 2026, 14:05"
+    // opts.timeZone: show an instant (Date, number, or text with Z/+hh:mm) in
+    //               that zone, e.g. 'Europe/London'. Plain 'YYYY-MM-DD[ HH:MM]'
+    //               text is shown exactly as written.
+    // opts.fallback: returned when value is not a date (default '')
+    function formatDate(value, opts) {
+        var o = opts || {};
+        var date = parseDate(value);
+        if (!date) return o.fallback !== undefined ? o.fallback : '';
+        var p = dateParts(date, zoneFor(value, o.timeZone));
+        var out = p.day + ' ' + (o.month === 'long' ? MONTHS_LONG : MONTHS_SHORT)[p.month];
+        if (o.year !== false) out += ' ' + p.year;
+        if (o.weekday) out = (o.weekday === 'long' ? WEEKDAYS_LONG : WEEKDAYS_SHORT)[p.weekday] + ' ' + out;
+        if (o.time) out += ', ' + pad2(p.hour) + ':' + pad2(p.minute);
+        return out;
+    }
+
+    // "14:05" (24-hour). opts.timeZone as for formatDate.
+    function formatTime(value, opts) {
+        var o = opts || {};
+        var date = parseDate(value);
+        if (!date) return o.fallback !== undefined ? o.fallback : '';
+        var p = dateParts(date, zoneFor(value, o.timeZone));
+        return pad2(p.hour) + ':' + pad2(p.minute);
+    }
+
+    // ---- Title case for venues, towns and organiser names -----------------
+    // Display only: stored text stays as typed. Escape the result afterwards
+    // (escapeHtml) or set it with textContent.
+    //   "LEEDS sports centre, ls1 4ab" -> "LEEDS Sports Centre, LS1 4AB"
+    //   "hall of the KBF in stoke-on-trent" -> "Hall of the KBF in Stoke-on-Trent"
+    // Words of two or more capitals (KBF, UK, MARC) are kept as typed, UK
+    // postcodes are put in capitals, small joining words are lower case
+    // except at the start, and Mc/O'/D' names and hyphenated parts are handled.
+    var SMALL_WORDS = {
+        a: 1, an: 1, and: 1, as: 1, at: 1, by: 1, de: 1, del: 1, der: 1, des: 1, du: 1,
+        en: 1, 'for': 1, from: 1, 'in': 1, into: 1, la: 1, le: 1, les: 1, nor: 1, of: 1,
+        on: 1, or: 1, the: 1, to: 1, upon: 1, van: 1, von: 1, via: 1, with: 1
+    };
+    var POSTCODE = /\b([A-Za-z]{1,2}\d[A-Za-z\d]?)\s*(\d[A-Za-z]{2})\b/g;
+
+    function capitalise(word) {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }
+
+    function titleCasePart(part, isFirst) {
+        if (part === '') return part;
+        var letters = part.replace(/[^A-Za-zÀ-ɏ]/g, '');
+        if (letters === '') return part;
+        // Contains a digit (postcodes, unit numbers, "3rd"): leave as typed
+        if (/\d/.test(part)) return part;
+        // Acronyms: two or more capitals and no lower case letters
+        if (letters.length >= 2 && letters === letters.toUpperCase() && letters !== letters.toLowerCase()) return part;
+        var lower = part.toLowerCase();
+        var core = lower.replace(/[^a-zÀ-ɏ'’.]/g, '');
+        if (!isFirst && SMALL_WORDS[core]) return lower;
+        // Already typed with an inner capital: MacLeod, DeVere, McDonald
+        if (/^[A-Z][a-zÀ-ɏ]+[A-Z][a-zÀ-ɏ]+$/.test(part)) return part;
+        // Mc + capital: mcdonald -> McDonald
+        var mc = /^([^A-Za-z]*)mc([a-zÀ-ɏ])(.+)$/.exec(lower);
+        if (mc) return mc[1] + 'Mc' + mc[2].toUpperCase() + mc[3];
+        // O'Brien, D'Souza (one letter before the apostrophe)
+        var apos = /^([^A-Za-z]*)([a-z])(['’])([a-zÀ-ɏ])(.*)$/.exec(lower);
+        if (apos) return apos[1] + apos[2].toUpperCase() + apos[3] + apos[4].toUpperCase() + apos[5];
+        // Leading punctuation such as "(" before the first letter
+        var lead = /^([^A-Za-zÀ-ɏ]*)(.*)$/.exec(lower);
+        return lead[1] + capitalise(lead[2]);
+    }
+
+    function titleCase(value) {
+        if (value === null || value === undefined) return '';
+        var text = String(value).replace(POSTCODE, function (all, outward, inward) {
+            return outward.toUpperCase() + ' ' + inward.toUpperCase();
+        });
+        var wordIndex = 0;
+        return text.replace(/\S+/g, function (word) {
+            var first = wordIndex === 0;
+            wordIndex++;
+            return word.split('-').map(function (part, i) {
+                return titleCasePart(part, first && i === 0);
+            }).join('-');
+        });
+    }
+
     var KBF = window.KBF = window.KBF || {};
+    KBF.MONTHS_SHORT = MONTHS_SHORT;
+    KBF.MONTHS_LONG = MONTHS_LONG;
+    KBF.WEEKDAYS_SHORT = WEEKDAYS_SHORT;
+    KBF.WEEKDAYS_LONG = WEEKDAYS_LONG;
+    KBF.parseDate = parseDate;
+    KBF.formatDate = formatDate;
+    KBF.formatTime = formatTime;
+    KBF.titleCase = titleCase;
     KBF.storage = storage;
     KBF.showLoadError = showLoadError;
     KBF.escapeHtml = escapeHtml;
@@ -294,4 +466,5 @@
     window.imageVariant = imageVariant;
     window.imgVariantAttrs = imgVariantAttrs;
     window.setImageVariant = setImageVariant;
+    window.titleCase = titleCase;
 })(window);

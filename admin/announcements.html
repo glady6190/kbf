@@ -156,7 +156,7 @@
                         <p class="text-sm text-gray-300 mb-3 font-semibold">${escapeHtml(ann.Content.substring(0, 150))}${ann.Content.length > 150 ? '...' : ''}</p>
                         <div class="flex justify-between items-center text-xs mb-4 pb-4 border-b-4 border-gray-700">
                             <span class="text-gray-400 font-bold uppercase">Posted by ${escapeHtml(ann.AuthorName)}</span>
-                            <span class="text-gray-400 font-bold uppercase">${new Date(ann.PublishedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            <span class="text-gray-400 font-bold uppercase">${escapeHtml(KBF.formatDate(ann.PublishedDate))}</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" data-ann-id="${Number(ann.AnnouncementId)}" data-ann-action="toggle" onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1}, this)"

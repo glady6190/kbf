@@ -42,31 +42,46 @@ body.auth-body {
 .auth-card {
     width: 100%;
     max-width: 440px;
+    margin: 0 auto;
     background: #0F172A;
     border: 4px solid #374151;
     box-shadow: 8px 8px 0 var(--theme-primary);
     padding: 32px 28px;
 }
 
-/* ---------- logo (same image and ring as the site header) ---------- */
+/* ---------- logo (same image and ring as the site header) ----------
+ * The ring, glow and image holders are <span>s in the markup, so every one
+ * of them is made a block here: an inline span ignores width/height, which
+ * let the logo show at its full file size and drew the ring border and glow
+ * as thin strips along the text line instead of around the image.
+ * Sizes are fixed in px so nothing else can stretch the logo. */
 .auth-logo {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin: 0 0 24px;
 }
-.auth-logo a { display: inline-block; border-radius: 9999px; }
+.auth-logo a { display: block; border-radius: 50%; text-decoration: none; }
 .auth-logo a:focus-visible { outline: 3px solid var(--theme-primary); outline-offset: 4px; }
-.auth-logo-ring { position: relative; width: 80px; height: 80px; }
-.auth-logo-glow {
-    position: absolute; inset: 0; border-radius: 9999px;
-    background: var(--theme-primary); filter: blur(12px); opacity: .4;
+.auth-logo .auth-logo-ring {
+    position: relative; display: block; flex: 0 0 auto;
+    width: 96px; height: 96px;
 }
-.auth-logo-img {
-    position: relative; width: 80px; height: 80px; border-radius: 9999px;
-    border: 1px solid var(--theme-primary); background: #FFFFFF; overflow: hidden;
+.auth-logo .auth-logo-glow {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: block;
+    border-radius: 50%;
+    background: var(--theme-primary); filter: blur(12px); opacity: .4;
+    pointer-events: none;
+}
+.auth-logo .auth-logo-img {
+    position: relative; display: block;
+    width: 96px; height: 96px; border-radius: 50%;
+    border: 3px solid var(--theme-primary); background: #FFFFFF; overflow: hidden;
     box-shadow: 0 0 12px var(--theme-primary);
 }
-.auth-logo-img img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.auth-logo .auth-logo-img img {
+    display: block; width: 100%; height: 100%; max-width: 100%;
+    border-radius: 50%; object-fit: cover;
+}
 
 /* ---------- heading ---------- */
 .auth-title {
@@ -90,6 +105,18 @@ body.auth-body {
 .auth-intro a, .auth-text a { color: var(--theme-primary); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .auth-intro a:hover, .auth-text a:hover { color: #FFFFFF; }
 .auth-intro a:focus-visible, .auth-text a:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+.auth-intro strong { color: #FFFFFF; }
+
+/* Small label above a heading (2-step verification) */
+.auth-step {
+    margin: 0 0 8px; text-align: center;
+    color: var(--theme-primary); font-size: 12px; font-weight: 900;
+    letter-spacing: .14em; text-transform: uppercase;
+}
+
+/* "Checking..." block with a spinner */
+.auth-loading { text-align: center; padding: 8px 0; }
+.auth-loading .auth-small { margin-top: 12px; }
 
 .auth-text { color: #D1D5DB; font-size: 14px; line-height: 1.55; margin: 0 0 16px; }
 .auth-note {
@@ -132,6 +159,11 @@ body.auth-body {
 .auth-input::placeholder { color: #6B7280; }
 .auth-input:focus { outline: none; border-color: var(--theme-primary); box-shadow: 0 0 0 2px var(--theme-primary); }
 .auth-input:disabled { opacity: .6; cursor: not-allowed; }
+/* Backup code field (2-step verification) */
+.auth-input.auth-input-code {
+    text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 900; font-size: 18px; letter-spacing: .15em; text-transform: uppercase;
+}
 
 /* Password field with a show/hide button inside it */
 .pw-wrap { position: relative; }
@@ -231,6 +263,7 @@ body.auth-body {
 @media (max-width: 480px) {
     .auth-wrap { padding: 24px 16px; align-items: flex-start; }
     .auth-card { padding: 24px 18px; box-shadow: 5px 5px 0 var(--theme-primary); }
+    .auth-logo { margin-bottom: 20px; }
     .auth-title { font-size: 22px; }
 }
 

@@ -836,19 +836,15 @@
         return el('span', 'pp-grade' + (grade ? '' : ' is-none') + (extra ? ' ' + extra : ''), grade || '-');
     }
 
+    // Shared date format from /js/escape.js
     function formatDate(value) {
         if (!value) return '';
-        const d = new Date(value);
-        if (isNaN(d.getTime())) return String(value);
-        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' });
+        return KBF.formatDate(value, { timeZone: 'Europe/London', fallback: String(value) });
     }
 
     function formatDateTime(value) {
         if (!value) return '';
-        const d = new Date(String(value).indexOf('T') === -1 ? String(value).replace(' ', 'T') : value);
-        if (isNaN(d.getTime())) return String(value);
-        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' }) + ', ' +
-            d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+        return KBF.formatDate(value, { time: true, timeZone: 'Europe/London', fallback: String(value) });
     }
 
     function showMsg(id, text, kind) {
