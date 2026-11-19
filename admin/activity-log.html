@@ -27,15 +27,17 @@
 
         /* Impersonation tag: fixed amber on every theme */
         .as-tag { display: inline-flex; align-items: center; gap: .25rem; margin-top: .25rem; padding: .125rem .375rem; background: #f59e0b; color: #0F172A; font-size: .65rem; font-weight: 900; text-transform: uppercase; }
+        /* Phones and tablets: the download is the header's Export button */
+        @media (max-width: 1023.98px) { #csvBtn { display: none; } }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8">
+        <div id="pageBand" class="mb-6 sm:mb-8">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Activity</span> log</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Who did what, and when</p>
@@ -59,7 +61,7 @@
             </div>
 
             <!-- Filters -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div id="filterBlock" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                     <label for="searchInput" class="block text-xs font-black theme-primary-text uppercase mb-1">Search details</label>
                     <input type="search" id="searchInput" class="field" placeholder="Search details" autocomplete="off">
@@ -128,19 +130,44 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.activity_log
     // ============================================
     KBFShell.startControl({ section: 'activity' }).then(function (user) {
         window.kbfUser = user;
+        setUpPhoneTools();
         load(true);
     });
+
+    // Phones and tablets (below 1024px): compact header with Export, and the
+    // search and filters toolbar (js/admin-list-tools.js)
+    let listTools = null;
+    function setUpPhoneTools() {
+        if (!window.KBFListTools) return;
+        KBFListTools.header({
+            band: document.getElementById('pageBand'),
+            primary: { label: 'Export', ariaLabel: 'Download CSV', target: document.getElementById('csvBtn') }
+        });
+        listTools = KBFListTools.filters({
+            anchor: document.getElementById('filterBlock'),
+            search: document.getElementById('searchInput'),
+            controls: [
+                { el: document.getElementById('personFilter'), label: 'Person' },
+                { el: document.getElementById('actionFilter'), label: 'Action' },
+                { el: document.getElementById('rangeFilter'), label: 'Date' },
+                { block: document.getElementById('customDates') }
+            ],
+            count: () => knownTotal,
+            noun: ['entry', 'entries']
+        });
+    }
 
     const API = '/api/control-activity.php';
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -301,6 +328,7 @@
                 : 'Showing ' + shown.toLocaleString('en-GB') + (data.hasMore ? ' entries (more available)' : ' entries');
             document.getElementById('logEmpty').classList.toggle('hidden', shown > 0);
             more.classList.toggle('hidden', !data.hasMore);
+            if (listTools) listTools.refresh();
         } catch (err) {
             console.error('Activity log error:', err);
             loadFailed(reset, 'The activity log could not be loaded. Please check your connection and try again.');
@@ -422,6 +450,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

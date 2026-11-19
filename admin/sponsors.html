@@ -69,14 +69,14 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8">
+        <div id="pageBand" class="mb-6 sm:mb-8">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Sponsors</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Shown in the rotating spotlight on the home page</p>
@@ -197,7 +197,7 @@
         <!-- ============================ -->
         <div class="bg-slate-900 border-2 sm:border-4 border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-4 border-gray-700 bg-slate-800">
-                <h2 class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Sponsor Queue</h2>
+                <h2 id="queueHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Sponsor Queue</h2>
                 <p class="text-xs text-gray-400 mt-1 uppercase font-bold">Shown on the home page in this order</p>
             </div>
             <div id="listMessage" class="hidden mx-4 sm:mx-6 mt-4 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
@@ -207,16 +207,43 @@
         </div>
     </main>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
     <script>
     // Page guard (shared shell)
     KBFShell.start({ anyOf: ['content.sponsors'], active: 'sponsors' }).then(function (user) {
         window.kbfUser = user;
         document.getElementById('logoLimitMb').textContent = String(KBFShell.uploadLimitMb('sponsor', 2));
+        // Phones and tablets (below 1024px): compact header. "Sponsor" goes
+        // to the add form (leaving any edit); the queue is under "more".
+        if (window.KBFListTools) {
+            KBFListTools.header({
+                band: document.getElementById('pageBand'),
+                primary: {
+                    label: 'Sponsor', ariaLabel: 'Add a sponsor',
+                    onClick: function () {
+                        const cancel = document.getElementById('cancelEditBtn');
+                        if (!cancel.classList.contains('hidden')) cancel.click();
+                        const title = document.getElementById('formTitle');
+                        title.scrollIntoView({ block: 'start' });
+                        document.getElementById('sponsorName').focus({ preventScroll: true });
+                    }
+                },
+                more: [{
+                    label: 'Sponsor queue', icon: 'list',
+                    onClick: function () {
+                        const h = document.getElementById('queueHeading');
+                        h.tabIndex = -1;
+                        h.scrollIntoView({ block: 'start' });
+                        h.focus({ preventScroll: true });
+                    }
+                }]
+            });
+        }
         loadSponsors();
     });
 
@@ -703,6 +730,6 @@
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

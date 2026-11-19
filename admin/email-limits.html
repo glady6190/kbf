@@ -40,15 +40,17 @@
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
+        /* Phones and tablets: the log download is the header's Export button */
+        @media (max-width: 1023.98px) { #csvBtn { display: none; } }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8">
+        <div id="pageBand" class="mb-6 sm:mb-8">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Email</span> and limits</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">How many emails the site sends, and what happened to each one</p>
@@ -136,7 +138,7 @@
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div id="logFilterBlock" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div>
                         <label for="statusFilter" class="block text-xs font-black theme-primary-text uppercase mb-2">Result</label>
                         <select id="statusFilter" class="field-input">
@@ -182,19 +184,51 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.email
     // ============================================
     KBFShell.startControl({ section: 'email' }).then(function (user) {
         window.kbfUser = user;
+        setUpPhoneTools();
         initPage();
     });
+
+    // Phones and tablets (below 1024px): compact header (Export downloads the
+    // email log; "more" jumps to the log) and the log's filters in the
+    // filters sheet (js/admin-list-tools.js)
+    let listTools = null;
+    function setUpPhoneTools() {
+        if (!window.KBFListTools) return;
+        KBFListTools.header({
+            band: document.getElementById('pageBand'),
+            primary: { label: 'Export', ariaLabel: 'Download the email log as CSV', target: document.getElementById('csvBtn') },
+            more: [{
+                label: 'Email log', icon: 'mail',
+                onClick: function () {
+                    const h = document.getElementById('logHeading');
+                    h.tabIndex = -1;
+                    h.scrollIntoView({ block: 'start' });
+                    h.focus({ preventScroll: true });
+                }
+            }]
+        });
+        listTools = KBFListTools.filters({
+            anchor: document.getElementById('logFilterBlock'),
+            controls: [
+                { el: document.getElementById('statusFilter'), label: 'Result' },
+                { el: document.getElementById('eventFilter'), label: 'Email' }
+            ],
+            count: () => null,
+            noun: ['email', 'emails']
+        });
+    }
 
     // ============================================
     // HELPER FUNCTIONS
@@ -484,6 +518,7 @@
             nextOffset = data.nextOffset || 0;
             moreBtn.classList.toggle('hidden', !data.hasMore);
             document.getElementById('logEmpty').classList.toggle('hidden', body.children.length > 0);
+            if (listTools) listTools.refresh();
         } catch (e) {
             console.error('Load email log error:', e);
             logFailed(reset, 'The email log could not be loaded. Please check your connection and try again.');
@@ -602,6 +637,6 @@
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

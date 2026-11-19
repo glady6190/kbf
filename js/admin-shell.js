@@ -118,8 +118,27 @@
         download: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
         cog: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
         list: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
-        users: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'
+        users: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        // Phone menu (js/admin-list-tools.js uses the same style)
+        inbox: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
+        trophy: 'M8 21h8m-4-4v4m-5-17h10v5a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3m10-4h3v1a3 3 0 01-3 3',
+        trend: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
+        news: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z',
+        star: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+        external: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14'
     };
+
+    // Phone menu groups (below 1024px): MENU keys per group, with an icon each
+    var PHONE_GROUPS = [
+        { label: 'Daily work', keys: ['dashboard', 'people', 'approvals', 'tournaments', 'grading'] },
+        { label: 'Content', keys: ['news', 'broadcasts', 'sponsors'] },
+        { label: 'Administration', keys: ['staff', 'settings'] }
+    ];
+    var PHONE_ICONS = {
+        dashboard: 'grid', people: 'users', approvals: 'inbox', tournaments: 'trophy', grading: 'trend',
+        news: 'news', broadcasts: 'mail', sponsors: 'star', staff: 'shield', settings: 'cog'
+    };
+    var PHONE_LABELS = { staff: 'Staff and access' };
 
     // ---------- helpers ----------
     // Shared escaper from /js/escape.js (must be loaded before this file).
@@ -377,9 +396,25 @@
                 '</div>' +
             '</div>';
 
-        var mobileLinks = items.map(function (i) {
-            return '<a href="' + i.href + '" class="kbf-mobile-link' + (i.key === active ? ' kbf-active' : '') + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
+        // Phones: the pages in groups, each with an icon; a group with none
+        // of the person's pages is left out. Counts fill the badges later.
+        var byKey = {};
+        items.forEach(function (i) { byKey[i.key] = i; });
+        var mobileGroups = PHONE_GROUPS.map(function (g, n) {
+            var links = g.keys.filter(function (k) { return byKey[k]; }).map(function (k) {
+                var i = byKey[k];
+                var on = k === active;
+                var badge = k === 'approvals' ? '<span class="kbf-pm-badge kbf-pm-badge-red hidden" data-kbf-count="approvals"></span>'
+                    : (k === 'tournaments' ? '<span class="kbf-pm-badge kbf-pm-badge-amber hidden" data-kbf-count="resultsDue"></span>' : '');
+                return '<li><a href="' + i.href + '" class="kbf-pm-link' + (on ? ' kbf-active' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' +
+                    icon(PHONE_ICONS[k] || 'grid', 'kbf-pm-icon') + '<span class="kbf-pm-label">' + escapeHtml(PHONE_LABELS[k] || i.label) + '</span>' + badge + '</a></li>';
+            }).join('');
+            if (!links) return '';
+            return '<h2 class="kbf-pm-group" id="kbf-pm-group-' + n + '">' + escapeHtml(g.label) + '</h2>' +
+                '<ul aria-labelledby="kbf-pm-group-' + n + '">' + links + '</ul>';
         }).join('');
+        var canApprove = !!byKey.approvals;
+        var peopleLink = byKey.people ? '/admin/people?person=' + encodeURIComponent(String(user.id)) : '';
 
         var html =
             '<nav class="bg-slate-900 border-b-4 theme-primary-border shadow-2xl" style="border-color:var(--theme-primary)">' +
@@ -388,32 +423,51 @@
                         '<a href="/admin/dashboard" class="flex items-center gap-3 min-w-0 flex-shrink-0" aria-label="KBF-UK Admin dashboard">' +
                             '<span class="kbf-logo" aria-hidden="true"><span class="kbf-logo-glow"></span>' +
                                 '<span class="kbf-logo-ring"><img src="/assets/images/logo/KBF-Logo.jpeg" alt=""></span></span>' +
-                            '<span class="kbf-brand-text text-base sm:text-xl font-black uppercase whitespace-nowrap">KBF-UK Admin</span>' +
+                            '<span class="kbf-brand-text text-base sm:text-xl font-black uppercase whitespace-nowrap">KBF-UK <span class="kbf-brand-admin">Admin</span></span>' +
                         '</a>' +
                         '<div class="hidden lg:flex items-center gap-1 flex-1 justify-center min-w-0 kbf-bar" data-kbf-bar>' + bar + more + '</div>' +
                         '<div class="hidden lg:flex items-center gap-3 flex-shrink-0">' +
                             account +
                         '</div>' +
-                        '<button type="button" class="lg:hidden kbf-icon-btn text-gray-400 hover:text-white" data-kbf-mobile-toggle aria-label="Open menu" aria-expanded="false" aria-controls="kbf-mobile-menu">' +
-                            '<span data-kbf-icon-open>' + icon('menu', 'w-6 h-6') + '</span>' +
-                            '<span data-kbf-icon-close class="hidden">' + icon('close', 'w-6 h-6') + '</span>' +
-                        '</button>' +
+                        '<div class="lg:hidden flex items-center gap-2 flex-shrink-0">' +
+                            // Approvals with the number waiting (people who can approve; hidden at 0)
+                            (canApprove ?
+                            '<a href="/admin/approvals" class="kbf-pm-top-btn hidden" data-kbf-approvals-btn aria-label="Approvals">' +
+                                icon('inbox', 'w-6 h-6') + '<span class="kbf-pm-top-badge" data-kbf-count="approvals" aria-hidden="true"></span>' +
+                            '</a>' : '') +
+                            '<button type="button" class="kbf-pm-toggle text-gray-200" data-kbf-mobile-toggle aria-label="Open menu" aria-expanded="false" aria-controls="kbf-mobile-menu">' +
+                                '<span data-kbf-icon-open>' + icon('menu', 'w-6 h-6') + '</span>' +
+                                '<span data-kbf-icon-close class="hidden">' + icon('close', 'w-6 h-6') + '</span>' +
+                            '</button>' +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div id="kbf-mobile-menu" class="lg:hidden hidden border-t-2 border-gray-700" data-kbf-mobile-menu>' +
-                    '<div class="px-4 py-4 space-y-2">' +
-                        '<div class="flex items-center justify-between mb-3 gap-3">' +
-                            '<div class="min-w-0">' +
-                                '<span class="block font-bold uppercase text-sm truncate" style="color:var(--theme-primary)" data-kbf-name></span>' +
-                                '<span class="block font-bold uppercase text-xs text-gray-400" data-kbf-label></span>' +
-                            '</div>' +
-                            '<div class="flex items-center" role="group" aria-label="Colour theme">' + themeButtons() + '</div>' +
+                // Phones: the full-screen menu. Account card at the top, the
+                // pages in groups (scrolling), and a fixed footer
+                '<div id="kbf-mobile-menu" class="kbf-pm lg:hidden hidden" data-kbf-mobile-menu>' +
+                    '<div class="kbf-pm-account">' +
+                        '<span class="kbf-pm-avatar" aria-hidden="true" data-kbf-initials></span>' +
+                        '<span class="min-w-0">' +
+                            '<span class="kbf-pm-name" data-kbf-name></span>' +
+                            '<span class="kbf-pm-role" data-kbf-label></span>' +
+                        '</span>' +
+                    '</div>' +
+                    '<nav class="kbf-pm-list" aria-label="Admin pages">' + mobileGroups + '</nav>' +
+                    '<div class="kbf-pm-foot">' +
+                        '<div class="kbf-pm-theme" role="group" aria-label="Colour theme">' +
+                            '<span class="kbf-pm-theme-label" aria-hidden="true">Theme</span>' +
+                            '<span class="flex items-center">' + themeButtons() + '</span>' +
                         '</div>' +
-                        mobileLinks +
-                        '<button type="button" class="kbf-mobile-link w-full text-left flex items-center gap-2" data-kbf-action="password">' + icon('key') + 'Change password</button>' +
-                        '<a href="/admin/two-step" class="kbf-mobile-link flex items-center gap-2">' + icon('shield') + '2-step verification</a>' +
-                        '<button type="button" class="kbf-mobile-link w-full text-left flex items-center gap-2" data-kbf-action="signout-everywhere">' + icon('signout') + 'Sign out everywhere</button>' +
-                        '<button type="button" class="w-full px-4 py-2 bg-slate-800 border-2 border-red-500 text-red-400 font-bold uppercase text-sm hover:bg-red-500 hover:text-slate-900 transition flex items-center gap-2" style="min-height:44px" data-kbf-action="signout">' + icon('signout') + 'Sign out</button>' +
+                        '<div class="kbf-pm-actions">' +
+                            '<a href="/" class="kbf-pm-btn">' + icon('external', 'w-4 h-4 flex-shrink-0') + 'View website</a>' +
+                            '<button type="button" class="kbf-pm-btn kbf-pm-btn-danger" data-kbf-action="signout">' + icon('signout', 'w-4 h-4 flex-shrink-0') + 'Sign out</button>' +
+                        '</div>' +
+                        '<div class="kbf-pm-small">' +
+                            (peopleLink ? '<a href="' + peopleLink + '">My account</a>' : '') +
+                            '<button type="button" data-kbf-action="password">Change password</button>' +
+                            '<a href="/admin/two-step">2-step verification</a>' +
+                            '<button type="button" data-kbf-action="signout-everywhere">Sign out everywhere</button>' +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
             '</nav>';
@@ -428,8 +482,10 @@
 
         host.querySelectorAll('[data-kbf-name]').forEach(function (el) { el.textContent = user.name; });
         host.querySelectorAll('[data-kbf-label]').forEach(function (el) { el.textContent = user.mainLabel; });
+        host.querySelectorAll('[data-kbf-initials]').forEach(function (el) { el.textContent = initialsOf(user.name); });
 
         wireHeader(host);
+        loadCounts(host);
 
         // Fit the menu to the space now, and again whenever it changes
         fitHeaderMenu(host);
@@ -523,15 +579,44 @@
 
         var mobileToggle = host.querySelector('[data-kbf-mobile-toggle]');
         var mobileMenu = host.querySelector('[data-kbf-mobile-menu]');
+        var navEl = host.querySelector('nav');
+        var menuInerted = [];
+        // Phones: the menu fills the screen (the top bar stays, its menu
+        // button becomes a close button). The page behind is made inert
+        // (inert only) and does not scroll.
         function setMobileMenu(open) {
             mobileMenu.classList.toggle('hidden', !open);
+            navEl.classList.toggle('kbf-pm-open', open);
             mobileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
             mobileToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
             host.querySelector('[data-kbf-icon-open]').classList.toggle('hidden', open);
             host.querySelector('[data-kbf-icon-close]').classList.toggle('hidden', !open);
+            menuInerted.forEach(function (n) { n.removeAttribute('inert'); });
+            menuInerted = [];
+            if (open) {
+                Array.prototype.forEach.call(document.body.children, function (n) {
+                    if (n === host || n.inert || n.hasAttribute('inert')) return;
+                    if (/^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(n.tagName) || n.hasAttribute('data-kbf-live')) return;
+                    n.setAttribute('inert', '');
+                    menuInerted.push(n);
+                });
+                document.documentElement.classList.add('kbf-pm-lock');
+            } else {
+                document.documentElement.classList.remove('kbf-pm-lock');
+            }
         }
         mobileToggle.addEventListener('click', function () {
             setMobileMenu(mobileMenu.classList.contains('hidden'));
+        });
+        // Wider than a phone: the full menu is in the bar again
+        try {
+            window.matchMedia('(min-width: 1024px)').addEventListener('change', function (e) {
+                if (e.matches && !mobileMenu.classList.contains('hidden')) setMobileMenu(false);
+            });
+        } catch (e) { /* older browsers */ }
+        // A page link or action closes the menu first
+        mobileMenu.addEventListener('click', function (e) {
+            if (e.target.closest('[data-kbf-action="password"], [data-kbf-action="signout-everywhere"]')) setMobileMenu(false);
         });
 
         // Escape closes an open drop-down or the phone menu and puts focus
@@ -585,6 +670,59 @@
                 signOutEverywhere(accountToggleFor(btn));
             });
         });
+    }
+
+    function initialsOf(name) {
+        var words = String(name || '').trim().split(/\s+/).filter(Boolean);
+        if (!words.length) return '?';
+        return (words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '')).toUpperCase();
+    }
+
+    // ---------- counts for the phone top bar and menu ----------
+    // One small request (api/admin-counts.php) gives only the counts this
+    // person may see; kept for 60 seconds in this tab so moving between
+    // pages does not ask again.
+    var COUNTS_KEY = 'kbf-admin-counts';
+    function loadCounts(host) {
+        if (!host.querySelector('[data-kbf-count]')) return;
+        var store = window.KBF && window.KBF.storage ? window.KBF.storage.session : null;
+        var userId = window.KBFShell.user ? String(window.KBFShell.user.id) : '';
+        var cached = null;
+        try { cached = JSON.parse(store ? store.get(COUNTS_KEY, '') || 'null' : 'null'); } catch (e) { cached = null; }
+        if (cached && cached.user === userId && Date.now() - cached.at < 60000 && cached.counts) {
+            showCounts(host, cached.counts);
+            return;
+        }
+        fetch('/api/admin-counts.php', { credentials: 'include' })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (!data || !data.success || !data.counts) return;
+                if (store) store.set(COUNTS_KEY, JSON.stringify({ user: userId, at: Date.now(), counts: data.counts }));
+                showCounts(host, data.counts);
+            })
+            .catch(function () { /* the badges simply stay hidden */ });
+    }
+
+    function showCounts(host, counts) {
+        host.querySelectorAll('[data-kbf-count]').forEach(function (el) {
+            var key = el.getAttribute('data-kbf-count');
+            var n = parseInt(counts[key], 10) || 0;
+            el.textContent = n > 99 ? '99+' : String(n);
+            // Menu links read "Approvals 47 waiting" to screen readers
+            if (el.closest('.kbf-pm-link')) {
+                var extra = document.createElement('span');
+                extra.className = 'sr-only';
+                extra.textContent = key === 'resultsDue' ? ' with results due' : ' waiting';
+                el.appendChild(extra);
+            }
+            el.classList.toggle('hidden', n < 1);
+        });
+        var n = parseInt(counts.approvals, 10) || 0;
+        var btn = host.querySelector('[data-kbf-approvals-btn]');
+        if (btn) {
+            btn.classList.toggle('hidden', n < 1);
+            btn.setAttribute('aria-label', 'Approvals, ' + n + ' waiting');
+        }
     }
 
     // ---------- footer ----------

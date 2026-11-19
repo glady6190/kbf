@@ -113,14 +113,14 @@
         .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div id="headBand" class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Tournaments</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
@@ -148,7 +148,7 @@
         </div>
 
         <!-- Search, organiser and season -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div id="filterBlock" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <div class="md:col-span-2 relative">
                 <label for="searchInput" class="sr-only">Search by tournament, organiser or town</label>
                 <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -376,12 +376,13 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/tournament-form.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/tournament-form.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -742,6 +743,7 @@
         const canCreate = can('tournaments.organise_own') || can('tournaments.manage_all');
         document.getElementById('createBtn').classList.toggle('hidden', !canCreate);
         document.getElementById('quickResultsBtn').classList.toggle('hidden', !can('tournaments.manage_all'));
+        setUpPhoneTools();
 
         const s = stateFromUrl();
         list.tab = s.tab; list.q = s.q; list.organiser = s.organiser; list.season = s.season;
@@ -755,6 +757,33 @@
             writeUrl(false);
             openCreate();
         }
+    }
+
+    // Phones and tablets (below 1024px): compact header with "New" and a
+    // "more" menu, one scrolling row of tabs, search with a Filters sheet
+    // (js/admin-list-tools.js). Desktop keeps the page as it is.
+    let listTools = null;
+    function setUpPhoneTools() {
+        if (!window.KBFListTools) return;
+        KBFListTools.header({
+            band: document.getElementById('headBand'),
+            primary: { label: 'New', ariaLabel: 'Create tournament', target: document.getElementById('createBtn') },
+            more: [
+                { label: 'Add results for a past tournament', icon: 'trophy', target: document.getElementById('quickResultsBtn') }
+            ]
+        });
+        KBFListTools.tabs(document.getElementById('listTabs'));
+        listTools = KBFListTools.filters({
+            anchor: document.getElementById('filterBlock'),
+            search: document.getElementById('searchInput'),
+            controls: [
+                { el: document.getElementById('organiserFilter'), label: 'Organiser' },
+                // "This season" shows as an active filter; clearing it shows all seasons
+                { el: document.getElementById('seasonFilter'), label: 'Season', defaultValue: 'all' }
+            ],
+            count: () => list.total,
+            noun: ['tournament', 'tournaments']
+        });
     }
 
     function syncControls() {
@@ -926,6 +955,7 @@
             ? 'Showing 1 to ' + to.toLocaleString('en-GB') + ' of ' + list.total.toLocaleString('en-GB')
             : 'Showing 0 of 0';
         markOpenRow();
+        if (listTools) listTools.refresh();
     }
 
     // The name opens the panel (keyboard access to every row)
@@ -1020,7 +1050,8 @@
         btn.appendChild(dateTile(t.date));
         const mid = el('div', 'min-w-0 flex-1');
         mid.appendChild(el('p', 'text-sm font-black text-white break-words', t.name));
-        mid.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', t.organiser || ''));
+        // "Organiser • Town" (as in the phone concept)
+        mid.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [t.organiser, t.town].filter(Boolean).join(' • ')));
         const summary = resultsSummary(t);
         if (summary) mid.appendChild(el('p', 'text-xs font-semibold text-gray-400', summary));
         const tagLine = el('div', 'mt-1.5 flex flex-wrap items-center gap-2');
@@ -2199,6 +2230,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

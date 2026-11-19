@@ -63,6 +63,11 @@
             .ap-review.is-open .ap-foot button { min-height: 48px; width: 100%; }
             .ap-review.is-open .ap-foot-note { display: none; }
             .ap-review.is-open .ap-foot-approve { grid-column: 1 / -1; }
+            /* Search and Filters toolbar inside the queue box (js/admin-list-tools.js) */
+            #queueSection > .kbf-lt { padding: 12px 12px 0; }
+            #queueSection > .kbf-lt-tags, #queueSection > .kbf-lt-extra { padding: 0 12px; }
+            #queueList { border-top: 2px solid #374151; }
+            .ap-tab { min-height: 44px; }
         }
 
         /* Queue rows */
@@ -116,14 +121,14 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8">
+        <div class="mb-6 sm:mb-8" id="pageBand">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Approvals</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Review new players, tournaments and results</p>
@@ -143,8 +148,8 @@
         <!-- QUEUE AND REVIEW -->
         <!-- ============================ -->
         <div id="queueView" class="ap-split hidden">
-            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 min-w-0" aria-label="Queue">
-                <div class="p-3 space-y-2 border-b-2 border-gray-700">
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 min-w-0" aria-label="Queue" id="queueSection">
+                <div class="p-3 space-y-2 border-b-2 border-gray-700" id="queueFilters">
                     <div class="relative min-w-0">
                         <label for="searchInput" class="sr-only">Search</label>
                         <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -196,7 +201,7 @@
         <!-- HISTORY -->
         <!-- ============================ -->
         <section id="historyView" class="hidden" aria-label="History">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3" id="historyFilters">
                 <div class="lg:col-span-2 relative">
                     <label for="hSearch" class="sr-only">Search the history</label>
                     <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -300,12 +305,13 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -330,6 +336,60 @@
     const selected = new Set();   // registrations ticked for "Approve selected"
     const hist = { entries: [], total: 0, seq: 0, ready: false };
     const layers = [];
+
+    // ============================================
+    // PHONES (below 1024px): page header, tabs in one scrolling row, and
+    // search with a Filters sheet (js/admin-list-tools.js). Desktop keeps
+    // the page's own controls where they are.
+    // ============================================
+    const QUEUE_NOUNS = { registrations: ['registration', 'registrations'], tournaments: ['tournament', 'tournaments'], results: ['result', 'results'] };
+    const queueNoun = ['registration', 'registrations'];   // updated per tab (the tools keep this array)
+    let queueTools = null;
+    let historyTools = null;
+    let pageHeader = null;
+    if (window.KBFListTools) {
+        // "Download CSV" (History tab only) is in the header's more menu
+        pageHeader = KBFListTools.header({
+            band: document.getElementById('pageBand'),
+            more: [{ label: 'Download CSV', icon: 'download', target: document.getElementById('hCsv') }]
+        });
+        KBFListTools.tabs(document.getElementById('tabs'));
+        queueTools = KBFListTools.filters({
+            anchor: document.getElementById('queueFilters'),
+            search: document.getElementById('searchInput'),
+            controls: [
+                { el: document.getElementById('sortSelect'), label: 'Sort', sort: true },
+                { el: document.getElementById('gradeSelect'), label: 'Grade' }
+            ],
+            extra: [document.getElementById('waitingBox')],
+            count: () => queue.total,
+            noun: queueNoun
+        });
+        historyTools = KBFListTools.filters({
+            anchor: document.getElementById('historyFilters'),
+            search: document.getElementById('hSearch'),
+            controls: [
+                { el: document.getElementById('hType'), label: 'Type' },
+                { el: document.getElementById('hDecision'), label: 'Decision' },
+                { el: document.getElementById('hPerson'), label: 'Decided by' },
+                { el: document.getElementById('hRange'), label: 'Date' },
+                { block: document.getElementById('hCustom') }
+            ],
+            count: () => hist.total,
+            noun: ['decision', 'decisions']
+        });
+    }
+
+    // The grade filter applies to registrations only: its place in the
+    // phone sheet is hidden on the other tabs
+    function refreshQueueTools() {
+        const nouns = QUEUE_NOUNS[state.tab];
+        if (nouns) { queueNoun[0] = nouns[0]; queueNoun[1] = nouns[1]; }
+        const grade = document.getElementById('gradeSelect');
+        const slot = grade.closest('.kbf-sheet-body > div');
+        if (slot) slot.classList.toggle('hidden', state.tab !== 'registrations');
+        if (queueTools) queueTools.refresh();
+    }
 
     // ============================================
     // HELPERS
@@ -691,6 +751,7 @@
         const isHistory = state.tab === 'history';
         document.getElementById('queueView').classList.toggle('hidden', isHistory);
         document.getElementById('historyView').classList.toggle('hidden', !isHistory);
+        if (pageHeader) pageHeader.refresh();
         if (isHistory) {
             closeReviewMobile();
             initHistory();
@@ -701,6 +762,7 @@
         search.value = state.q;
         document.getElementById('sortSelect').value = state.sort;
         document.getElementById('gradeWrap').classList.toggle('hidden', state.tab !== 'registrations');
+        refreshQueueTools();
         document.getElementById('gradeSelect').value = state.grade;
         let loading = null;
         if (reloadList) {
@@ -775,6 +837,7 @@
         queue.waiting = tab === 'registrations' ? (data.waiting || null) : null;
         renderWaiting(queue.waiting);
         renderQueue();
+        refreshQueueTools();
         document.getElementById('moreBtn').classList.toggle('hidden', queue.items.length >= queue.total);
         return queue.items;
     }
@@ -1765,6 +1828,7 @@
         hist.total = (data.total === null || data.total === undefined) ? null : (Number(data.total) || 0);
         hist.hasMore = !!data.hasMore;
         renderHistory();
+        if (historyTools) historyTools.refresh();
         document.getElementById('hMore').classList.toggle('hidden', !data.hasMore);
     }
 
@@ -1806,6 +1870,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

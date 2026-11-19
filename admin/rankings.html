@@ -35,6 +35,14 @@
         /* Fields */
         .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .55rem .7rem; font-weight: 700; font-size: .8125rem; }
         @media (max-width: 639.98px) { .field { font-size: 16px; } }
+        /* Phones and tablets (js/admin-list-tools.js): "Change" in the page
+           header replaces the big button; the Filters toolbar sits in the
+           Recent grade changes box */
+        @media (max-width: 1023.98px) {
+            #changeGradeBtn { display: none; }
+            #panel-history > .kbf-lt { padding: 12px 12px 0; }
+            #panel-history > .kbf-lt-tags, #panel-history > .kbf-lt-extra { padding: 0 12px; }
+        }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
 
@@ -63,7 +71,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -71,7 +79,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
         <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div>
+            <div id="pageBand">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Player grades</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
                 <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Promotions and grade changes</p>
@@ -182,12 +190,13 @@
         </section>
     </main>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
-    <script src="/js/grade-change.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
+    <script src="/js/grade-change.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.change_grades
@@ -459,6 +468,8 @@
                 + '<td class="px-3 sm:px-4 py-3 text-xs text-gray-300 font-semibold hidden lg:table-cell">' + esc(r.changedBy || '-') + '</td>'
                 + '</tr>').join('');
         }
+        historyTotal = Number(data.total);
+        if (historyTools) historyTools.refresh();
         const pager = document.getElementById('historyPager');
         pager.classList.toggle('hidden', data.pages <= 1);
         document.getElementById('pageInfo').textContent = 'Page ' + data.page + ' of ' + data.pages + ' (' + fmt(data.total) + ' changes)';
@@ -474,9 +485,44 @@
         document.getElementById('historyFilters').reset();
         loadHistory(1);
     });
+    // ============================================
+    // PHONES (below 1024px): page header, tabs in one scrolling row, and a
+    // Filters sheet for the grade changes (js/admin-list-tools.js). In the
+    // sheet a change applies at once; desktop keeps the form and its Show
+    // button.
+    // ============================================
+    let historyTotal = null;
+    let historyTools = null;
+    if (window.KBFListTools) {
+        KBFListTools.header({
+            band: document.getElementById('pageBand'),
+            primary: { label: 'Change', ariaLabel: 'Change a grade', target: document.getElementById('changeGradeBtn') }
+        });
+        KBFListTools.tabs(document.getElementById('tabs'));
+        historyTools = KBFListTools.filters({
+            anchor: document.getElementById('historyFilters'),
+            controls: [
+                { el: document.getElementById('filterType'), label: 'Type' },
+                { block: document.getElementById('filterFrom').parentNode },
+                { block: document.getElementById('filterTo').parentNode }
+            ],
+            count: () => historyTotal,
+            noun: ['change', 'changes'],
+            onClearAll: () => {
+                ['filterType', 'filterFrom', 'filterTo'].forEach(id => { document.getElementById(id).value = ''; });
+                loadHistory(1);
+            }
+        });
+        ['filterType', 'filterFrom', 'filterTo'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (KBFListTools.isPhone() && !document.getElementById('historyFilters').contains(document.getElementById(id))) loadHistory(1);
+            });
+        });
+    }
+
     document.getElementById('prevPage').addEventListener('click', () => loadHistory(Math.max(1, historyPage - 1)));
     document.getElementById('nextPage').addEventListener('click', () => loadHistory(historyPage + 1));
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

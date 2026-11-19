@@ -40,15 +40,21 @@
         .month-bar { width: 100%; background: var(--theme-primary); min-height: 2px; }
         .month-count { font-size: .7rem; font-weight: 900; color: #fff; margin-bottom: .25rem; }
         .month-label { font-size: .65rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; margin-top: .375rem; white-space: nowrap; }
+        /* Phones and tablets: the download is the header's Export button and
+           the report's filters sit in the filters sheet (one column) */
+        @media (max-width: 1023.98px) {
+            #reportCsvBtn { display: none; }
+            .kbf-sheet-body #reportFilters { grid-template-columns: 1fr; gap: 16px; }
+        }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8">
+        <div id="pageBand" class="mb-6 sm:mb-8">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Reports</span> and exports</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">View the figures, or download them as a spreadsheet</p>
@@ -77,7 +83,9 @@
                     </button>
                 </div>
 
-                <div id="reportFilters" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                <div id="reportFilterBlock">
+                    <div id="reportFilters" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                </div>
                 <div id="reportChart"></div>
 
                 <div class="overflow-x-auto border-2 border-gray-700">
@@ -98,19 +106,41 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.reports
     // ============================================
     KBFShell.startControl({ section: 'reports' }).then(function (user) {
         window.kbfUser = user;
+        setUpPhoneTools();
         renderCards(user);
     });
+
+    // Phones and tablets (below 1024px): compact header with Export (while a
+    // report is open) and a Filters button whose sheet holds the open
+    // report's filters (js/admin-list-tools.js). Each report has its own
+    // filters, so they move into the sheet as one block.
+    let listTools = null;
+    let reportTotal = null;
+    function setUpPhoneTools() {
+        if (!window.KBFListTools) return;
+        KBFListTools.header({
+            band: document.getElementById('pageBand'),
+            primary: { label: 'Export', ariaLabel: 'Download CSV of the open report', target: document.getElementById('reportCsvBtn') }
+        });
+        listTools = KBFListTools.filters({
+            anchor: document.getElementById('reportFilterBlock'),
+            controls: [{ block: document.getElementById('reportFilters') }],
+            count: () => reportTotal,
+            noun: ['row', 'rows']
+        });
+    }
 
     const API = '/api/control-reports.php';
     const ICONS = {
@@ -259,6 +289,8 @@
             document.getElementById('reportCount').textContent = 'Showing ' + shown.toLocaleString('en-GB') + ' of ' + Number(data.total).toLocaleString('en-GB');
             document.getElementById('reportEmpty').classList.toggle('hidden', shown > 0);
             more.classList.toggle('hidden', !data.hasMore);
+            reportTotal = Number(data.total);
+            if (listTools) listTools.refresh();
         } catch (e) {
             console.error('Report error:', e);
             reportFailed(reset, 'The report could not be loaded. Please check your connection and try again.');
@@ -434,6 +466,6 @@
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

@@ -67,14 +67,14 @@
         .nw-menu-item:hover, .nw-menu-item:focus { background: #1e293b; color: #fff; outline: none; }
         .nw-menu-item.is-danger { color: #fca5a5; }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div id="pageBand" class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">News</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
@@ -98,7 +98,7 @@
         </div>
 
         <!-- Search, tournament and author -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div id="filterBlock" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <div class="md:col-span-2 relative">
                 <label for="searchInput" class="sr-only">Search titles and text</label>
                 <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -151,11 +151,12 @@
     <!-- Row menu (one, shared by every row) -->
     <div id="rowMenu" class="nw-menu hidden" role="menu" aria-label="Post actions"></div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
   <script>
     // News list (staff). Data: GET /api/announcements.php?staff=1 with tab,
     // q, tournament, author and page; 50 posts a page. The API decides what
@@ -175,8 +176,31 @@
         const tab = params.get('tab');
         if (tab && TABS.indexOf(tab) !== -1) state.tab = tab;
         markTabs();
+        setUpPhoneTools();
         loadPosts();
     });
+
+    // Phones and tablets (below 1024px): compact header, one-row tabs and
+    // the search and filters toolbar (js/admin-list-tools.js)
+    let listTools = null;
+    let listTotal = null;
+    function setUpPhoneTools() {
+        if (!window.KBFListTools) return;
+        KBFListTools.header({
+            band: document.getElementById('pageBand'),
+            primary: { label: 'Post', ariaLabel: 'New post', target: document.getElementById('newPostBtn') }
+        });
+        KBFListTools.tabs(document.getElementById('listTabs'));
+        const controls = [{ el: document.getElementById('tournamentFilter'), label: 'Tournament' }];
+        if (canAll) controls.push({ el: document.getElementById('authorFilter'), label: 'Written by' });
+        listTools = KBFListTools.filters({
+            anchor: document.getElementById('filterBlock'),
+            search: document.getElementById('searchInput'),
+            controls: controls,
+            count: () => listTotal,
+            noun: ['post', 'posts']
+        });
+    }
 
     // ============================================
     // HELPERS
@@ -411,6 +435,8 @@
         document.getElementById('pageText').textContent = 'Page ' + page + ' of ' + pages;
         document.getElementById('prevBtn').disabled = page <= 1;
         document.getElementById('nextBtn').disabled = page >= pages;
+        listTotal = total;
+        if (listTools) listTools.refresh();
     }
 
     function tableRow(p) {
@@ -689,6 +715,6 @@
         }
     }
 </script>
-<script src="/js/session-manager.js?v=2611191807"></script>
+<script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

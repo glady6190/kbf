@@ -71,6 +71,14 @@
         .pp-panel.is-open { transform: translateX(0); }
         @media (max-width: 640px) { .pp-panel { border-left-width: 0; } }
         @media (prefers-reduced-motion: reduce) { .pp-panel { transition: none; } }
+        /* Phones and tablets: Export and Recent changes are in the header's
+           "more" menu; compact list rows as in the phone concept */
+        @media (max-width: 1023.98px) {
+            #tabActions { display: none !important; }
+            #compactList .pp-row { align-items: center; min-height: 64px; }
+            .pp-c-name { font-size: 14px; font-weight: 900; color: #fff; overflow-wrap: anywhere; }
+            .pp-c-meta { margin-top: 2px; font-size: 12px; font-weight: 700; color: #9ca3af; overflow-wrap: anywhere; }
+        }
         /* Phones: the person panel is full screen with a top bar (Back to list
            and the name), one row of scrolling tabs and a fixed bottom bar */
         .pp-topbar { display: none; }
@@ -117,14 +125,14 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div id="headBand" class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">People</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
@@ -152,7 +160,7 @@
                 <button type="button" class="pp-tab" role="tab" data-tab="staff">Staff <span class="pp-count" data-count="staff">0</span></button>
                 <button type="button" class="pp-tab" role="tab" data-tab="deactivated">Deactivated <span class="pp-count" data-count="deactivated">0</span></button>
             </div>
-            <div class="flex flex-wrap gap-3">
+            <div id="tabActions" class="flex flex-wrap gap-3">
                 <button type="button" id="exportBtn" class="btn-plain hidden">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Export
@@ -165,7 +173,7 @@
         </div>
 
         <!-- Search, grade and sort -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div id="filterBlock" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <div class="md:col-span-2 relative">
                 <label for="searchInput" class="sr-only">Search everyone</label>
                 <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -678,14 +686,15 @@
         </form>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191807"></script>
-    <script src="/js/kbf-cropper.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
-    <script src="/js/grade-change.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191826"></script>
+    <script src="/js/kbf-cropper.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
+    <script src="/js/grade-change.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.view_export, players.edit_details
@@ -1067,6 +1076,7 @@
         document.getElementById('recentChangesLink').classList.toggle('hidden', !canSeeActivityLog());
         document.getElementById('exportBtn').classList.toggle('hidden', !me.has('players.view_export'));
         document.querySelector('.pp-ptab[data-panel="access"]').classList.toggle('hidden', !me.isSuperAdmin);
+        setUpPhoneTools();
 
         renderPermissionGroups();
         bindRoleTiles();
@@ -1082,6 +1092,34 @@
         if (s.add === 'player' && canAddPlayer()) openAddPlayer();
         if (s.add === 'staff' && me.isSuperAdmin) openAddStaff();
         if (s.add) writeUrl(false);
+    }
+
+    // Phones and tablets (below 1024px): compact header with "Player" and a
+    // "more" menu, one scrolling row of tabs, search with a Filters sheet
+    // (js/admin-list-tools.js). Desktop keeps the page as it is.
+    let listTools = null;
+    function setUpPhoneTools() {
+        if (!window.KBFListTools) return;
+        KBFListTools.header({
+            band: document.getElementById('headBand'),
+            primary: { label: 'Player', ariaLabel: 'Add player', target: document.getElementById('addPlayerBtn') },
+            more: [
+                { label: 'Add staff member', icon: 'user', target: document.getElementById('addStaffBtn') },
+                { label: 'Export', icon: 'download', target: document.getElementById('exportBtn') },
+                { label: 'Recent changes', icon: 'clock', target: document.getElementById('recentChangesLink') }
+            ]
+        });
+        KBFListTools.tabs(document.getElementById('listTabs'));
+        listTools = KBFListTools.filters({
+            anchor: document.getElementById('filterBlock'),
+            search: document.getElementById('searchInput'),
+            controls: [
+                { el: document.getElementById('gradeFilter'), label: 'Grade' },
+                { el: document.getElementById('sortSelect'), label: 'Sort', sort: true }
+            ],
+            count: () => list.total,
+            noun: ['person', 'people']
+        });
     }
 
     function syncControls() {
@@ -1238,6 +1276,7 @@
             ? 'Showing 1 to ' + to.toLocaleString('en-GB') + ' of ' + list.total.toLocaleString('en-GB') + ' people'
             : 'Showing 0 people';
         markOpenRow();
+        if (listTools) listTools.refresh();
     }
 
     function nameBlock(r) {
@@ -1323,11 +1362,18 @@
         btn.type = 'button';
         btn.dataset.personId = String(r.id);
         btn.appendChild(avatar(r.photo, r.name, 'w-11 h-11 text-xs'));
+        // Name, then "KBF ID • City" (as in the phone concept)
         const mid = el('div', 'min-w-0 flex-1');
-        mid.appendChild(nameBlock(r));
-        const city = el('div', 'mt-0.5');
-        city.appendChild(cityLine(r.city));
-        mid.appendChild(city);
+        const nameLine = el('div', 'flex items-center gap-2 flex-wrap');
+        nameLine.appendChild(el('span', 'pp-c-name', r.name));
+        if (!r.active) nameLine.appendChild(el('span', 'pp-chip is-off', 'Deactivated'));
+        mid.appendChild(nameLine);
+        const meta = el('div', 'pp-c-meta');
+        if (r.kbfId) meta.appendChild(el('span', 'theme-primary-text', r.kbfId));
+        if (r.kbfId && r.city) meta.appendChild(document.createTextNode(' • '));
+        if (r.city) meta.appendChild(document.createTextNode(r.city));
+        if (!r.kbfId && !r.city) meta.textContent = '-';
+        mid.appendChild(meta);
         if (r.staffLabel || r.noAccess) {
             const chip = el('div', 'mt-1.5');
             chip.appendChild(r.noAccess ? el('span', 'pp-chip is-off', 'No access') : staffChip(r.staffLabel));
@@ -2826,6 +2872,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>

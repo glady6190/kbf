@@ -73,14 +73,14 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
-        <div class="mb-6 sm:mb-8">
+        <div id="pageBand" class="mb-6 sm:mb-8">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Email broadcasts</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Send news to all members or chosen grades</p>
@@ -280,18 +280,38 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191807"></script>
-    <script src="/js/kbf-toast.js?v=2611191807"></script>
-    <script src="/js/kbf-dialog.js?v=2611191807"></script>
-    <script src="/js/kbf-forms.js?v=2611191807"></script>
-    <script src="/js/admin-shell.js?v=2611191807"></script>
-    <script src="/js/kbf-editor.js?v=2611191807"></script>
+    <script src="/js/escape.js?v=2611191826"></script>
+    <script src="/js/kbf-toast.js?v=2611191826"></script>
+    <script src="/js/kbf-dialog.js?v=2611191826"></script>
+    <script src="/js/admin-list-tools.js?v=2611191826"></script>
+    <script src="/js/kbf-forms.js?v=2611191826"></script>
+    <script src="/js/admin-shell.js?v=2611191826"></script>
+    <script src="/js/kbf-editor.js?v=2611191826"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): content.broadcasts
     // ============================================
     KBFShell.start({ anyOf: ['content.broadcasts'], active: 'broadcasts' }).then(function (user) {
         window.kbfUser = user;
+        // Phones and tablets (below 1024px): compact header. "New" starts a
+        // new broadcast while one is open for editing; the history is one
+        // tap away under the "more" button.
+        if (window.KBFListTools) {
+            KBFListTools.header({
+                band: document.getElementById('pageBand'),
+                title: 'Broadcasts',
+                primary: { label: 'New', ariaLabel: 'Start a new broadcast', target: document.getElementById('newBroadcastBtn') },
+                more: [{
+                    label: 'Sent and scheduled', icon: 'clock',
+                    onClick: function () {
+                        const h = document.getElementById('historyHeading');
+                        h.tabIndex = -1;
+                        h.scrollIntoView({ block: 'start' });
+                        h.focus({ preventScroll: true });
+                    }
+                }]
+            });
+        }
         init();
     });
 
@@ -951,6 +971,6 @@
         document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) closeDialog(id); });
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191807"></script>
+    <script src="/js/session-manager.js?v=2611191826"></script>
 </body>
 </html>
