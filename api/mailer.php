@@ -36,9 +36,12 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
 // Results: 'sent', 'waiting' (the job sends it later) or 'failed'.
 //   * The mail server's own rate limit (e.g. SMTP 451, "ratelimit") keeps the
 //     email waiting and pauses sending for one hour.
-//   * Only real failures (invalid address, refused recipient, a message that
-//     cannot be built) become failed, after KBF_MAIL_MAX_ATTEMPTS attempts.
-//   * Connection or sign-in problems keep the email waiting.
+//   * Permanent refusals (SMTP 5xx replies, an address that can never
+//     receive mail, a message that cannot be built) become failed at once,
+//     with no retry (kbfMailClassifyFailure), so a refused email is tried
+//     only once. The email log shows the reason in plain English.
+//   * 4xx replies, timeouts, connection or sign-in problems keep the email
+//     waiting.
 //
 // Secrets: anything listed in 'redact' (e.g. a password reset link) is
 // replaced before it is stored. Such an email is never left waiting, because
@@ -55,7 +58,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/config-helpers.php';
 
 const KBF_MAIL_PRIORITIES = ['important', 'normal', 'bulk'];
-const KBF_MAIL_MAX_ATTEMPTS = 3;
 const KBF_MAIL_PAUSE_SECONDS = 3600;          // after the mail server's rate limit
 const KBF_MAIL_LOCK_NAME = 'kbf_mailer_send';  // MySQL named lock: one send at a time
 const KBF_MAIL_LOCK_WAIT = 10;                 // seconds to wait for the lock
@@ -451,17 +453,47 @@ function kbfMailSmtpSend(array $msg, $service = null) {
             $code = (int) $m[1];
         }
 
-        if ($code === 451 || preg_match('/rate.?limit|too many (messages|emails|mails|recipients)|sending limit|quota|limit exceeded|exceeded/i', $text)) {
-            return ['kind' => 'ratelimit', 'error' => $text];
-        }
-        if (preg_match('/could not connect|connection|authenticate|timed out|timeout|helo|ehlo|starttls/i', $text)) {
-            return ['kind' => 'temporary', 'error' => $text];
-        }
-        if (($code >= 500 && $code < 600) || preg_match('/recipients? failed|invalid address|recipient address rejected|user unknown|mailbox unavailable|no such user/i', $text)) {
-            return ['kind' => 'permanent', 'error' => $text];
-        }
+        return kbfMailClassifyFailure($code, $text);
+    }
+}
+
+// Sorts a refusal from the mail server ($code: SMTP reply code, 0 when
+// unknown; $text: the error). Returns ['kind', 'error'] where kind is
+//   'permanent'  never retried: 5xx replies and addresses that can never
+//                receive mail (no such user, unknown, invalid or reserved
+//                domain, mailbox does not exist, recipient rejected)
+//   'ratelimit'  the mail server's own rate limit
+//   'temporary'  4xx replies, timeouts, connection and sign-in problems
+// A permanent error starts with a plain-English reason for the email log,
+// followed by the mail server's own words.
+function kbfMailClassifyFailure($code, $text) {
+    $code = (int) $code;
+    $text = trim((string) $text);
+    $isTemporaryCode = $code >= 400 && $code < 500;
+
+    // The address can never receive mail (unless the server says "try later")
+    if (!$isTemporaryCode && preg_match('/no such (user|mailbox|recipient|domain)|user (unknown|not found|does not exist)|unknown (user|recipient|mailbox|domain|host)|'
+        . 'mailbox (does not exist|not found|unavailable|is unavailable)|does not exist|invalid (recipient|address|domain|mailbox)|'
+        . 'domain (not found|does not exist|is reserved|name not found)|reserved (domain|for documentation)|rfc ?2606|host not found|no mx|'
+        . 'recipient (address )?(rejected|refused)|address rejected|recipients? failed|undeliverable address|'
+        . 'cannot receive (e-?)?mail|can\'t receive (e-?)?mail|\b5\.1\.[0-3]\b/i', $text)) {
+        return ['kind' => 'permanent', 'error' => 'The address cannot receive email. Mail server: ' . $text];
+    }
+    if ($code === 451 || preg_match('/rate.?limit|too many (messages|emails|mails|recipients)|sending limit|quota|limit exceeded|exceeded/i', $text)) {
+        return ['kind' => 'ratelimit', 'error' => $text];
+    }
+    if ($isTemporaryCode) {
         return ['kind' => 'temporary', 'error' => $text];
     }
+    // Our own connection or sign-in problems are never the email's fault,
+    // even when the reply is a 5xx (e.g. 535 for a wrong password)
+    if (preg_match('/could not connect|connection|authenticat|timed out|timeout|helo|ehlo|starttls/i', $text)) {
+        return ['kind' => 'temporary', 'error' => $text];
+    }
+    if ($code >= 500 && $code < 600) {
+        return ['kind' => 'permanent', 'error' => 'The mail server refused this email permanently. Mail server: ' . $text];
+    }
+    return ['kind' => 'temporary', 'error' => $text];
 }
 
 // ============================================
@@ -582,19 +614,9 @@ function kbfMailDeliver($pdo, $logId, $priority, array $live, $hasSecrets, array
             return $status;
         }
 
-        // Real failure: failed after KBF_MAIL_MAX_ATTEMPTS attempts
-        $attempts = 0;
-        try {
-            $stmt = $pdo->prepare("SELECT Attempts FROM EmailLog WHERE Id = ?");
-            $stmt->execute([$logId]);
-            $attempts = (int) $stmt->fetchColumn();
-        } catch (PDOException $e) {
-            $attempts = KBF_MAIL_MAX_ATTEMPTS;
-        }
-        if ($hasSecrets || $attempts + 1 >= KBF_MAIL_MAX_ATTEMPTS) {
-            return $finish('failed', $result['error'], false, true);
-        }
-        return $finish('waiting', $result['error'], false, true);
+        // Permanent refusal: failed at once, never retried, so the email is
+        // offered to the mail server (and counted by it) only this once
+        return $finish('failed', $result['error'], false, true);
     } catch (PDOException $e) {
         error_log('mailer: delivery error for EmailLog ' . (int) $logId . ': ' . $e->getMessage());
         return $waitOrFail('A database problem stopped the email. It will be tried again.', 'database');

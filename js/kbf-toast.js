@@ -5,12 +5,15 @@
  *   KBF.toast('Nothing to export.', 'info');           info (light)
  *   KBF.toast('Saved, but 2 rows were skipped.', 'warning');   amber
  *   KBF.toast('Could not save: ...', 'error');         red, stays until closed
+ *   KBF.toast('Post published.', 'success', { label: 'View post', href: '/post?id=12' })
+ *                                   one action link (a page on this site); a
+ *                                   toast with a link stays for 8 seconds
  *
- *   KBF.toast.next(message, type)   show it on the next page instead (for an
+ *   KBF.toast.next(message, type, link)   show it on the next page instead (for an
  *                                   action that ends by moving to another page)
  *   KBF.toast.email(status)         one sentence about an email, from the
  *                                   server's emailStatus ('' when unknown)
- *   KBF.toast.fromReply(text, reply, type)   text + the email sentence
+ *   KBF.toast.fromReply(text, reply, type, who, link)   text + the email sentence
  *
  * Top right below the header on desktop; bottom centre on phones, above any
  * fixed bottom bar. At most three are shown, newest on top. Success and info
@@ -29,6 +32,7 @@
     var NEXT_KEY = 'kbf-toast-next';
     var TYPES = ['success', 'info', 'warning', 'error'];
     var DELAY = { success: 5000, info: 5000, warning: 8000, error: 0 };
+    var LINK_DELAY = 8000;
 
     var ICONS = {
         success: '<path d="M20 6 9 17l-5-5"/>',
@@ -66,6 +70,10 @@
                 'margin:-.5rem 0 -.5rem 0;background:transparent;border:0;color:inherit;cursor:pointer;opacity:.8;}' +
             '.kbf-toast-close:hover{opacity:1;}' +
             '.kbf-toast-close:focus-visible{outline:2px solid currentColor;outline-offset:-2px;}' +
+            '.kbf-toast-link{display:inline-flex;align-items:center;min-height:32px;margin-top:.25rem;color:inherit;font-weight:900;font-size:.75rem;' +
+                'text-transform:uppercase;text-decoration:underline;text-underline-offset:3px;}' +
+            '.kbf-toast-link:hover{text-decoration-thickness:2px;}' +
+            '.kbf-toast-link:focus-visible{outline:2px solid currentColor;outline-offset:2px;}' +
             '.kbf-toast-success{background:var(--theme-primary,#8B5CF6);border-color:var(--theme-primary,#8B5CF6);color:#0F172A;}' +
             '.kbf-toast-info{background:#F1F5F9;border-color:#CBD5E1;color:#0F172A;}' +
             '.kbf-toast-warning{background:#FBBF24;border-color:#F59E0B;color:#0F172A;}' +
@@ -184,12 +192,23 @@
         node.__kbfLeft = Math.max(1500, node.__kbfLeft - (Date.now() - node.__kbfStarted));
     }
 
-    function toast(message, type) {
+    // An action link: { label, href } where href is a page on this site
+    // ("/admin/people?person=5"). Anything else is ignored.
+    function cleanLink(link) {
+        if (!link || typeof link !== 'object') return null;
+        var label = String(link.label == null ? '' : link.label).trim();
+        var href = String(link.href == null ? '' : link.href).trim();
+        if (!label || !/^\/(?![\/\\])\S*$/.test(href)) return null;
+        return { label: label.slice(0, 40), href: href };
+    }
+
+    function toast(message, type, link) {
         var text = String(message == null ? '' : message).trim();
         if (!text) return null;
         type = TYPES.indexOf(type) === -1 ? 'success' : type;
+        link = cleanLink(link);
         if (!document.body) {
-            document.addEventListener('DOMContentLoaded', function () { toast(text, type); });
+            document.addEventListener('DOMContentLoaded', function () { toast(text, type, link); });
             return null;
         }
         ensureHost();
@@ -205,6 +224,15 @@
         var body = document.createElement('div');
         body.className = 'kbf-toast-text';
         body.textContent = text;
+        if (link) {
+            // A real link, reached with Tab like any other
+            var a = document.createElement('a');
+            a.className = 'kbf-toast-link';
+            a.href = link.href;
+            a.textContent = link.label;
+            body.appendChild(document.createElement('br'));
+            body.appendChild(a);
+        }
         var close = document.createElement('button');
         close.type = 'button';
         close.className = 'kbf-toast-close';
@@ -216,8 +244,10 @@
         node.appendChild(body);
         node.appendChild(close);
 
-        node.__kbfDelay = DELAY[type];
-        node.__kbfLeft = DELAY[type];
+        // A toast with a link stays longer, so there is time to use it
+        var delay = link && DELAY[type] ? Math.max(DELAY[type], LINK_DELAY) : DELAY[type];
+        node.__kbfDelay = delay;
+        node.__kbfLeft = delay;
         node.__kbfHover = false;
         node.__kbfFocus = false;
         node.addEventListener('mouseenter', function () { node.__kbfHover = true; pauseTimer(node); });
@@ -271,10 +301,10 @@
 
     // text + the email sentence for reply.emailStatus; a failed email turns
     // a success into a warning so it is not missed
-    function fromReply(text, reply, type, who) {
+    function fromReply(text, reply, type, who, link) {
         var status = reply && reply.emailStatus;
         var extra = emailText(status, who);
-        return toast(text + (extra ? ' ' + extra : ''), emailType(status, type));
+        return toast(text + (extra ? ' ' + extra : ''), emailType(status, type), link);
     }
 
     // ---------- toasts that survive a page change ----------
@@ -287,14 +317,14 @@
         };
     }
 
-    function next(message, type) {
+    function next(message, type, link) {
         var text = String(message == null ? '' : message).trim();
         if (!text) return false;
         var store = sessionStore();
         var list = [];
         try { list = JSON.parse(store.get(NEXT_KEY, '[]')) || []; } catch (e) { list = []; }
         if (!Array.isArray(list)) list = [];
-        list.push({ m: text, t: TYPES.indexOf(type) === -1 ? 'success' : type, at: Date.now() });
+        list.push({ m: text, t: TYPES.indexOf(type) === -1 ? 'success' : type, l: cleanLink(link), at: Date.now() });
         return store.set(NEXT_KEY, JSON.stringify(list.slice(-MAX)));
     }
 
@@ -315,7 +345,7 @@
         if (!Array.isArray(list)) return;
         list.forEach(function (item) {
             // Ignore anything left from long ago (for example a closed tab)
-            if (item && item.m && (!item.at || Date.now() - item.at < 120000)) toast(item.m, item.t);
+            if (item && item.m && (!item.at || Date.now() - item.at < 120000)) toast(item.m, item.t, item.l);
         });
     }
 

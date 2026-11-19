@@ -106,7 +106,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191755">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -290,12 +290,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191751"></script>
-    <script src="/js/kbf-toast.js?v=2611191751"></script>
-    <script src="/js/kbf-dialog.js?v=2611191751"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191751"></script>
-    <script src="/js/kbf-forms.js?v=2611191751"></script>
-    <script src="/js/admin-shell.js?v=2611191751"></script>
+    <script src="/js/escape.js?v=2611191755"></script>
+    <script src="/js/kbf-toast.js?v=2611191755"></script>
+    <script src="/js/kbf-dialog.js?v=2611191755"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191755"></script>
+    <script src="/js/kbf-forms.js?v=2611191755"></script>
+    <script src="/js/admin-shell.js?v=2611191755"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -1093,8 +1093,8 @@
     // email), the decided row fades out of the queue, the counts update and
     // the next item opens in the review panel, which flashes briefly so it
     // is clear someone new is shown.
-    async function afterDecision(text, decidedId, reply, type) {
-        KBF.toast.fromReply(text, reply, 'success', emailWho(type));
+    async function afterDecision(text, decidedId, reply, type, link) {
+        KBF.toast.fromReply(text, reply, 'success', emailWho(type), link || null);
         const tab = state.tab;
         const next = nextAfter(decidedId);
         await removeFromQueue(decidedId);
@@ -1155,7 +1155,10 @@
                 showMsg(result.message || 'This could not be approved.', 'error');
                 return;
             }
-            await afterDecision(doneText || (name + ' approved.'), id, result, type);
+            // An approved registration is now a player: "Open profile" in People
+            const newUser = type === 'registration' ? parseInt(result.userId, 10) : 0;
+            const link = newUser > 0 ? { label: 'Open profile', href: '/admin/people?person=' + newUser } : null;
+            await afterDecision(doneText || (name + ' approved.'), id, result, type, link);
         } catch (e) {
             console.error('Approve error:', e);
             showMsg('This could not be approved.', 'error');
@@ -1663,6 +1666,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191751"></script>
+    <script src="/js/session-manager.js?v=2611191755"></script>
 </body>
 </html>

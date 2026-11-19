@@ -336,8 +336,9 @@
 
         // Result of an action: the shared toast (js/kbf-toast.js); the box
         // above the form keeps problems to fix and the page's own notes
-        function toast(text, type) {
-            if (window.KBF && typeof window.KBF.toast === 'function') { window.KBF.toast(text, type); return; }
+        // link: optional { label, href } shown in the toast
+        function toast(text, type, link) {
+            if (window.KBF && typeof window.KBF.toast === 'function') { window.KBF.toast(text, type, link); return; }
             showMsg(text, type === 'error' ? 'error' : 'ok');
         }
 
@@ -1670,6 +1671,10 @@
                 if (!isEdit) removeDraft();
                 dirty = false;
                 var message = res.message || 'Results saved.';
+                // "View results" once they are on the website (approved);
+                // results waiting for approval are not shown there yet
+                var live = isEdit ? /worked out again/.test(String(res.message || '')) : !!res.approved;
+                var viewLink = live && tid ? { label: 'View results', href: '/tournament-details?id=' + tid } : null;
                 // Name the category and tournament the results belong to
                 if (isEdit) message = message.replace(/^Results updated/, 'Results for ' + savedCategory.name + ' updated');
                 if (data && data.tournament && data.tournament.name) message = message.replace(/^(Results for [^.]+?) (published|submitted|updated)/, '$1 at ' + data.tournament.name + ' $2');
@@ -1682,7 +1687,7 @@
                             message += ' Now entering ' + next.name + '.';
                         }
                     }
-                    toast(message);
+                    toast(message, 'success', viewLink);
                 });
             }).catch(function () {
                 busy = false;

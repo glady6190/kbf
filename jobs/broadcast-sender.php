@@ -123,8 +123,9 @@ $sentThisRun   = 0;
 $failedThisRun = 0;
 $notes         = [];
 
-// Stop sending for this run after a 'waiting' result, unless the email only
-// had a real failure (then the next email may still go out)
+// Stop sending for this run after a 'waiting' result (allowance, pause, rate
+// limit or a temporary problem). A permanent refusal is never 'waiting': the
+// mailer marks it failed at once with no retry, and the next email goes out.
 // An email skipped for a while after repeated temporary failures never stops
 // the others.
 function kbfJobShouldStop($status) {

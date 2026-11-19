@@ -895,7 +895,10 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
         $resultMessage .= '.';
     }
 
-    return ['success' => true, 'message' => $resultMessage, 'code' => 200, 'emailStatus' => $emailStatus];
+    // The new player's id after approving a registration ("Open profile")
+    $newUserId = ($type === 'registration' && $action === 'approve' && isset($userId)) ? (int) $userId : null;
+
+    return ['success' => true, 'message' => $resultMessage, 'code' => 200, 'emailStatus' => $emailStatus, 'userId' => $newUserId];
 }
 
 // ============================================
@@ -1770,7 +1773,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     sendJSON([
         'success' => true,
         'message' => $result['message'],
-        'emailStatus' => $result['emailStatus']
+        'emailStatus' => $result['emailStatus'],
+        'userId' => $result['userId'] ?? null
     ]);
 }
 ?>
