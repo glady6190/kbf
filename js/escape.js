@@ -124,9 +124,14 @@
 
     // Return the 'thumb' or 'display' copy of an uploaded image url.
     // Returns url unchanged when it has no copies or is already a copy.
-    function imageVariant(url, kind) {
+    // Copies are WebP (<name>.t.webp / <name>.d.webp); images saved before
+    // that, or on a server without WebP, have JPEG copies (.t.jpg / .d.jpg):
+    // pages try the WebP copy first, then the JPEG copy, then the original
+    // (see variantFallbacks and the error handler below).
+    function imageVariant(url, kind, format) {
         if (typeof url !== 'string' || url === '') return url;
-        var suffix = kind === 'display' ? '.d.jpg' : (kind === 'thumb' ? '.t.jpg' : '');
+        var ext = format === 'jpg' ? '.jpg' : '.webp';
+        var suffix = kind === 'display' ? '.d' + ext : (kind === 'thumb' ? '.t' + ext : '');
         if (!suffix) return url;
         var match = VARIANT_PATTERN.exec(url.trim());
         if (!match) return url;
@@ -139,12 +144,25 @@
         return match[1] + suffix + (match[3] || '');
     }
 
-    // Swap a failed variant image back to its original (once).
+    // The addresses to try after the WebP copy fails, in order, as one
+    // data-fallback value: the JPEG copy, then the original ("|" between)
+    function variantFallbacks(original, kind) {
+        var jpg = imageVariant(original, kind, 'jpg');
+        return (jpg && jpg !== original ? jpg + '|' : '') + original;
+    }
+
+    // Swap a failed variant image to the next address in data-fallback
+    // (the JPEG copy, then the original), once each.
     function handleVariantError(event) {
         var img = event.target;
         if (!img || img.tagName !== 'IMG' || !img.hasAttribute('data-fallback')) return;
-        var fallback = img.getAttribute('data-fallback');
-        img.removeAttribute('data-fallback');
+        var list = img.getAttribute('data-fallback').split('|');
+        var fallback = list.shift();
+        if (list.length) {
+            img.setAttribute('data-fallback', list.join('|'));
+        } else {
+            img.removeAttribute('data-fallback');
+        }
         if (!fallback || img.getAttribute('src') === fallback) return;
         // Stop page onerror handlers (hide image, show initials) from
         // reacting to the missing copy; they still run if the original fails.
@@ -162,7 +180,7 @@
         var original = safeUrl(url);
         var variant = imageVariant(original, kind);
         if (variant && variant !== original) {
-            return ' src="' + escapeHtml(variant) + '" data-fallback="' + escapeHtml(original) + '"';
+            return ' src="' + escapeHtml(variant) + '" data-fallback="' + escapeHtml(variantFallbacks(original, kind)) + '"';
         }
         return ' src="' + escapeHtml(original) + '"';
     }
@@ -173,7 +191,7 @@
         var original = url === null || url === undefined ? '' : String(url);
         var variant = imageVariant(original, kind);
         if (variant && variant !== original) {
-            img.setAttribute('data-fallback', original);
+            img.setAttribute('data-fallback', variantFallbacks(original, kind));
             if (!img._kbfVariantListener) {
                 // Covers images that fail before they are added to the page.
                 img.addEventListener('error', handleVariantError);

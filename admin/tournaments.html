@@ -92,6 +92,21 @@
         .tt-dialog-wrap { position: fixed; inset: 0; background: rgba(2, 6, 23, .82); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
         @media (min-width: 640px) { .tt-dialog-wrap { align-items: center; } }
         .tt-dialog { background: #0f172a; border: 4px solid #374151; width: 100%; max-width: 32rem; margin: 2rem 0; }
+        .tt-dialog.is-wide { max-width: 48rem; }
+
+        /* Photos dialog */
+        .tt-photo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+        @media (min-width: 640px) { .tt-photo-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        .tt-photo { position: relative; border: 2px solid #374151; background: #1e293b; }
+        .tt-photo img { display: block; width: 100%; height: 6rem; object-fit: cover; }
+        .tt-photo-name { padding: .25rem .5rem; font-size: .7rem; font-weight: 700; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tt-photo-del { position: absolute; top: .25rem; right: .25rem; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; background: rgba(2, 6, 23, .85); color: #fca5a5; border: 2px solid #ef4444; }
+        .tt-photo-del:hover { background: #ef4444; color: #0f172a; }
+        .tt-photo-del:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .tt-drop { display: block; border: 3px dashed #4b5563; background: #1e293b; padding: 1.5rem 1rem; text-align: center; cursor: pointer; }
+        .tt-drop:hover, .tt-drop:focus-within { border-color: var(--theme-primary); }
+        .tt-progress { border: 2px solid #4b5563; background: #374151; height: 2rem; }
+        .tt-progress-bar { height: 100%; background: var(--theme-primary); color: #0f172a; font-weight: 900; font-size: .75rem; display: flex; align-items: center; justify-content: center; transition: width .2s; }
 
         /* Messages */
         .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
@@ -320,6 +335,47 @@
         </div>
     </div>
 
+    <!-- Gallery photos for a Completed tournament (api/gallery.php) -->
+    <div id="photosDialog" class="tt-dialog-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="photosTitle" aria-describedby="photosName">
+        <div class="tt-dialog is-wide p-5 sm:p-6">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div class="min-w-0">
+                    <h2 id="photosTitle" class="text-lg font-black uppercase theme-primary-text">Photos</h2>
+                    <p id="photosName" class="text-sm text-white font-black break-words"></p>
+                </div>
+                <button type="button" class="btn-plain" data-close="photosDialog">Close</button>
+            </div>
+
+            <h3 class="field-label">On the gallery (<span id="photosCount">0</span> of 10)</h3>
+            <div id="photosExisting" class="mb-5"></div>
+
+            <form id="photosForm" novalidate>
+                <p class="field-label" id="photoInputTitle">Add photos</p>
+                <label for="photoInput" class="tt-drop">
+                    <span class="block text-sm font-black uppercase text-white">Choose photos</span>
+                    <span class="block text-xs font-bold text-gray-400 mt-1" id="photoInputHint">JPG, PNG or WEBP. Up to 10 photos per tournament.</span>
+                </label>
+                <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp" multiple class="sr-only" aria-labelledby="photoInputTitle" aria-describedby="photoInputHint">
+
+                <div id="photoPreview" class="hidden mt-4">
+                    <p class="field-label">Chosen (<span id="photoChosenCount">0</span>)</p>
+                    <div id="photoPreviewGrid" class="tt-photo-grid"></div>
+                </div>
+
+                <div id="photosMessage" class="hidden msg msg-error mt-4" role="alert"></div>
+
+                <div id="photosProgress" class="hidden tt-progress mt-4" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="photosProgressBar" class="tt-progress-bar" style="width: 0%">0%</div>
+                </div>
+
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+                    <button type="button" class="btn-plain" data-close="photosDialog">Cancel</button>
+                    <button type="submit" id="photosUpload" class="btn-solid">Upload photos</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="/js/escape.js"></script>
     <script src="/js/kbf-dialog.js"></script>
     <script src="/js/kbf-forms.js"></script>
@@ -329,7 +385,9 @@
     // ============================================
     // PAGE GUARD + SHARED HEADER
     // ============================================
-    KBFShell.start({ anyOf: ['tournaments.approve', 'tournaments.manage_all'], active: 'tournaments' }).then(function (user) {
+    // Organisers (tournaments.organise_own only) see just the tournaments they
+    // created; the API limits every list, count and panel to those.
+    KBFShell.start({ anyOf: ['tournaments.approve', 'tournaments.manage_all', 'tournaments.organise_own'], active: 'tournaments' }).then(function (user) {
         me = user;
         initPage();
     });
@@ -349,6 +407,7 @@
     let historyRows = null;    // ?action=history
     let form = null;           // the one tournament form, moved between panels
     const layers = [];         // open panels and dialogs, top last
+    const photos = { t: null, existing: [], chosen: [], busy: false, seq: 0 };   // Photos dialog
 
     // ============================================
     // HELPERS
@@ -526,6 +585,23 @@
         return can('tournaments.organise_own') && !!t.isOwn && (t.storedStatus === 'Pending' || t.storedStatus === 'Approved');
     }
 
+    // Submit results: managers for any tournament, organisers for their own
+    function canSubmitResults(t) {
+        return can('tournaments.manage_all') || (can('tournaments.organise_own') && !!t.isOwn);
+    }
+
+    // Remind the organiser (same rule as the API's remindOrganiser)
+    function canRemind() {
+        return can('tournaments.approve') || can('tournaments.manage_all');
+    }
+
+    // Gallery photos (same rule as api/gallery.php): Completed tournaments only;
+    // content.all_news_gallery for any, content.own_news_gallery for their own
+    function canManagePhotos(t) {
+        if (!t || t.storedStatus !== 'Completed') return false;
+        return can('content.all_news_gallery') || (can('content.own_news_gallery') && !!t.isOwn);
+    }
+
     // ============================================
     // LAYERS: open panels and dialogs. The shared helper (js/kbf-dialog.js)
     // keeps Tab inside the top one, closes it on Escape and makes the page
@@ -560,6 +636,8 @@
     }
 
     function closeDialog(id) {
+        // The photos dialog stays open while an upload is running
+        if (id === 'photosDialog' && photos.busy) return;
         const wrap = document.getElementById(id);
         wrap.classList.add('hidden');
         const layer = popLayer(wrap);
@@ -668,7 +746,14 @@
         list.tab = s.tab; list.q = s.q; list.organiser = s.organiser; list.season = s.season;
         syncControls();
         loadList(true);
-        if (s.id) openTournament(s.id, s.panel, { fromHistory: true });
+        if (s.id) {
+            openTournament(s.id, s.panel, { fromHistory: true });
+        } else if (canCreate && new URLSearchParams(window.location.search).get('create') === '1') {
+            // ?create=1 (e.g. the Create tournament links) opens the create form;
+            // it is taken out of the address so Back or a reload does not reopen it
+            writeUrl(false);
+            openCreate();
+        }
     }
 
     function syncControls() {
@@ -977,15 +1062,20 @@
                 out.push(edit);
             }
         } else if (t.status === 'due') {
-            if (can('tournaments.manage_all')) {
+            if (canSubmitResults(t)) {
                 out.push(link('/admin/submit-tournament-results?id=' + idParam(t.id), 'btn-solid' + small, 'Submit results'));
-            } else {
+            } else if (canRemind()) {
                 const remind = button('btn-outline' + small, 'Remind', 'mail');
                 remind.addEventListener('click', () => remindOrganiser(t, remind));
                 out.push(remind);
             }
         } else if (t.status === 'due_waiting') {
-            out.push(link('/admin/approvals', 'btn-solid' + small, 'Review results'));
+            if (can('tournaments.approve')) {
+                out.push(link('/admin/approvals', 'btn-solid' + small, 'Review results'));
+            } else if (canSubmitResults(t)) {
+                // Results for another category while the first are waiting approval
+                out.push(link('/admin/submit-tournament-results?id=' + idParam(t.id), 'btn-plain' + small, 'Submit more results'));
+            }
         } else if (t.status === 'completed') {
             if (can('tournaments.manage_all')) {
                 // The shared results form in edit mode
@@ -1018,6 +1108,7 @@
             // The shared results form, to enter a category that has no results yet
             items.push(['Add results for another category', 'plus', null, '/admin/submit-tournament-results?id=' + idParam(t.id)]);
         }
+        if (canManagePhotos(t)) items.push(['Photos', 'image', () => openPhotos(t)]);
         if (can('tournaments.manage_all')) items.push(['Change status', 'swap', () => openStatusDialog(t)]);
         if (onWebsite(t)) items.push(['View on the website', 'external', null, '/tournament-details?id=' + idParam(t.id)]);
         if (t.canDelete) items.push(['Delete', 'trash', () => deleteTournament(t)]);
@@ -1263,6 +1354,11 @@
             menuBtn.classList.add('mr-auto');
             footer.appendChild(menuBtn);
         }
+        if (canManagePhotos(t)) {
+            const p = button('btn-outline', 'Photos', 'image');
+            p.addEventListener('click', () => openPhotos(t));
+            footer.appendChild(p);
+        }
         if (onWebsite(t)) {
             const a = link('/tournament-details?id=' + idParam(t.id), 'btn-plain', 'View on the website', 'external');
             a.target = '_blank';
@@ -1431,7 +1527,7 @@
         if (d.waitingCount > 0) {
             const box = el('div', 'border-2 border-gray-700 bg-slate-800 p-4 mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3');
             box.appendChild(el('p', 'text-sm font-bold text-gray-200', 'Results have been submitted and are waiting for approval.'));
-            box.appendChild(link('/admin/approvals', 'btn-solid btn-sm', 'Review results'));
+            if (can('tournaments.approve')) box.appendChild(link('/admin/approvals', 'btn-solid btn-sm', 'Review results'));
             pane.appendChild(box);
         }
 
@@ -1475,7 +1571,10 @@
         }
         pane.appendChild(empty);
 
-        if (row.status === 'due') {
+        if (row.status === 'due' && !canRemind() && canSubmitResults(row)) {
+            // Organiser of their own tournament: straight to the results form
+            pane.appendChild(link('/admin/submit-tournament-results?id=' + idParam(d.id), 'btn-solid', 'Submit results'));
+        } else if (row.status === 'due' && canRemind()) {
             const box = el('div', 'border-2 border-gray-700 bg-slate-800 p-4 mt-2');
             box.appendChild(el('h3', 'text-sm font-black uppercase theme-primary-text mb-1', 'Remind the organiser'));
             const last = el('p', 'text-sm font-semibold text-gray-300 mb-3');
@@ -1505,8 +1604,10 @@
             const ul = el('ul', 'border-2 border-gray-700 divide-y-2 divide-gray-800 mb-4');
             posts.forEach(p => {
                 const li = el('li');
-                const inner = canPost
-                    ? link('/clubadmin/edit-post?id=' + idParam(p.id), 'flex items-center gap-3 px-3 py-3 hover:bg-slate-800')
+                // Editable: any post with content.all_news_gallery, otherwise the person's own
+                const canEdit = can('content.all_news_gallery') || (canPost && !!p.mine);
+                const inner = canEdit
+                    ? link('/admin/announcements?edit=' + idParam(p.id), 'flex items-center gap-3 px-3 py-3 hover:bg-slate-800')
                     : el('div', 'flex items-center gap-3 px-3 py-3');
                 inner.appendChild(icon('news', 'w-5 h-5 flex-shrink-0 text-gray-500'));
                 const text = el('div', 'min-w-0 flex-1');
@@ -1517,14 +1618,16 @@
                 if (!p.visible) meta.appendChild(el('span', 'tt-chip', 'Hidden'));
                 text.appendChild(meta);
                 inner.appendChild(text);
-                if (canPost) inner.appendChild(icon('chevron', 'w-4 h-4 flex-shrink-0 text-gray-500'));
+                if (canEdit) inner.appendChild(icon('chevron', 'w-4 h-4 flex-shrink-0 text-gray-500'));
                 li.appendChild(inner);
                 ul.appendChild(li);
             });
             pane.appendChild(ul);
         }
-        if (canPost) {
-            pane.appendChild(link('/clubadmin/create-post?id=' + idParam(row.id), 'btn-outline', 'Post news about this tournament', 'plus'));
+        // Organisers post only about their own Approved or Completed tournaments (the API checks too)
+        const postable = row.storedStatus === 'Approved' || row.storedStatus === 'Completed';
+        if (canPost && postable) {
+            pane.appendChild(link('/admin/announcements?tournament=' + idParam(row.id), 'btn-outline', 'Post news about this tournament', 'plus'));
         }
     }
 
@@ -1645,6 +1748,236 @@
             if (btn && document.contains(btn)) btn.disabled = false;
         }
     }
+
+    // ---------- Photos (gallery, api/gallery.php) ----------
+    // Up to 10 photos per tournament. Existing photos can be deleted; new ones
+    // are previewed, can be taken out before uploading, and upload with real
+    // progress (XHR). The server checks the same rules again.
+    const PHOTO_MAX = 10;
+    const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+    function photosMsg(text, kind) { showMsg('photosMessage', text, kind); }
+
+    function setPhotosProgress(percent) {
+        const p = Math.max(0, Math.min(100, Math.round(percent)));
+        const bar = document.getElementById('photosProgressBar');
+        bar.style.width = p + '%';
+        bar.textContent = p + '%';
+        document.getElementById('photosProgress').setAttribute('aria-valuenow', String(p));
+    }
+
+    function openPhotos(t) {
+        if (!canManagePhotos(t)) return;
+        closeMenu(false);
+        photos.t = t;
+        photos.existing = [];
+        photos.chosen = [];
+        document.getElementById('photosName').textContent = t.name || '';
+        document.getElementById('photoInput').value = '';
+        document.getElementById('photosProgress').classList.add('hidden');
+        photosMsg('');
+        renderChosenPhotos();
+        openDialog('photosDialog');
+        loadPhotos();
+    }
+
+    async function loadPhotos() {
+        const seq = ++photos.seq;
+        const box = document.getElementById('photosExisting');
+        box.textContent = '';
+        box.appendChild(el('p', 'text-sm font-bold text-gray-400', 'Loading...'));
+        try {
+            // The gallery list is briefly cached for the public: ask for a fresh copy
+            const data = await getJson('/api/gallery.php?tournamentId=' + idParam(photos.t.id) + '&fresh=' + Date.now());
+            if (seq !== photos.seq) return;
+            if (!data.success) {
+                box.textContent = '';
+                box.appendChild(el('p', 'text-sm font-bold text-red-300', data.message || 'The photos could not be loaded.'));
+                return;
+            }
+            photos.existing = Array.isArray(data.photos) ? data.photos : [];
+            renderExistingPhotos();
+        } catch (e) {
+            console.error('Photos load error:', e);
+            if (seq !== photos.seq) return;
+            box.textContent = '';
+            KBF.showLoadError(box, { message: 'The photos could not be loaded. Please check your connection and try again.', retry: loadPhotos });
+        }
+    }
+
+    function renderExistingPhotos() {
+        const box = document.getElementById('photosExisting');
+        box.textContent = '';
+        document.getElementById('photosCount').textContent = String(photos.existing.length);
+        if (!photos.existing.length) {
+            box.appendChild(el('p', 'text-sm font-bold text-gray-400', 'No photos yet.'));
+            return;
+        }
+        const grid = el('div', 'tt-photo-grid');
+        photos.existing.forEach((p, i) => {
+            const card = el('div', 'tt-photo');
+            const img = el('img');
+            img.alt = 'Photo ' + (i + 1);
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            KBF.setImageVariant(img, p.FilePath, 'thumb');
+            card.appendChild(img);
+            const del = el('button', 'tt-photo-del');
+            del.type = 'button';
+            del.setAttribute('aria-label', 'Delete photo ' + (i + 1));
+            del.appendChild(icon('trash', 'w-4 h-4'));
+            del.addEventListener('click', () => deletePhoto(p, del));
+            card.appendChild(del);
+            grid.appendChild(card);
+        });
+        box.appendChild(grid);
+    }
+
+    async function deletePhoto(p, btn) {
+        if (photos.busy) return;
+        const yes = await askConfirm('Delete this photo?', 'It will be taken off the gallery straight away.', 'Delete photo');
+        if (!yes) return;
+        btn.disabled = true;
+        try {
+            const result = await sendJson('/api/gallery.php', 'DELETE', { photoId: parseInt(p.PhotoId, 10) || 0 });
+            if (result.success) {
+                photos.existing = photos.existing.filter(x => x !== p);
+                renderExistingPhotos();
+                if (window.KBFDialog) KBFDialog.toast('Photo deleted.', 'success');
+                const next = document.querySelector('#photosExisting .tt-photo-del') || document.getElementById('photoInput');
+                if (next) next.focus();
+            } else {
+                photosMsg(result.message || 'The photo could not be deleted.', 'error');
+                btn.disabled = false;
+            }
+        } catch (e) {
+            console.error('Photo delete error:', e);
+            photosMsg('The photo could not be deleted. Please check your connection and try again.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    function renderChosenPhotos() {
+        const wrap = document.getElementById('photoPreview');
+        const grid = document.getElementById('photoPreviewGrid');
+        grid.textContent = '';
+        document.getElementById('photoChosenCount').textContent = String(photos.chosen.length);
+        wrap.classList.toggle('hidden', !photos.chosen.length);
+        photos.chosen.forEach((file, i) => {
+            const card = el('div', 'tt-photo');
+            const img = el('img');
+            img.alt = 'Preview of ' + file.name;
+            const reader = new FileReader();
+            reader.onload = e => { img.src = e.target.result; };
+            reader.readAsDataURL(file);
+            card.appendChild(img);
+            card.appendChild(el('p', 'tt-photo-name', file.name));
+            const remove = el('button', 'tt-photo-del');
+            remove.type = 'button';
+            remove.setAttribute('aria-label', 'Remove ' + file.name);
+            remove.appendChild(icon('trash', 'w-4 h-4'));
+            remove.addEventListener('click', () => {
+                if (photos.busy) return;
+                photos.chosen.splice(i, 1);
+                renderChosenPhotos();
+                document.getElementById('photoInput').focus();
+            });
+            card.appendChild(remove);
+            grid.appendChild(card);
+        });
+    }
+
+    document.getElementById('photoInput').addEventListener('change', function () {
+        const files = Array.from(this.files || []);
+        this.value = '';
+        if (!files.length || photos.busy) return;
+        photosMsg('');
+        const limitMb = KBFShell.uploadLimitMb('gallery', 15);
+        for (const file of files) {
+            if (!PHOTO_TYPES.includes(file.type)) {
+                photosMsg(file.name + ' is not a JPG, PNG or WEBP image.', 'error');
+                return;
+            }
+            if (file.size > limitMb * 1024 * 1024) {
+                photosMsg(file.name + ' is larger than ' + limitMb + 'MB.', 'error');
+                return;
+            }
+        }
+        const room = PHOTO_MAX - photos.existing.length - photos.chosen.length;
+        if (files.length > room) {
+            photosMsg(room > 0
+                ? 'You can add ' + room + ' more photo' + (room === 1 ? '' : 's') + ' (10 per tournament).'
+                : 'This tournament already has 10 photos. Delete one to add another.', 'error');
+            return;
+        }
+        photos.chosen = photos.chosen.concat(files);
+        renderChosenPhotos();
+    });
+
+    document.getElementById('photosForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (photos.busy) return;
+        if (!photos.chosen.length) {
+            photosMsg('Please choose at least one photo.', 'error');
+            document.getElementById('photoInput').focus();
+            return;
+        }
+        const t = photos.t;
+        const formData = new FormData();
+        formData.append('tournamentId', String(t.id));
+        photos.chosen.forEach(file => formData.append('photos[]', file));
+
+        const uploadBtn = document.getElementById('photosUpload');
+        const restore = KBF.setBusy(uploadBtn, 'Uploading...');
+        photos.busy = true;
+        photosMsg('');
+        setPhotosProgress(0);
+        document.getElementById('photosProgress').classList.remove('hidden');
+        try {
+            const result = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/gallery.php');
+                xhr.withCredentials = true;
+                const token = getCSRFToken();
+                if (token) xhr.setRequestHeader('X-CSRF-Token', token);
+                xhr.upload.onprogress = ev => {
+                    // The last step is for the server's work on the photos
+                    if (ev.lengthComputable && ev.total > 0) setPhotosProgress((ev.loaded / ev.total) * 95);
+                };
+                xhr.upload.onload = () => setPhotosProgress(95);
+                xhr.onload = () => {
+                    let data = null;
+                    try { data = JSON.parse(xhr.responseText); } catch (err) { data = null; }
+                    if (!data) {
+                        resolve({ success: false, message: xhr.status === 413
+                            ? 'The photos are too large to upload together. Please try fewer photos at once.'
+                            : 'Upload failed. Please try again.' });
+                        return;
+                    }
+                    resolve(data);
+                };
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.onabort = () => reject(new Error('Upload stopped'));
+                xhr.send(formData);
+            });
+            if (result.success) {
+                setPhotosProgress(100);
+                photos.chosen = [];
+                renderChosenPhotos();
+                if (window.KBFDialog) KBFDialog.toast(result.message || 'Photos uploaded.', 'success');
+                if (photos.t === t) loadPhotos();
+            } else {
+                photosMsg(result.message || 'Upload failed.', 'error');
+            }
+        } catch (err) {
+            console.error('Photo upload error:', err);
+            photosMsg('Upload failed. Please check your connection and try again.', 'error');
+        } finally {
+            photos.busy = false;
+            restore();
+            setTimeout(() => document.getElementById('photosProgress').classList.add('hidden'), 800);
+        }
+    });
 
     // ---------- Change status ----------
     let statusTarget = null;

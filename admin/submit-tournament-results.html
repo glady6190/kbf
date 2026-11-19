@@ -33,11 +33,13 @@
     // ============================================
     // Page guard and shared header; the form is js/results-form.js
     // ============================================
-    KBFShell.start({ anyOf: ['tournaments.manage_all'], active: 'tournaments' }).then(function () {
+    // Managers for any tournament; organisers (tournaments.organise_own) for
+    // their own (api/matches.php checks ownership)
+    KBFShell.start({ anyOf: ['tournaments.manage_all', 'tournaments.organise_own'], active: 'tournaments' }).then(function () {
         const rawId = new URLSearchParams(window.location.search).get('id');
         KBFResultsForm.mount(document.getElementById('resultsForm'), {
             tournamentId: rawId && /^\d+$/.test(rawId) ? parseInt(rawId, 10) : 0,
-            backHref: '/admin/tournaments',
+            backHref: '/admin/tournaments?tab=due',
             backLabel: 'Tournaments'
         });
     });

@@ -260,7 +260,7 @@ const KBF_PLACEHOLDERS = [
     'tournament_name' => ['Tournament name', 'KBF Winter Open'],
     'tournament_date' => ['Tournament date', 'Saturday, 12 December 2026'],
     'organiser_name' => ['Organiser of the tournament', 'Leeds Badminton Club'],
-    'submit_link' => ['Page where the organiser submits results for this tournament', 'https://kbf-uk.org/clubadmin/submit-results?id=123'],
+    'submit_link' => ['Page where the organiser submits results for this tournament', 'https://kbf-uk.org/admin/submit-tournament-results?id=123'],
     'reset_link' => ['Password reset link (never stored)', 'https://kbf-uk.org/reset-password.html?token=sample'],
     'access_list' => ['What the person can now do in the admin area', 'Approve player registrations, Change player grades'],
     'login_link' => ['Admin sign-in page', 'https://kbf-uk.org/login'],
@@ -807,7 +807,7 @@ function kbfSampleValues($pdo) {
     $values['site_link'] = kbfSiteLink($pdo);
     $values['login_link'] = kbfSiteLink($pdo) . '/login';
     $values['review_link'] = kbfSiteLink($pdo) . '/admin/approvals';
-    $values['submit_link'] = kbfSiteLink($pdo) . '/clubadmin/submit-results?id=123';
+    $values['submit_link'] = kbfSiteLink($pdo) . '/admin/submit-tournament-results?id=123';
     $values['contact_email'] = kbfContactEmail();
     $values['security_email'] = kbfSecurityEmail();
     $wa = kbfWhatsappLink($pdo);

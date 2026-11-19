@@ -1662,11 +1662,11 @@
                 <div class="stat-item">
                     <div class="stat-ring">
                         <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/>
+                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
                         </svg>
                     </div>
-                    <div class="stat-number" id="totalMatches">0</div>
-                    <div class="stat-label">Matches played</div>
+                    <div class="stat-number" id="totalPromoted">0</div>
+                    <div class="stat-label">Players promoted</div>
                 </div>
             </div>
         </div>
@@ -2086,7 +2086,7 @@
     // STATISTICS
     // ============================================
     async function loadStats() {
-        const statIds = ['totalPlayers', 'totalTournaments', 'totalClubs', 'totalMatches'];
+        const statIds = ['totalPlayers', 'totalTournaments', 'totalClubs', 'totalPromoted'];
 
         // Show loading state immediately: prevents showing stale 0s
         statIds.forEach(id => {
@@ -2120,7 +2120,7 @@
             animateValue('totalPlayers', 0, data.stats.totalPlayers, 2000);
             animateValue('totalTournaments', 0, data.stats.totalTournaments, 2000);
             animateValue('totalClubs', 0, data.stats.totalClubs, 2000);
-            animateValue('totalMatches', 0, data.stats.totalMatches || 0, 2000);
+            animateValue('totalPromoted', 0, data.stats.totalPromoted || 0, 2000);
             updateSponsorBandCopy(data.stats);
         } catch (error) {
             clearTimeout(timeout);
@@ -2232,6 +2232,7 @@
         const showInitials = () => { avatar.textContent = promotionInitials(name); };
         if (post.FeaturedImage) {
             const img = document.createElement('img');
+            img.className = 'kbf-photo';
             img.alt = '';
             img.loading = 'lazy';
             img.decoding = 'async';

@@ -15,6 +15,14 @@
     }
 }
 
+/* Member photos in round or square frames (avatars, profile, approvals,
+   people, rankings, promotions): fill the frame and keep the top of a tall
+   portrait, where the face usually is, in view. */
+.kbf-photo {
+    object-fit: cover;
+    object-position: center 20%;
+}
+
 /* Error text shown under a form field by js/kbf-forms.js (showFieldError) */
 .kbf-field-error {
     margin-top: 0.25rem;

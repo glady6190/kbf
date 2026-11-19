@@ -67,7 +67,18 @@ function gradeOptions($pdo, $includeRetired = false) {
         . ($includeRetired ? '' : ' WHERE ' . kbfActiveGradeCondition($pdo))
         . " ORDER BY DisplayOrder, CategoryId";
     return array_map(function ($g) {
-        return ['value' => (string) $g['CategoryId'], 'label' => plain($g['ShortName']) . ' - ' . plain($g['Name'])];
+        // "D (Intermediate - Medium)": the full name may already start with the short name
+        $short = trim((string) plain($g['ShortName']));
+        $name = trim((string) plain($g['Name']));
+        $head = strtoupper(substr($name, 0, strlen($short) + 1));
+        if ($name === '' || strtoupper($name) === strtoupper($short)) {
+            $label = $short !== '' ? $short : $name;
+        } elseif ($short === '' || $head === strtoupper($short) . ' ' || $head === strtoupper($short) . '(') {
+            $label = $name;
+        } else {
+            $label = $short . ' (' . $name . ')';
+        }
+        return ['value' => (string) $g['CategoryId'], 'label' => $label];
     }, $pdo->query($sql)->fetchAll());
 }
 

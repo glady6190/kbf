@@ -15,7 +15,8 @@ kbfPublicCache(60);
 // FILE-BASED CACHE (60-second TTL)
 // Avoids hitting the database on every page load.
 // ============================================
-$cacheFile = sys_get_temp_dir() . '/kbf_stats_cache.json';
+// v2: totalMatches was replaced by totalPromoted, so an old cache file is ignored
+$cacheFile = sys_get_temp_dir() . '/kbf_stats_cache_v2.json';
 $cacheTTL  = 60;
 
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTTL) {
@@ -26,7 +27,7 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTTL) {
 }
 
 try {
-    // Single round-trip: all four counts in one query instead of four sequential queries.
+    // Single round-trip: all four figures in one query instead of four sequential queries.
     // Using correlated subqueries keeps the logic readable and avoids cross-joins.
     $stmt = $pdo->query("
         SELECT
@@ -36,7 +37,15 @@ try {
             -- tournaments, compared ignoring case and surrounding spaces (same response field)
             (SELECT COUNT(DISTINCT LOWER(TRIM(OrganiserName))) FROM Tournaments
               WHERE Status IN ('Approved', 'Completed') AND OrganiserName IS NOT NULL AND TRIM(OrganiserName) <> '') AS totalClubs,
-            (SELECT COUNT(*) FROM Matches     WHERE IsApproved = 1)       AS totalMatches
+            -- Players promoted: distinct players with any grade change to a higher
+            -- grade (lower Categories.DisplayOrder). Same rule as kbfLastGradeChanges
+            -- in points-rules.php: both grades known, and not an admin move.
+            (SELECT COUNT(DISTINCT rh.PlayerId)
+               FROM PlayerRankingHistory rh
+               JOIN Categories oc ON oc.CategoryId = rh.OldCategoryId
+               JOIN Categories nc ON nc.CategoryId = rh.NewCategoryId
+              WHERE nc.DisplayOrder < oc.DisplayOrder
+                AND (rh.Reason IS NULL OR rh.Reason NOT LIKE 'Moved by an admin%')) AS totalPromoted
     ");
     $row = $stmt->fetch();
 
@@ -46,7 +55,7 @@ try {
             'totalPlayers'     => (int)$row['totalPlayers'],
             'totalTournaments' => (int)$row['totalTournaments'],
             'totalClubs'       => (int)$row['totalClubs'],
-            'totalMatches'     => (int)$row['totalMatches'],
+            'totalPromoted'    => (int)$row['totalPromoted'],
         ],
     ];
 

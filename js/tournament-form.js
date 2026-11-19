@@ -1,6 +1,6 @@
 /* ============================================
  * KBF tournament form (create + edit details)
- * Shared by clubadmin/create-tournament.html and admin/tournaments.html.
+ * Used by admin/tournaments.html (create panel and the Details tab).
  *
  *   const tf = KBFTournamentForm.mount(hostElement, { showHowItWorks: true, canEditOrganiser: false });
  *   tf.loadForEdit(tournament)    switch to "edit details" mode (sections 3-5 + start time)

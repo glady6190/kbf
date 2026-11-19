@@ -55,7 +55,7 @@
 
         /* People */
         .pp-avatar { border-radius: 9999px; border: 2px solid var(--theme-primary); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: #e5e7eb; font-weight: 900; }
-        .pp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .pp-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
         .pp-chip { display: inline-block; padding: .15rem .45rem; border: 2px solid #4b5563; background: #1e293b; color: #e5e7eb; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
         .pp-chip.is-super { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
         .pp-chip.is-off { border-color: #4b5563; color: #9ca3af; }
@@ -243,6 +243,7 @@
                                 Change
                                 <input type="file" id="dPhotoInput" accept="image/jpeg,image/png,image/webp" class="sr-only">
                             </label>
+                            <button type="button" id="dPhotoAdjust" class="btn-plain hidden">Adjust</button>
                             <p id="dPhotoNote" class="field-hint"></p>
                         </div>
                     </div>
@@ -655,6 +656,8 @@
 
     <script src="/js/escape.js"></script>
     <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-lightbox.js"></script>
+    <script src="/js/kbf-cropper.js"></script>
     <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/grade-change.js"></script>
@@ -1137,7 +1140,12 @@
         const addSelect = document.getElementById('aGrade');
         const defaultId = defaultGrade && defaultGrade.id ? Number(defaultGrade.id) : null;
         items.forEach(g => {
-            const label = g.shortName + (g.name && g.name !== g.shortName ? ' (' + g.name + ')' : '');
+            // "D (Intermediate - Medium)": the full name may already start with the short name
+            const short = String(g.shortName || '').trim();
+            const full = String(g.name || '').trim();
+            const head = full.slice(0, short.length + 1).toUpperCase();
+            const label = !full || full.toUpperCase() === short.toUpperCase() ? (short || full)
+                : (!short || head === short.toUpperCase() + ' ' || head === short.toUpperCase() + '(' ? full : short + ' (' + full + ')');
             const o1 = el('option', '', label); o1.value = String(g.id); filter.appendChild(o1);
             // Add player: grades by their full name, starting on the default
             const o2 = el('option', '', g.name || g.shortName);
@@ -1361,6 +1369,7 @@
         document.getElementById('ppChip').textContent = '';
         document.getElementById('ppPlays').textContent = '';
         document.getElementById('ppAvatar').textContent = '';
+        KBFLightbox.detach(document.getElementById('ppAvatar'));
         document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => {
             const name = t.getAttribute('data-panel');
             t.classList.toggle('hidden', name === 'access' && !me.isSuperAdmin);
@@ -1394,7 +1403,10 @@
 
     function renderPersonHeader() {
         const p = person;
-        fillAvatar(document.getElementById('ppAvatar'), p.photo, p.name);
+        const headAvatar = document.getElementById('ppAvatar');
+        fillAvatar(headAvatar, p.photo, p.name);
+        // The photo opens larger (js/kbf-lightbox.js); initials have nothing to open
+        KBFLightbox.sync(headAvatar, safePhoto(p.photo), p.name, { round: true });
         document.getElementById('ppName').textContent = p.name;
         document.getElementById('ppMeta').textContent = [p.kbfId ? 'ID: ' + p.kbfId : '', p.city || ''].filter(Boolean).join(', ');
         const chip = document.getElementById('ppChip');
@@ -1410,7 +1422,9 @@
     function renderDraftHeader() {
         const d = accessDraft.member || accessDraft.person;
         const name = ((d.firstName || '') + ' ' + (d.lastName || '')).trim();
-        fillAvatar(document.getElementById('ppAvatar'), accessDraft.member ? d.profilePhoto : null, name);
+        const headAvatar = document.getElementById('ppAvatar');
+        fillAvatar(headAvatar, accessDraft.member ? d.profilePhoto : null, name);
+        KBFLightbox.sync(headAvatar, accessDraft.member ? safePhoto(d.profilePhoto) : null, name, { round: true });
         document.getElementById('ppName').textContent = name;
         document.getElementById('ppMeta').textContent = d.location || '';
         const chip = document.getElementById('ppChip');
@@ -1467,7 +1481,12 @@
         ['dFirstName', 'dLastName', 'dCity', 'dPostCode', 'dYear'].forEach(id => { document.getElementById(id).disabled = !can.edit; });
         ['dEmail', 'dMobile'].forEach(id => { document.getElementById(id).disabled = !can.editContacts; });
         document.getElementById('dPhotoChange').classList.toggle('hidden', !can.edit);
-        fillAvatar(document.getElementById('dPhotoPreview'), pendingPhoto !== undefined ? pendingPhoto : p.photo, p.name);
+        const shownPhoto = safePhoto(pendingPhoto !== undefined ? pendingPhoto : p.photo);
+        const preview = document.getElementById('dPhotoPreview');
+        fillAvatar(preview, shownPhoto, p.name);
+        KBFLightbox.sync(preview, shownPhoto, p.name, { round: true });
+        // Adjust: crop the current photo again (it needs canvas support)
+        document.getElementById('dPhotoAdjust').classList.toggle('hidden', !(can.edit && shownPhoto && KBFCropper.supported()));
         document.getElementById('dPhotoNote').textContent = pendingPhoto !== undefined ? 'New photo, not saved yet.' : '';
 
         const box = document.getElementById('dGradeBox');
@@ -1504,18 +1523,47 @@
         return data.photoPath;
     }
 
-    document.getElementById('dPhotoInput').addEventListener('change', async function () {
-        const file = this.files && this.files[0];
-        this.value = '';
-        if (!file || !person) return;
-        showMsg('ppMessage', 'Uploading the photo...', 'ok');
+    // Crop step (js/kbf-cropper.js): the chosen square is cropped and resized
+    // in the browser, then uploaded as usual. Resolves the file to upload,
+    // or null when Cancel was pressed. Without canvas support the photo is
+    // uploaded as chosen.
+    async function cropPhoto(source, opener) {
+        if (!KBFCropper.supported()) return source.file || null;
+        if (source.file && !['image/jpeg', 'image/png', 'image/webp'].includes(source.file.type)) {
+            throw new Error('Only JPG, PNG and WEBP photos are allowed.');
+        }
+        return KBFCropper.open(Object.assign({ opener: opener }, source));
+    }
+
+    async function uploadPersonPhoto(source, opener) {
+        if (!person) return;
+        const forPerson = personId;
         try {
+            const file = await cropPhoto(source, opener);
+            // Nothing chosen, or another person opened meanwhile
+            if (!file || !person || personId !== forPerson) return;
+            showMsg('ppMessage', 'Uploading the photo...', 'ok');
             pendingPhoto = await uploadPhoto(file);
             showMsg('ppMessage', 'Photo uploaded. Press Save to keep it.', 'ok');
             renderDetails();
         } catch (e) {
             showMsg('ppMessage', e.message || 'The photo could not be uploaded.', 'error');
         }
+    }
+
+    document.getElementById('dPhotoInput').addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        this.value = '';
+        if (!file || !person) return;
+        uploadPersonPhoto({ file: file, title: 'Crop photo' }, this);
+    });
+
+    // Adjust the current photo: the original first, then its display copy
+    document.getElementById('dPhotoAdjust').addEventListener('click', function () {
+        if (!person) return;
+        const current = safePhoto(pendingPhoto !== undefined ? pendingPhoto : person.photo);
+        if (!current) return;
+        uploadPersonPhoto({ src: [current, KBF.imageVariant(current, 'display'), KBF.imageVariant(current, 'display', 'jpg')], title: 'Adjust photo' }, this);
     });
 
     document.getElementById('saveDetailsBtn').addEventListener('click', saveDetails);
@@ -2451,9 +2499,12 @@
         const file = this.files && this.files[0];
         this.value = '';
         if (!file) return;
-        showMsg('addMessage', 'Uploading the photo...', 'ok');
         try {
-            addPhoto = await uploadPhoto(file);
+            // Crop step first (Cancel keeps the photo as it was)
+            const cropped = await cropPhoto({ file: file, title: 'Crop photo' }, this);
+            if (!cropped) return;
+            showMsg('addMessage', 'Uploading the photo...', 'ok');
+            addPhoto = await uploadPhoto(cropped);
             fillAvatar(document.getElementById('aPhotoPreview'), addPhoto, '');
             showMsg('addMessage', '');
         } catch (e) {

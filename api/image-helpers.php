@@ -62,12 +62,10 @@ function kbfStoreImage($sourcePath, $isUploaded, $destDir, $urlDir, $prefix, $ma
         return [null, 'Failed to create upload directory'];
     }
 
-    $extension = KBF_IMAGE_TYPES[$mimeType];
-    $filename = $prefix . bin2hex(random_bytes(16)) . '.' . $extension;
-    $target = rtrim($destDir, '/\\') . '/' . $filename;
-
-    if (!kbfReencodeImage($sourcePath, $target, $mimeType)) {
-        @unlink($target);
+    // Saved as WebP (or the fallback format, see kbfImageOutputFormat)
+    $base = rtrim($destDir, '/\\') . '/' . $prefix . bin2hex(random_bytes(16));
+    $target = kbfReencodeImage($sourcePath, $base, $mimeType);
+    if ($target === null) {
         return [null, 'The image could not be processed. Please try a different image.'];
     }
     if ($isUploaded) {
@@ -75,31 +73,182 @@ function kbfStoreImage($sourcePath, $isUploaded, $destDir, $urlDir, $prefix, $ma
     }
     // Display version and thumbnail next to it (a problem never stops the upload)
     kbfMakeImageVariants($target);
-    return [rtrim($urlDir, '/') . '/' . $filename, null];
+    return [rtrim($urlDir, '/') . '/' . basename($target), null];
+}
+
+// ============================================
+// OUTPUT FORMAT: WebP for every saved image (original, display version and
+// thumbnail), keeping transparency. When the server's GD cannot write WebP,
+// JPEG is used instead, or PNG for an image with transparency, and this is
+// logged once a day.
+// ============================================
+function kbfWebpWritable() {
+    static $ok = null;
+    if ($ok === null) {
+        $ok = function_exists('imagewebp') && function_exists('gd_info') && !empty(gd_info()['WebP Support']);
+        if (!$ok) {
+            $message = 'GD on this server cannot write WebP images; uploads are saved as JPEG (PNG when transparent) instead.';
+            if (function_exists('kbfLogOnce')) {
+                kbfLogOnce($message);
+            } else {
+                error_log('KBF: ' . $message);
+            }
+        }
+    }
+    return $ok;
+}
+
+// True when a GD image has any (partly) transparent pixel. Checked on a
+// small copy, so it is quick even for large images.
+function kbfImageHasAlpha($image) {
+    $width = imagesx($image);
+    $height = imagesy($image);
+    $sw = min(64, $width);
+    $sh = min(64, $height);
+    $small = imagecreatetruecolor($sw, $sh);
+    imagealphablending($small, false);
+    imagesavealpha($small, true);
+    imagefill($small, 0, 0, imagecolorallocatealpha($small, 0, 0, 0, 127));
+    imagecopyresampled($small, $image, 0, 0, 0, 0, $sw, $sh, $width, $height);
+    $found = false;
+    for ($y = 0; $y < $sh && !$found; $y++) {
+        for ($x = 0; $x < $sw; $x++) {
+            if (((imagecolorat($small, $x, $y) >> 24) & 0x7F) > 0) {
+                $found = true;
+                break;
+            }
+        }
+    }
+    imagedestroy($small);
+    return $found;
+}
+
+// 'webp', or the fallback: 'png' for a transparent image, otherwise 'jpg'
+function kbfImageOutputFormat($image, $mayHaveAlpha) {
+    if (kbfWebpWritable()) {
+        return 'webp';
+    }
+    return ($mayHaveAlpha && kbfImageHasAlpha($image)) ? 'png' : 'jpg';
+}
+
+// Write a GD image in $format ('webp', 'png' or 'jpg'). JPEG has no
+// transparency, so transparent areas are put on white for it.
+function kbfWriteImage($image, $target, $format, $quality) {
+    if ($format === 'webp') {
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        return imagewebp($image, $target, $quality) && is_file($target);
+    }
+    if ($format === 'png') {
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        return imagepng($image, $target, 8) && is_file($target);
+    }
+    $flat = imagecreatetruecolor(imagesx($image), imagesy($image));
+    imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255));
+    imagealphablending($flat, true);
+    imagecopy($flat, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+    imageinterlace($flat, true);
+    $ok = imagejpeg($flat, $target, $quality);
+    imagedestroy($flat);
+    return (bool) $ok && is_file($target);
+}
+
+// Open an image file with GD by its real type, or false
+function kbfOpenImage($file, $mimeType = null) {
+    if ($mimeType === null) {
+        $info = @getimagesize($file);
+        $mimeType = $info === false ? '' : (string) ($info['mime'] ?? '');
+    }
+    switch ($mimeType) {
+        case 'image/jpeg': return @imagecreatefromjpeg($file);
+        case 'image/png': return @imagecreatefrompng($file);
+        case 'image/webp': return function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file) : false;
+        case 'image/gif': return @imagecreatefromgif($file);
+    }
+    return false;
+}
+
+// Re-save an image file that is already on disk (for example a resized
+// profile photo or a poster) in the output format, next to it with the same
+// random name, and delete the old file. Returns the new path, or the old
+// path unchanged if it could not be converted (it is still a valid image).
+function kbfConvertStoredImage($file) {
+    if (!is_file($file) || !function_exists('imagecreatetruecolor')) {
+        return $file;
+    }
+    $info = @getimagesize($file);
+    if ($info === false || (int) $info[0] * (int) $info[1] > 50000000) {
+        return $file;
+    }
+    $mime = (string) ($info['mime'] ?? '');
+    $image = kbfOpenImage($file, $mime);
+    if (!$image) {
+        return $file;
+    }
+    imagealphablending($image, false);
+    imagesavealpha($image, true);
+    $format = kbfImageOutputFormat($image, $mime !== 'image/jpeg');
+    $base = preg_replace('/\.(jpe?g|png|webp|gif)$/i', '', $file);
+    $target = $base . '.' . $format;
+    if ($target === $file) {
+        imagedestroy($image);
+        return $file;
+    }
+    $ok = kbfWriteImage($image, $target, $format, 88);
+    imagedestroy($image);
+    if (!$ok) {
+        @unlink($target);
+        return $file;
+    }
+    @unlink($file);
+    return $target;
 }
 
 // ============================================
 // DISPLAY VERSION AND THUMBNAIL
 // For /uploads/<folder>/<name>.<ext> the site also keeps
-//   <name>.d.jpg  display version, at most 1600 px on its longest side
-//   <name>.t.jpg  thumbnail, at most 480 px
-// Lists, grids and cards use the thumbnail; full-size views use the display
-// version (js/escape.js imageVariant()); both fall back to the original.
-// The random name of the original is kept. JPEG (transparent areas on white).
+//   <name>.d.webp  display version, at most 1600 px on its longest side
+//   <name>.t.webp  thumbnail, at most 480 px
+// (.d.jpg / .t.jpg instead on a server whose GD cannot write WebP, and for
+// images saved before WebP was used). Lists, grids and cards use the
+// thumbnail; full-size views use the display version (js/escape.js
+// imageVariant() tries WebP, then JPEG, then the original). The random name
+// of the original is kept. WebP keeps transparency; JPEG puts it on white.
 // ============================================
 const KBF_IMAGE_DISPLAY_SIDE = 1600;
 const KBF_IMAGE_THUMB_SIDE = 480;
 
-// [display path, thumbnail path] for an original file path, or null when the
-// path is not an original image (or is itself a variant)
-function kbfImageVariantFiles($file) {
+// The name of an original image without its extension, or null when the
+// path is not an original image (or is itself a version)
+function kbfImageVariantBase($file) {
     if (!is_string($file) || !preg_match('/^(.+)\.(jpe?g|png|webp|gif)$/i', $file, $m)) {
         return null;
     }
     if (preg_match('/\.(d|t)$/', $m[1])) {
         return null;
     }
-    return [$m[1] . '.d.jpg', $m[1] . '.t.jpg'];
+    return $m[1];
+}
+
+// [display path, thumbnail path] in the format this server writes
+// (WebP, or JPEG when GD cannot write WebP), or null for a non-original
+function kbfImageVariantFiles($file) {
+    $base = kbfImageVariantBase($file);
+    if ($base === null) {
+        return null;
+    }
+    $ext = kbfWebpWritable() ? 'webp' : 'jpg';
+    return [$base . '.d.' . $ext, $base . '.t.' . $ext];
+}
+
+// Every version file an original may have (WebP and older JPEG ones)
+function kbfImageAllVariantFiles($file) {
+    $base = kbfImageVariantBase($file);
+    if ($base === null) {
+        return [];
+    }
+    return [$base . '.d.webp', $base . '.t.webp', $base . '.d.jpg', $base . '.t.jpg'];
 }
 
 // Make the two versions of an original image file. $force: make them again
@@ -118,18 +267,15 @@ function kbfMakeImageVariants($file, $force = false) {
         if ($info === false || (int) $info[0] < 1 || (int) $info[1] < 1 || (int) $info[0] * (int) $info[1] > 50000000) {
             return false;
         }
-        switch ($info['mime'] ?? '') {
-            case 'image/jpeg': $source = @imagecreatefromjpeg($file); break;
-            case 'image/png': $source = @imagecreatefrompng($file); break;
-            case 'image/webp': $source = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file) : false; break;
-            case 'image/gif': $source = @imagecreatefromgif($file); break;
-            default: $source = false;
-        }
+        $source = kbfOpenImage($file, (string) ($info['mime'] ?? ''));
         if (!$source) {
             return false;
         }
-        $ok = kbfWriteJpegVariant($source, $display, KBF_IMAGE_DISPLAY_SIDE, 82)
-            && kbfWriteJpegVariant($source, $thumb, KBF_IMAGE_THUMB_SIDE, 78);
+        imagealphablending($source, false);
+        imagesavealpha($source, true);
+        $format = kbfWebpWritable() ? 'webp' : 'jpg';
+        $ok = kbfWriteVariant($source, $display, KBF_IMAGE_DISPLAY_SIDE, $format, 82)
+            && kbfWriteVariant($source, $thumb, KBF_IMAGE_THUMB_SIDE, $format, 78);
         imagedestroy($source);
         if (!$ok) {
             @unlink($display);
@@ -142,29 +288,26 @@ function kbfMakeImageVariants($file, $force = false) {
     }
 }
 
-// Scale $source down (never up) to $maxSide and save it as JPEG
-function kbfWriteJpegVariant($source, $target, $maxSide, $quality) {
+// Scale $source down (never up) to $maxSide and save it in $format
+function kbfWriteVariant($source, $target, $maxSide, $format, $quality) {
     $width = imagesx($source);
     $height = imagesy($source);
     $ratio = min(1, $maxSide / max($width, $height));
     $newWidth = max(1, (int) round($width * $ratio));
     $newHeight = max(1, (int) round($height * $ratio));
     $image = imagecreatetruecolor($newWidth, $newHeight);
-    imagefill($image, 0, 0, imagecolorallocate($image, 255, 255, 255));
+    imagealphablending($image, false);
+    imagesavealpha($image, true);
+    imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
     imagecopyresampled($image, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-    imageinterlace($image, true);
-    $ok = imagejpeg($image, $target, $quality);
+    $ok = kbfWriteImage($image, $target, $format, $quality);
     imagedestroy($image);
-    return (bool) $ok && is_file($target);
+    return $ok;
 }
 
-// Delete the two versions of an original image file (if any)
+// Delete every version of an original image file (WebP and JPEG, if any)
 function kbfDeleteImageVariants($file) {
-    $variants = kbfImageVariantFiles($file);
-    if ($variants === null) {
-        return;
-    }
-    foreach ($variants as $v) {
+    foreach (kbfImageAllVariantFiles($file) as $v) {
         if (is_file($v)) {
             @unlink($v);
         }
@@ -172,22 +315,17 @@ function kbfDeleteImageVariants($file) {
 }
 
 // Decode with GD, fix JPEG orientation, scale down to KBF_IMAGE_MAX_SIDE and
-// write a fresh file (no metadata is copied). Returns true on success.
-function kbfReencodeImage($sourcePath, $targetPath, $mimeType) {
+// write a fresh file (no metadata is copied) at $targetBase plus the output
+// format's extension (.webp, or .jpg/.png). Returns the path written, or null.
+function kbfReencodeImage($sourcePath, $targetBase, $mimeType) {
     if (!function_exists('imagecreatetruecolor')) {
         error_log('kbfReencodeImage: the GD extension is missing');
-        return false;
+        return null;
     }
     try {
-        switch ($mimeType) {
-            case 'image/jpeg': $source = @imagecreatefromjpeg($sourcePath); break;
-            case 'image/png': $source = @imagecreatefrompng($sourcePath); break;
-            case 'image/webp': $source = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($sourcePath) : false; break;
-            case 'image/gif': $source = @imagecreatefromgif($sourcePath); break;
-            default: $source = false;
-        }
+        $source = kbfOpenImage($sourcePath, $mimeType);
         if (!$source) {
-            return false;
+            return null;
         }
 
         if ($mimeType === 'image/jpeg' && function_exists('exif_read_data')) {
@@ -209,26 +347,24 @@ function kbfReencodeImage($sourcePath, $targetPath, $mimeType) {
         $newHeight = max(1, (int) round($height * $ratio));
 
         $image = imagecreatetruecolor($newWidth, $newHeight);
-        if ($mimeType === 'image/png' || $mimeType === 'image/webp' || $mimeType === 'image/gif') {
-            imagealphablending($image, false);
-            imagesavealpha($image, true);
-            imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
-        }
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
         imagecopyresampled($image, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
         imagedestroy($source);
 
-        switch ($mimeType) {
-            case 'image/jpeg': $ok = imagejpeg($image, $targetPath, 88); break;
-            case 'image/png': $ok = imagepng($image, $targetPath, 8); break;
-            case 'image/webp': $ok = function_exists('imagewebp') && imagewebp($image, $targetPath, 88); break;
-            case 'image/gif': $ok = imagegif($image, $targetPath); break;
-            default: $ok = false;
-        }
+        $format = kbfImageOutputFormat($image, $mimeType !== 'image/jpeg');
+        $targetPath = $targetBase . '.' . $format;
+        $ok = kbfWriteImage($image, $targetPath, $format, 88);
         imagedestroy($image);
-        return (bool) $ok && is_file($targetPath);
+        if (!$ok) {
+            @unlink($targetPath);
+            return null;
+        }
+        return $targetPath;
     } catch (Throwable $e) {
         error_log('kbfReencodeImage: ' . $e->getMessage());
-        return false;
+        return null;
     }
 }
 

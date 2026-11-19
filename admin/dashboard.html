@@ -27,6 +27,12 @@
         .db-tile-number { font-size: 1.875rem; line-height: 1; font-weight: 900; color: #fff; }
         .db-tile-label { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #D1D5DB; }
         .db-tile-note { font-size: 0.75rem; font-weight: 600; color: #9CA3AF; }
+        /* A tile that links to the page behind its figure */
+        .db-tile-link { color: inherit; text-decoration: none; transition: border-color 0.2s, background-color 0.2s, transform 0.2s; }
+        .db-tile-link:hover { border-color: var(--theme-primary); background: #1e293b; transform: translateY(-2px); }
+        .db-tile-link:hover .db-tile-label { color: #fff; }
+        .db-tile-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-color: var(--theme-primary); }
+        @media (prefers-reduced-motion: reduce) { .db-tile-link, .db-tile-link:hover { transition: none; transform: none; } }
 
         /* Panels */
         .db-panel { background: #0f172a; border: 4px solid #374151; }
@@ -64,7 +70,7 @@
 
         /* People and tournaments */
         .db-avatar { width: 44px; height: 44px; border-radius: 9999px; border: 2px solid var(--theme-primary); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: #D1D5DB; font-weight: 900; font-size: 0.875rem; }
-        .db-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .db-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
         .db-link-row { display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem; border: 2px solid transparent; transition: border-color 0.2s, background-color 0.2s; }
         .db-link-row:hover { border-color: var(--theme-primary); background: #1e293b; }
         .db-datetile { width: 52px; flex-shrink: 0; text-align: center; border: 2px solid var(--theme-primary); }
@@ -382,7 +388,7 @@
             } else {
                 text = 'You have results to submit for ' + plural(m, 'tournament') + '.';
             }
-            button = ['Create tournament', '/clubadmin/create-tournament'];
+            button = ['Create tournament', '/admin/tournaments?create=1'];
         }
 
         sentence.textContent = text;
@@ -396,8 +402,9 @@
     // ============================================
     // 2. FIGURE TILES (first rule that fits, four at most)
     // ============================================
-    function tile(iconName, number, label, note) {
-        const box = el('div', 'db-tile');
+    // href: the tile is a link to the page behind the figure
+    function tile(iconName, number, label, note, href) {
+        const box = href ? link(href, 'db-tile db-tile-link') : el('div', 'db-tile');
         const top = el('div', 'flex items-center justify-between gap-2');
         const ring = el('div', 'db-ring');
         ring.appendChild(icon(iconName));
@@ -412,7 +419,8 @@
     function upcomingTile(data) {
         const up = data.upcoming || {};
         const next = up.next && up.next[0] ? up.next[0].date : null;
-        return tile('calendar', num(up.count), 'Upcoming events', next ? 'Next: ' + dayDate(next) : 'Nothing booked yet');
+        const href = hasAny(['tournaments.approve', 'tournaments.manage_all', 'tournaments.organise_own']) ? '/admin/tournaments?tab=upcoming' : '/tournaments';
+        return tile('calendar', num(up.count), 'Upcoming events', next ? 'Next: ' + dayDate(next) : 'Nothing booked yet', href);
     }
 
     function waitingTile(data) {
@@ -420,7 +428,14 @@
         const appr = data.approvals;
         const total = (regs ? num(regs.waiting) : 0) + (appr ? num(appr.tournaments) + num(appr.results) : 0);
         const note = regs && regs.oldestDate ? 'Oldest since ' + shortDate(regs.oldestDate) : (total ? 'Tournaments and results' : 'Nothing waiting');
-        return tile('clock', total, 'Waiting approval', note);
+        const href = hasAny(['players.approve_registrations', 'tournaments.approve']) ? '/admin/approvals' : null;
+        return tile('clock', total, 'Waiting approval', note, href);
+    }
+
+    // Players tile: the Players tab of People, for those who can open it
+    function playersTile(players, note) {
+        const href = hasAny(['players.view_export', 'players.edit_details']) ? '/admin/people?tab=players' : null;
+        return tile('users', num(players.active), 'Players', note, href);
     }
 
     function renderTiles(data) {
@@ -430,25 +445,28 @@
         const players = data.players || {};
 
         if (hasAny(['tournaments.approve', 'tournaments.manage_all', 'players.change_grades'])) {
-            tiles.push(tile('users', num(players.active), 'Players', '+' + num(players.thisMonth) + ' this month'));
+            tiles.push(playersTile(players, '+' + num(players.thisMonth) + ' this month'));
             tiles.push(waitingTile(data));
             tiles.push(upcomingTile(data));
             if (data.eligible) {
-                tiles.push(tile('trending', num(data.eligible.count), 'Eligible to promote', 'Season ends ' + longDate(data.eligible.seasonEnds)));
+                tiles.push(tile('trending', num(data.eligible.count), 'Eligible to promote', 'Season ends ' + longDate(data.eligible.seasonEnds),
+                    has('players.change_grades') ? '/admin/rankings?tab=eligible' : null));
             }
         } else if (has('players.approve_registrations')) {
             tiles.push(waitingTile(data));
-            tiles.push(tile('checkCircle', data.mine ? num(data.mine.approved) : 0, 'You approved', 'In the last 30 days'));
-            tiles.push(tile('users', num(players.active), 'Players', 'Across all grades'));
+            tiles.push(tile('checkCircle', data.mine ? num(data.mine.approved) : 0, 'You approved', 'In the last 30 days', '/admin/approvals?tab=history'));
+            tiles.push(playersTile(players, 'Across all grades'));
             tiles.push(upcomingTile(data));
         } else if (data.myTournaments) {
+            // Organisers: their tournaments are on admin/tournaments
             const mt = data.myTournaments;
-            tiles.push(tile('calendar', num(mt.comingUp), 'Coming up', mt.nextDate ? 'Next: ' + shortDate(mt.nextDate) : 'Nothing booked yet'));
-            tiles.push(tile('clock', num(mt.waitingApproval), 'Waiting approval', 'Submitted to KBF'));
-            tiles.push(tile('upload', num(mt.resultsDue), 'Results to submit', 'After the event'));
-            tiles.push(tile('news', num(mt.posts), 'My posts', 'News and photos'));
+            tiles.push(tile('calendar', num(mt.comingUp), 'Coming up', mt.nextDate ? 'Next: ' + shortDate(mt.nextDate) : 'Nothing booked yet', '/admin/tournaments?tab=upcoming'));
+            tiles.push(tile('clock', num(mt.waitingApproval), 'Waiting approval', 'Submitted to KBF', '/admin/tournaments?tab=waiting'));
+            tiles.push(tile('upload', num(mt.resultsDue), 'Results to submit', 'After the event', '/admin/tournaments?tab=due'));
+            tiles.push(tile('news', num(mt.posts), 'News', 'News and photos',
+                hasAny(['content.all_news_gallery', 'content.own_news_gallery']) ? '/admin/announcements' : null));
         } else {
-            tiles.push(tile('users', num(players.active), 'Players', 'Across all grades'));
+            tiles.push(playersTile(players, 'Across all grades'));
             tiles.push(upcomingTile(data));
         }
 
@@ -535,7 +553,7 @@
             rows.push(todoRow('Results to approve', num(data.approvals.results), 'Review', '/admin/approvals'));
         }
         if (data.eligible) rows.push(todoRow('Players eligible for promotion', num(data.eligible.count), 'Review', '/admin/rankings'));
-        if (data.myTournaments) rows.push(todoRow('Results to submit', num(data.myTournaments.resultsDue), 'Submit results', '/clubadmin/tournaments'));
+        if (data.myTournaments) rows.push(todoRow('Results to submit', num(data.myTournaments.resultsDue), 'Submit results', '/admin/tournaments?tab=due'));
         if (!rows.length) return null;
 
         const p = panel('Your to-do');
@@ -611,18 +629,18 @@
 
     function nextAction(t) {
         const id = encodeURIComponent(num(t.id));
-        if (t.status === 'Results due') return ['Submit results', '/clubadmin/submit-results?id=' + id];
-        if (t.status === 'Waiting approval' || t.status === 'Approved') return ['Edit details', '/clubadmin/create-tournament?edit=' + id];
+        if (t.status === 'Results due') return ['Submit results', '/admin/submit-tournament-results?id=' + id];
+        if (t.status === 'Waiting approval' || t.status === 'Approved') return ['Edit details', '/admin/tournaments?id=' + id];
         return ['View results', '/tournament-details?id=' + id];
     }
 
     function buildMyTournaments(mt) {
-        const p = panel('My tournaments', '/clubadmin/tournaments', 'See all');
+        const p = panel('Tournaments', '/admin/tournaments', 'See all');
         const items = mt.items || [];
         if (!items.length) {
             const empty = el('div', 'text-center py-4');
             empty.appendChild(el('p', 'text-gray-400 font-bold text-sm mb-4', 'You have not created any tournaments yet.'));
-            const a = link('/clubadmin/create-tournament', 'db-main-btn', 'Create tournament');
+            const a = link('/admin/tournaments?create=1', 'db-main-btn', 'Create tournament');
             a.appendChild(icon('arrow'));
             empty.appendChild(a);
             p.body.appendChild(empty);
@@ -657,11 +675,11 @@
         const actions = [];
         if (has('players.approve_registrations')) actions.push(['Review registrations', '/admin/approvals', 'clipboard']);
         if (has('players.approve_registrations') && has('players.edit_details')) actions.push(['Add player', '/admin/people?add=player', 'userPlus']);
-        if (has('tournaments.organise_own')) actions.push(['Create tournament', '/clubadmin/create-tournament', 'calendarPlus']);
+        if (has('tournaments.organise_own')) actions.push(['Create tournament', '/admin/tournaments?create=1', 'calendarPlus']);
         else if (has('tournaments.manage_all')) actions.push(['Create tournament', '/admin/tournaments', 'calendarPlus']);
-        if (has('tournaments.organise_own')) actions.push(['Submit results', '/clubadmin/tournaments', 'upload']);
+        if (has('tournaments.organise_own')) actions.push(['Submit results', '/admin/tournaments?tab=due', 'upload']);
         if (has('content.all_news_gallery')) actions.push(['Post news', '/admin/announcements', 'news']);
-        else if (has('content.own_news_gallery')) actions.push(['Post news', '/clubadmin/create-post', 'news']);
+        else if (has('content.own_news_gallery')) actions.push(['Post news', '/admin/announcements', 'news']);
         if (has('content.broadcasts')) actions.push(['Send broadcast', '/admin/broadcasts', 'megaphone']);
         if (hasAny(['players.view_export', 'players.edit_details'])) actions.push(['Find a player', '/admin/people', 'search']);
         if (has('players.view_export')) actions.push(['Export the player list', '/admin/people', 'download']);

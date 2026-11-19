@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My tournaments - KBF-UK Admin</title>
+    <title>Tournaments - KBF-UK Admin</title>
     <meta name="robots" content="noindex">
     <script>
-    // The old organiser dashboard has been replaced by My tournaments.
+    // The old organiser dashboard has been retired: organisers use the admin
+    // Tournaments page, which shows them their own tournaments.
     (function () {
-        window.location.replace('/clubadmin/tournaments' + window.location.hash);
+        window.location.replace('/admin/tournaments' + window.location.hash);
     })();
     </script>
     <style>body { background: #020617; color: #e5e7eb; font-family: system-ui, sans-serif; padding: 2rem; } a { color: #10b981; font-weight: 700; }</style>
 </head>
 <body>
-    <p>This page has moved to <a href="/clubadmin/tournaments">My tournaments</a>.</p>
+    <p>This page has moved to <a href="/admin/tournaments">Tournaments</a>.</p>
 </body>
 </html>

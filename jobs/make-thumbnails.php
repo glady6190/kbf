@@ -2,12 +2,15 @@
 /**
  * Make missing display versions and thumbnails (one-off, CLI only)
  * --------------------------------------------------------------------------
- * New uploads get a display version (<name>.d.jpg, at most 1600 px) and a
- * thumbnail (<name>.t.jpg, at most 480 px) straight away
- * (api/image-helpers.php). This job makes them for files uploaded before
- * that, in these folders:
+ * New uploads get a display version (<name>.d.webp, at most 1600 px) and a
+ * thumbnail (<name>.t.webp, at most 480 px) straight away
+ * (api/image-helpers.php; .jpg instead when the server's GD cannot write
+ * WebP). This job makes them for files uploaded before that, including the
+ * WebP versions of images that so far only have JPEG ones, in these folders:
  *     uploads/gallery (every tournament folder), uploads/announcements,
- *     uploads/profiles, uploads/registrations, uploads/tournaments
+ *     uploads/profiles, uploads/registrations, uploads/tournaments,
+ *     assets/images/sponsors
+ * Pages ask for the WebP version first, then the JPEG one, then the original.
  *
  * Safe to stop and run again: a file whose two versions already exist is
  * skipped, so each run carries on where the last one stopped. The originals
@@ -38,10 +41,11 @@ foreach ($argv as $arg) {
 $timeBudget = 50; // seconds per run, so a shared host never kills it midway
 $started = time();
 
-$root = dirname(__DIR__) . '/uploads';
-$folders = ['gallery', 'announcements', 'profiles', 'registrations', 'tournaments'];
+$root = dirname(__DIR__);
+$folders = ['uploads/gallery', 'uploads/announcements', 'uploads/profiles', 'uploads/registrations', 'uploads/tournaments',
+            'assets/images/sponsors'];
 
-// Every original image (not a .d.jpg or .t.jpg) under the folders
+// Every original image (not a .d.* or .t.* version) under the folders
 function kbfThumbOriginals($dir) {
     $out = [];
     if (!is_dir($dir)) {

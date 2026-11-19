@@ -160,7 +160,13 @@ function storeSponsorLogo(array $file) {
         sendJSON(['success' => false, 'message' => 'Failed to save logo'], 500);
     }
 
-    return SPONSOR_LOGO_URL_DIR . $filename;
+    // Saved as WebP keeping transparency (JPEG, or PNG when transparent, if
+    // the server cannot write WebP), with a display version and thumbnail
+    require_once __DIR__ . '/image-helpers.php';
+    $saved = kbfConvertStoredImage($uploadDir . $filename);
+    kbfMakeImageVariants($saved);
+
+    return SPONSOR_LOGO_URL_DIR . basename($saved);
 }
 
 // Delete a logo file, only ever inside the sponsors folder.
@@ -176,6 +182,8 @@ function deleteSponsorLogo($logoPath) {
     if (is_file($fullPath)) {
         @unlink($fullPath);
     }
+    require_once __DIR__ . '/image-helpers.php';
+    kbfDeleteImageVariants($fullPath);
 }
 
 function tableMissingResponse() {

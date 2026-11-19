@@ -87,8 +87,11 @@ try {
         sendJSON(['success' => false, 'message' => 'Failed to process image'], 500);
     }
     
-    // Display version and thumbnail (a problem never stops the upload)
+    // Saved as WebP (JPEG/PNG when the server cannot write WebP), then the
+    // display version and thumbnail (a problem never stops the upload)
     require_once __DIR__ . '/image-helpers.php';
+    $uploadPath = kbfConvertStoredImage($uploadPath);
+    $filename = basename($uploadPath);
     kbfMakeImageVariants($uploadPath);
 
     $photoPath = '/uploads/profiles/' . $filename;

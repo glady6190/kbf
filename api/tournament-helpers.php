@@ -67,7 +67,7 @@ function kbfTournamentStatusOf($pdo, $tournamentId) {
 // The organiser's "submit results" page for a tournament
 function kbfSubmitResultsLink($pdo, $tournamentId) {
     require_once __DIR__ . '/email-templates.php';
-    return kbfSiteLink($pdo) . '/clubadmin/submit-results?id=' . (int) $tournamentId;
+    return kbfSiteLink($pdo) . '/admin/submit-tournament-results?id=' . (int) $tournamentId;
 }
 
 // notify() context for results_overdue. $t: TournamentId, Name,

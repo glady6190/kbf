@@ -23,7 +23,7 @@
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         
-        #photoPreview { display: none; max-width: 200px; max-height: 200px; object-fit: cover; }
+        #photoPreview { display: none; max-width: 200px; max-height: 200px; object-fit: cover; object-position: center 20%; }
 #photoPreview.show { display: block; }
 #photoLoading { display: none; }
 #photoLoading.show { display: flex; }
@@ -682,6 +682,8 @@
 </div>
 
     <script src="/js/kbf-forms.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-cropper.js"></script>
     <script>
     // ============================================
     // GLOBAL VARIABLES
@@ -835,11 +837,55 @@
     // ============================================
     // PHOTO PREVIEW
     // ============================================
+    // Crop step (js/kbf-cropper.js): the chosen square is cropped and resized
+    // in the browser; the result is sent as profilePhoto instead of the file
+    // in the field. Browsers without canvas support send the photo as chosen.
+    let croppedPhoto = null;
+    let croppedPreviewUrl = null;
+
+    function clearCroppedPhoto() {
+        croppedPhoto = null;
+        if (croppedPreviewUrl) { try { URL.revokeObjectURL(croppedPreviewUrl); } catch (e) { /* ignore */ } }
+        croppedPreviewUrl = null;
+    }
+
     function previewPhoto(event) {
-        const file = event.target.files[0];
+        const input = event.target;
+        const file = input.files[0];
         const preview = document.getElementById('photoPreview');
         const loading = document.getElementById('photoLoading');
-        
+        clearCroppedPhoto();
+
+        if (file && window.KBFCropper && KBFCropper.supported()) {
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                alert('Only JPG, PNG, and WEBP files are allowed');
+                input.value = '';
+                preview.classList.remove('show');
+                return;
+            }
+            preview.classList.remove('show');
+            KBFCropper.open({ file: file, title: 'Crop your photo', opener: input }).then(function (cropped) {
+                if (!cropped) {
+                    // Cancel: no photo is sent
+                    input.value = '';
+                    return;
+                }
+                if (cropped.size > photoLimitMb * 1024 * 1024) {
+                    alert('Photo size must be less than ' + photoLimitMb + 'MB');
+                    input.value = '';
+                    return;
+                }
+                croppedPhoto = cropped;
+                croppedPreviewUrl = URL.createObjectURL(cropped);
+                preview.src = croppedPreviewUrl;
+                preview.classList.add('show');
+            }, function (err) {
+                input.value = '';
+                alert(err && err.message ? err.message : 'Error reading file. Please try again.');
+            });
+            return;
+        }
+
         if (file) {
             if (file.size > photoLimitMb * 1024 * 1024) {
                 alert('Photo size must be less than ' + photoLimitMb + 'MB');
@@ -977,6 +1023,10 @@
 
         try {
             const formData = new FormData(form);
+            // The cropped photo replaces the file chosen in the field
+            if (croppedPhoto && document.getElementById('profilePhotoInput').files.length) {
+                formData.set('profilePhoto', croppedPhoto, 'photo.jpg');
+            }
             formData.append('recaptcha_response', recaptchaResponse);
 
             const response = await fetch('/api/registration.php', {
@@ -995,6 +1045,7 @@
                 resetRecaptcha();
                 if (phoneInput) phoneInput.setNumber('');
                 document.getElementById('photoPreview').classList.remove('show');
+                clearCroppedPhoto();
             } else {
                 showError(result.message || 'Registration failed. Please try again.');
                 resetRecaptcha();

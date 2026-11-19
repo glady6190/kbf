@@ -47,7 +47,7 @@
         .pp-ring { width: 9rem; height: 9rem; border-radius: 9999px; border: 4px solid var(--theme-primary); padding: 4px; flex-shrink: 0; box-shadow: 0 0 24px color-mix(in srgb, var(--theme-primary) 35%, transparent); }
         @media (min-width: 640px) { .pp-ring { width: 11rem; height: 11rem; } }
         .pp-ring-inner { width: 100%; height: 100%; border-radius: 9999px; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; }
-        .pp-ring-inner img { width: 100%; height: 100%; object-fit: cover; }
+        .pp-ring-inner img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
         .pp-initials { font-size: 3rem; font-weight: 900; color: var(--theme-primary); }
         .pp-grade-sq { display: inline-flex; align-items: center; justify-content: center; min-width: 3.25rem; height: 3.25rem; padding: 0 .5rem; background: var(--theme-primary); color: #0F172A; font-weight: 900; font-size: 1.5rem; }
 
@@ -518,6 +518,8 @@
     </footer>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-lightbox.js"></script>
     <script>
     // ============================================
     // NAVIGATION AND THEME
@@ -627,12 +629,19 @@
         initials.textContent = p.initials || '';
         if (p.photo && /^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(p.photo) && p.photo.indexOf('..') === -1) {
             img.alt = p.name;
-            img.addEventListener('error', function () { img.classList.add('hidden'); initials.classList.remove('hidden'); });
             img.width = 160;
             img.height = 160;
             setImageVariant(img, p.photo, 'thumb');
             img.classList.remove('hidden');
             initials.classList.add('hidden');
+            // The photo opens larger (js/kbf-lightbox.js)
+            const photoBtn = KBFLightbox.attach(img, p.photo, p.name, { fill: true, round: true });
+            img.addEventListener('error', function () {
+                img.classList.add('hidden');
+                initials.classList.remove('hidden');
+                // Nothing to open: the initials stay outside the button
+                if (photoBtn !== img) photoBtn.classList.add('hidden');
+            });
         }
         if (p.grade && p.grade.short) {
             document.getElementById('gradeSquare').textContent = p.grade.short;

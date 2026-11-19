@@ -1,7 +1,7 @@
 /* ============================================
  * KBF results form (enter, edit and view results, one category at a time)
- * Shared by admin/submit-tournament-results.html, clubadmin/submit-results.html
- * and admin/edit-results.html.
+ * Shared by admin/submit-tournament-results.html (managers, and organisers for
+ * their own tournaments) and admin/edit-results.html.
  *
  *   KBFResultsForm.mount(hostElement, {
  *       tournamentId: 12,
@@ -98,7 +98,7 @@
             '.rf-option.is-active,.rf-option:hover{background:#1e293b;}' +
             '.rf-option.is-guest{color:#d1d5db;font-weight:800;font-size:.75rem;}' +
             '.rf-avatar{width:2.1rem;height:2.1rem;border-radius:9999px;border:2px solid var(--theme-primary);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#1e293b;color:#e5e7eb;font-weight:900;font-size:.68rem;}' +
-            '.rf-avatar img{width:100%;height:100%;object-fit:cover;}' +
+            '.rf-avatar img{width:100%;height:100%;object-fit:cover;object-position:center 20%;}' +
             '.rf-avatar.is-guest{border-color:#4b5563;color:#9ca3af;}' +
             '.rf-grade{width:1.9rem;height:1.9rem;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--theme-primary);color:var(--theme-primary);font-weight:900;font-size:.72rem;flex-shrink:0;}' +
             '.rf-grade.is-none{border-color:#374151;color:#6b7280;}' +

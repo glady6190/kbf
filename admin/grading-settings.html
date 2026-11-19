@@ -258,6 +258,18 @@
         return node;
     }
 
+    // "D (Intermediate - Medium)": the full name may already start with the
+    // short name, so it is shown once
+    function gradeOptionLabel(g) {
+        const short = String(g.shortName || '').trim();
+        const name = String(g.name || '').trim();
+        if (!name || name.toUpperCase() === short.toUpperCase()) return short || name;
+        if (!short) return name;
+        const head = name.slice(0, short.length + 1).toUpperCase();
+        if (head === short.toUpperCase() + ' ' || head === short.toUpperCase() + '(') return name;
+        return short + ' (' + name + ')';
+    }
+
     function svgIcon(name) {
         const ns = 'http://www.w3.org/2000/svg';
         const svg = document.createElementNS(ns, 'svg');
@@ -495,7 +507,7 @@
         document.getElementById('retiredWrap').classList.toggle('hidden', retired.length === 0);
         retired.forEach(g => {
             const li = el('li', 'flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-800 border-2 border-gray-700');
-            li.appendChild(el('span', 'text-sm font-bold text-gray-300', g.shortName + ' - ' + g.name));
+            li.appendChild(el('span', 'text-sm font-bold text-gray-300', gradeOptionLabel(g)));
             const actions = el('span', 'flex gap-2');
             const restore = el('button', 'px-3 py-1.5 bg-slate-900 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 disabled:opacity-40', 'Restore');
             restore.type = 'button';
@@ -819,7 +831,7 @@
         const select = node.querySelector('#moveTo');
         select.appendChild(Object.assign(el('option', '', 'Choose a grade'), { value: '' }));
         grades.filter(x => x.id !== g.id).forEach(x => {
-            const opt = el('option', '', x.shortName + ' - ' + x.name);
+            const opt = el('option', '', gradeOptionLabel(x));
             opt.value = String(x.id);
             select.appendChild(opt);
         });

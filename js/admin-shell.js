@@ -1,6 +1,6 @@
 /* ============================================
  * KBF-UK ADMIN SHELL
- * One shared header and page guard for every page in admin/ and clubadmin/.
+ * One shared header and page guard for every page in admin/.
  *
  *   <div id="kbf-admin-header"></div>            where the header goes
  *   <script src="/js/admin-shell.js"></script>    before the page's own script
@@ -80,11 +80,11 @@
         { key: 'dashboard', label: 'Dashboard', href: '/admin/dashboard', anyOf: [] },
         { key: 'people', label: 'People', href: '/admin/people', anyOf: ['players.view_export', 'players.edit_details'] },
         { key: 'approvals', label: 'Approvals', href: '/admin/approvals', anyOf: ['players.approve_registrations', 'tournaments.approve'] },
-        { key: 'tournaments', label: 'Tournaments', href: '/admin/tournaments', anyOf: ['tournaments.approve', 'tournaments.manage_all'] },
-        { key: 'my-tournaments', label: 'My tournaments', href: '/clubadmin/tournaments', anyOf: ['tournaments.organise_own'] },
+        // Organisers (organise_own / own_news_gallery) see only their own
+        // tournaments and posts on these pages
+        { key: 'tournaments', label: 'Tournaments', href: '/admin/tournaments', anyOf: ['tournaments.approve', 'tournaments.manage_all', 'tournaments.organise_own'] },
         { key: 'grading', label: 'Player grades', href: '/admin/rankings', anyOf: ['players.change_grades'] },
-        { key: 'news', label: 'News', href: '/admin/announcements', anyOf: ['content.all_news_gallery'] },
-        { key: 'my-posts', label: 'My posts', href: '/clubadmin/posts', anyOf: ['content.own_news_gallery'] },
+        { key: 'news', label: 'News', href: '/admin/announcements', anyOf: ['content.all_news_gallery', 'content.own_news_gallery'] },
         { key: 'broadcasts', label: 'Broadcasts', href: '/admin/broadcasts', anyOf: ['content.broadcasts'] },
         { key: 'sponsors', label: 'Sponsors', href: '/admin/sponsors', anyOf: ['content.sponsors'] },
         { key: 'staff', label: 'Staff', href: '/admin/people?tab=staff', superAdminOnly: true },

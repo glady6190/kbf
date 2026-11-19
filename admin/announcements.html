@@ -18,6 +18,8 @@
         .theme-focus:focus { border-color: var(--theme-primary); }
         .tap-target { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
         .tap-target:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        #featuredImage::file-selector-button { background: var(--theme-primary); color: #0F172A; }
+        #featuredImage:hover::file-selector-button { opacity: .9; }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
 </head>
@@ -26,13 +28,22 @@
 
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="mb-8">
-            <h1 class="text-3xl sm:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Post</span> news</h1>
+            <h1 class="text-3xl sm:text-4xl font-black uppercase mb-2"><span class="theme-primary-text" id="pageVerb">Post</span> news</h1>
             <div class="h-2 w-32 theme-primary-bg mb-4"></div>
-            <p class="text-gray-400 font-bold uppercase text-sm">Write a news post for the public site</p>
+            <p class="text-gray-400 font-bold uppercase text-sm" id="pageIntro">Write a news post for the public site</p>
         </div>
 
-        <div class="bg-slate-900 border-4 border-gray-700 p-8 mb-8">
+        <div class="bg-slate-900 border-4 border-gray-700 p-4 sm:p-8 mb-8" id="formCard">
             <form id="announcementForm" class="space-y-4" novalidate>
+                <div>
+                    <label for="tournamentSelect" class="block text-xs font-black theme-primary-text uppercase mb-2"><span id="tournamentLabel">Tournament</span></label>
+                    <select id="tournamentSelect" name="tournamentId" aria-describedby="tournamentHint"
+                            class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition disabled:opacity-60 disabled:cursor-not-allowed">
+                        <option value="">No tournament (general news)</option>
+                    </select>
+                    <p id="tournamentHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Approved or completed tournaments only</p>
+                </div>
+
                 <div>
                     <label for="announcementTitle" class="block text-xs font-black theme-primary-text uppercase mb-2">Title *</label>
                     <input type="text" id="announcementTitle" name="title" required minlength="3" maxlength="200"
@@ -47,9 +58,27 @@
                               placeholder="Write your news post here..."></textarea>
                 </div>
 
+                <div>
+                    <label for="featuredImage" class="block text-xs font-black theme-primary-text uppercase mb-2">Featured image</label>
+                    <input type="file" name="featuredImage" id="featuredImage" accept="image/*" aria-describedby="featuredImageHint"
+                           class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white font-bold text-xs sm:text-sm focus:outline-none theme-focus transition file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:font-bold file:cursor-pointer">
+                    <p id="featuredImageHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Optional. Recommended: 1200x630px (JPG, PNG)</p>
+                    <div id="imagePreview" class="hidden mt-3">
+                        <p class="text-xs font-black theme-primary-text uppercase mb-2" id="imagePreviewLabel">Preview</p>
+                        <div class="border-4 border-gray-700 p-2 bg-slate-800">
+                            <img id="previewImg" src="" alt="" class="w-full h-auto max-h-64 object-contain bg-slate-950">
+                        </div>
+                        <button type="button" id="removeImageBtn" class="tap-target mt-2 px-4 py-2 bg-red-500 text-slate-900 font-black uppercase text-xs hover:bg-red-400 transition">Remove image</button>
+                    </div>
+                </div>
+
                 <div id="formMessage" class="hidden p-4 border-4 font-bold text-sm" role="status" aria-live="polite"></div>
 
-                <div class="flex justify-end pt-4">
+                <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                    <button type="button" id="cancelEdit"
+                            class="hidden tap-target px-6 py-3 bg-slate-800 border-4 border-gray-700 font-black uppercase text-sm hover:border-gray-600 transition">
+                        Cancel
+                    </button>
                     <button type="submit" id="announcementSubmit"
                             class="px-6 py-3 theme-primary-bg text-slate-900 font-black uppercase text-sm brutal-shadow transition-all">
                         Publish news post
@@ -58,8 +87,8 @@
             </form>
         </div>
 
-        <div class="bg-slate-900 border-4 border-gray-700 p-8">
-            <h2 class="text-2xl font-black theme-primary-text uppercase mb-6">All news posts</h2>
+        <div class="bg-slate-900 border-4 border-gray-700 p-4 sm:p-8">
+            <h2 class="text-2xl font-black theme-primary-text uppercase mb-6" id="listTitle">All news posts</h2>
             <div id="announcementsList" class="space-y-4" aria-live="polite">
                 <p class="text-gray-400 text-center py-8 font-bold uppercase" role="status">Loading...</p>
             </div>
@@ -71,11 +100,67 @@
     <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
   <script>
-    // Page guard (shared shell): needs content.all_news_gallery
-    KBFShell.start({ anyOf: ['content.all_news_gallery'], active: 'news' }).then(function (user) {
+    // Page guard (shared shell).
+    // content.all_news_gallery: every post, posts about any tournament or none.
+    // content.own_news_gallery only: their own posts, each linked to one of
+    // their own Approved or Completed tournaments (api/announcements.php checks).
+    // Address: ?tournament=ID starts a post about that tournament; ?edit=ID
+    // opens that post for editing.
+    let canAll = false;
+    let editingId = null;      // post being edited, or null when creating
+    let tournamentsReady = null;
+
+    KBFShell.start({ anyOf: ['content.all_news_gallery', 'content.own_news_gallery'], active: 'news' }).then(function (user) {
         window.kbfUser = user;
+        canAll = user.has('content.all_news_gallery');
+        if (!canAll) {
+            document.getElementById('pageIntro').textContent = 'Write news about your own tournaments';
+            document.getElementById('listTitle').textContent = 'My news posts';
+            document.getElementById('tournamentLabel').textContent = 'Tournament *';
+            document.getElementById('tournamentSelect').required = true;
+            document.getElementById('tournamentSelect').options[0].textContent = 'Select tournament...';
+        }
+        tournamentsReady = loadTournamentPicker();
         loadAnnouncements();
+
+        const params = new URLSearchParams(window.location.search);
+        const editRaw = params.get('edit');
+        const tournamentRaw = params.get('tournament');
+        if (editRaw && /^\d+$/.test(editRaw)) {
+            startEdit(parseInt(editRaw, 10));
+        } else if (tournamentRaw && /^\d+$/.test(tournamentRaw)) {
+            tournamentsReady.then(() => {
+                const select = document.getElementById('tournamentSelect');
+                const value = String(parseInt(tournamentRaw, 10));
+                if (Array.from(select.options).some(o => o.value === value)) select.value = value;
+                document.getElementById('announcementTitle').focus();
+            });
+        }
     });
+
+    // Tournament picker: Approved or Completed tournaments; the person's own
+    // ones only without content.all_news_gallery
+    async function loadTournamentPicker() {
+        const select = document.getElementById('tournamentSelect');
+        try {
+            const response = await authenticatedFetch(canAll ? '/api/tournaments.php' : '/api/tournaments.php?mine=1');
+            const data = await response.json();
+            const eligible = (data.success && Array.isArray(data.tournaments) ? data.tournaments : [])
+                .filter(t => t.Status === 'Approved' || t.Status === 'Completed');
+            while (select.options.length > 1) select.remove(1);
+            eligible.forEach(t => {
+                const option = document.createElement('option');
+                option.value = String(parseInt(t.TournamentId, 10));
+                option.textContent = `${t.Name} (${t.Status})`;
+                select.appendChild(option);
+            });
+            if (!canAll && !eligible.length) {
+                showFormMessage('You can post news once one of your tournaments has been approved.', false);
+            }
+        } catch (error) {
+            console.error('Error loading tournaments:', error);
+        }
+    }
 
     // ============================================
     // HELPER FUNCTIONS
@@ -108,7 +193,8 @@
 
     async function loadAnnouncements() {
         try {
-            const response = await authenticatedFetch('/api/announcements.php?limit=50');
+            // Organisers: their own posts (?mine=1); removed posts are hidden and left out
+            const response = await authenticatedFetch(canAll ? '/api/announcements.php?limit=50' : '/api/announcements.php?mine=1');
             const data = await response.json();
 
             if (!data.success || !Array.isArray(data.announcements)) {
@@ -118,7 +204,7 @@
                 });
                 return;
             }
-            loadedAnnouncements = data.announcements;
+            loadedAnnouncements = canAll ? data.announcements : data.announcements.filter(p => String(p.IsVisible) !== '0');
             renderAnnouncements(loadedAnnouncements);
         } catch (error) {
             console.error('Error loading announcements:', error);
@@ -153,16 +239,20 @@
                             </span>
                         </div>
                         ${ann.FeaturedImage ? `<img${imgVariantAttrs(ann.FeaturedImage, 'thumb')} alt="${escapeHtml(ann.Title)}" width="400" height="128" loading="lazy" decoding="async" class="w-full h-32 object-contain bg-slate-700 border-4 border-gray-700 mb-4">` : ''}
-                        <p class="text-sm text-gray-300 mb-3 font-semibold">${escapeHtml(ann.Content.substring(0, 150))}${ann.Content.length > 150 ? '...' : ''}</p>
-                        <div class="flex justify-between items-center text-xs mb-4 pb-4 border-b-4 border-gray-700">
-                            <span class="text-gray-400 font-bold uppercase">Posted by ${escapeHtml(ann.AuthorName)}</span>
-                            <span class="text-gray-400 font-bold uppercase">${escapeHtml(KBF.formatDate(ann.PublishedDate))}</span>
+                        <p class="text-sm text-gray-300 mb-3 font-semibold">${escapeHtml(String(ann.Content || '').substring(0, 150))}${String(ann.Content || '').length > 150 ? '...' : ''}</p>
+                        <div class="flex justify-between items-center gap-3 text-xs mb-4 pb-4 border-b-4 border-gray-700">
+                            <span class="text-gray-400 font-bold uppercase">${ann.AuthorName ? 'Posted by ' + escapeHtml(ann.AuthorName) : ''}</span>
+                            <span class="text-gray-400 font-bold uppercase">${escapeHtml(KBF.formatDate(ann.PublishedDate || ann.CreatedDate))}</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button type="button" data-ann-id="${Number(ann.AnnouncementId)}" data-ann-action="toggle" onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1}, this)"
+                            <button type="button" onclick="startEdit(${Number(ann.AnnouncementId)})"
+                                    class="tap-target px-3 py-2 bg-slate-700 text-white border-4 border-gray-700 font-black uppercase text-xs hover:border-gray-500 transition">
+                                Edit
+                            </button>
+                            ${canAll ? `<button type="button" data-ann-id="${Number(ann.AnnouncementId)}" data-ann-action="toggle" onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1}, this)"
                                     class="tap-target flex-1 px-3 py-2 ${ann.IsVisible == 1 ? 'bg-yellow-500' : 'bg-green-500'} text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:opacity-90 transition">
                                 ${ann.IsVisible == 1 ? 'Hide' : 'Show'}
-                            </button>
+                            </button>` : ''}
                             <button type="button" onclick="deleteAnnouncement(${Number(ann.AnnouncementId)}, this)"
                                     class="tap-target px-3 py-2 bg-red-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-red-400 transition">
                                 Remove
@@ -175,7 +265,7 @@
                     </div>
                 `).join('');
             } else {
-                container.innerHTML = '<p class="text-gray-400 text-center py-8 font-bold uppercase">No news posts yet</p>';
+                container.innerHTML = '<p class="text-gray-400 text-center py-8 font-bold uppercase">' + (canAll ? 'No news posts yet' : 'You have not posted any news yet') + '</p>';
             }
         } catch (error) {
             console.error('Error rendering announcements:', error);
@@ -261,6 +351,137 @@
         }
     }
 
+    // ============================================
+    // CREATE AND EDIT FORM
+    // ============================================
+    function showFormMessage(text, ok) {
+        const messageDiv = document.getElementById('formMessage');
+        messageDiv.className = ok
+            ? 'p-4 border-4 border-green-500 bg-green-500/20 text-green-400 font-bold text-sm'
+            : 'p-4 border-4 border-red-500 bg-red-500/20 text-red-400 font-bold text-sm';
+        messageDiv.textContent = text;
+        messageDiv.classList.remove('hidden');
+    }
+
+    function imageLimitMb() {
+        return KBFShell.uploadLimitMb('news', 5);
+    }
+
+    document.getElementById('featuredImage').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > imageLimitMb() * 1024 * 1024) {
+            showFormMessage('The image must be smaller than ' + imageLimitMb() + 'MB.', false);
+            e.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            document.getElementById('previewImg').src = event.target.result;
+            document.getElementById('imagePreviewLabel').textContent = 'Preview';
+            document.getElementById('removeImageBtn').classList.remove('hidden');
+            document.getElementById('imagePreview').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Clears a newly chosen image (an existing post image is kept unless replaced)
+    document.getElementById('removeImageBtn').addEventListener('click', function () {
+        document.getElementById('featuredImage').value = '';
+        document.getElementById('imagePreview').classList.add('hidden');
+        const current = editingId ? loadedEditImage : null;
+        if (current) showCurrentImage(current);
+    });
+
+    let loadedEditImage = null;
+    function showCurrentImage(path) {
+        setImageVariant(document.getElementById('previewImg'), path, 'display');
+        document.getElementById('imagePreviewLabel').textContent = 'Current image (choose a file to replace it)';
+        document.getElementById('removeImageBtn').classList.add('hidden');
+        document.getElementById('imagePreview').classList.remove('hidden');
+    }
+
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            if (!file || file.size === 0) { resolve(null); return; }
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Back to an empty "Post news" form
+    function resetForm() {
+        const form = document.getElementById('announcementForm');
+        editingId = null;
+        loadedEditImage = null;
+        form.reset();
+        KBF.clearFormErrors(form);
+        document.getElementById('tournamentSelect').disabled = false;
+        document.getElementById('tournamentHint').textContent = 'Approved or completed tournaments only';
+        document.getElementById('imagePreview').classList.add('hidden');
+        document.getElementById('cancelEdit').classList.add('hidden');
+        document.getElementById('pageVerb').textContent = 'Post';
+        document.getElementById('announcementSubmit').textContent = 'Publish news post';
+        try {
+            const p = new URLSearchParams(window.location.search);
+            if (p.has('edit') || p.has('tournament')) window.history.replaceState(null, '', window.location.pathname);
+        } catch (e) { /* ignore */ }
+    }
+
+    document.getElementById('cancelEdit').addEventListener('click', function () {
+        resetForm();
+        document.getElementById('formMessage').classList.add('hidden');
+    });
+
+    // Load a post into the form for editing (GET ?id=)
+    async function startEdit(postId) {
+        const id = parseInt(postId, 10);
+        if (!id) return;
+        try {
+            const response = await authenticatedFetch('/api/announcements.php?id=' + encodeURIComponent(String(id)));
+            const data = await response.json();
+            if (!data.success || !data.announcement) {
+                showFormMessage(data.message || 'This news post could not be found.', false);
+                return;
+            }
+            const post = data.announcement;
+            await tournamentsReady;
+            editingId = id;
+            loadedEditImage = post.FeaturedImage || null;
+            document.getElementById('announcementTitle').value = post.Title || '';
+            document.getElementById('announcementContent').value = post.Content || '';
+            document.getElementById('featuredImage').value = '';
+            // A post's tournament is not changed after it is published
+            const select = document.getElementById('tournamentSelect');
+            const tid = post.TournamentId ? String(parseInt(post.TournamentId, 10)) : '';
+            if (tid && !Array.from(select.options).some(o => o.value === tid)) {
+                const option = document.createElement('option');
+                option.value = tid;
+                option.textContent = post.TournamentName || 'Current tournament';
+                select.appendChild(option);
+            }
+            select.value = tid;
+            select.disabled = true;
+            document.getElementById('tournamentHint').textContent = "A post's tournament cannot be changed after it is published";
+            if (loadedEditImage) showCurrentImage(loadedEditImage);
+            else document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('cancelEdit').classList.remove('hidden');
+            document.getElementById('pageVerb').textContent = 'Edit';
+            document.getElementById('announcementSubmit').textContent = 'Save changes';
+            document.getElementById('formMessage').classList.add('hidden');
+            try {
+                window.history.replaceState(null, '', window.location.pathname + '?edit=' + encodeURIComponent(String(id)));
+            } catch (e) { /* ignore */ }
+            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('announcementTitle').focus({ preventScroll: true });
+        } catch (error) {
+            console.error('Error loading post:', error);
+            showFormMessage('The news post could not be loaded. Please check your connection and try again.', false);
+        }
+    }
+
     document.getElementById('announcementForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -269,20 +490,19 @@
         const messageDiv = document.getElementById('formMessage');
         const titleField = document.getElementById('announcementTitle');
         const contentField = document.getElementById('announcementContent');
-
-        function showFormMessage(text, ok) {
-            messageDiv.className = ok
-                ? 'p-4 border-4 border-green-500 bg-green-500/20 text-green-400 font-bold text-sm'
-                : 'p-4 border-4 border-red-500 bg-red-500/20 text-red-400 font-bold text-sm';
-            messageDiv.textContent = text;
-            messageDiv.classList.remove('hidden');
-        }
+        const tournamentField = document.getElementById('tournamentSelect');
+        const imageField = document.getElementById('featuredImage');
 
         // Same limits as the server, shown next to the field
         KBF.clearFormErrors(form);
         messageDiv.classList.add('hidden');
         const title = titleField.value.trim();
         const content = contentField.value.trim();
+        if (!editingId && !canAll && !tournamentField.value) {
+            KBF.showFieldError(tournamentField, 'Please choose one of your tournaments.');
+            tournamentField.focus();
+            return;
+        }
         if (title.length < 3 || title.length > 200) {
             KBF.showFieldError(titleField, 'The title must be 3 to 200 characters.');
             titleField.focus();
@@ -294,12 +514,46 @@
             return;
         }
 
+        if (editingId) {
+            const postId = editingId;
+            let saved = false;
+            await KBF.withBusy(submit, 'Saving...', async function () {
+                try {
+                    const image = imageField.files[0] ? await fileToDataUrl(imageField.files[0]) : null;
+                    const response = await authenticatedFetch('/api/announcements.php?id=' + encodeURIComponent(String(postId)), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ postId: postId, title: title, content: content, featuredImage: image })
+                    });
+                    const result = await response.json().catch(() => ({ success: false }));
+                    if (result.success) {
+                        saved = true;
+                    } else {
+                        showFormMessage(result.message || 'The changes could not be saved.', false);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showFormMessage('The changes could not be saved. Please check your connection and try again.', false);
+                }
+            });
+            // After the button is restored, so the form goes back to "Publish news post"
+            if (saved) {
+                resetForm();
+                showFormMessage('News post saved.', true);
+                loadAnnouncements();
+                setTimeout(() => { messageDiv.classList.add('hidden'); }, 3000);
+            }
+            return;
+        }
+
         await KBF.withBusy(submit, 'Publishing...', async function () {
             // The server reads form fields (not JSON). The one-time request id
             // means a repeat of this request never publishes a second post.
             const formData = new FormData();
             formData.append('title', title);
             formData.append('content', content);
+            if (tournamentField.value) formData.append('tournamentId', tournamentField.value);
+            if (imageField.files[0]) formData.append('featuredImage', imageField.files[0]);
             try {
                 const response = await authenticatedFetch('/api/announcements.php', {
                     method: 'POST',
@@ -311,8 +565,8 @@
 
                 if (result.success) {
                     KBF.clearRequestId(form);
+                    resetForm();
                     showFormMessage('News post published.', true);
-                    form.reset();
                     loadAnnouncements();
                     setTimeout(() => {
                         messageDiv.classList.add('hidden');

@@ -106,6 +106,37 @@
         .nw-grades .nw-icon { color: #9CA3AF; }
         .nw-chevron { color: #6B7280; flex-shrink: 0; }
 
+        /* Recent promotions strip (All tab, no search or tournament filter) */
+        .nw-strip { margin-bottom: 28px; padding: 14px 16px 12px; border: 4px solid #374151; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); }
+        .nw-strip-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+        .nw-strip-title { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+        .nw-strip-title .nw-icon { color: var(--theme-primary); }
+        .nw-strip-tools { display: flex; align-items: center; gap: 8px; }
+        .nw-strip-nav { display: flex; gap: 8px; }
+        .nw-strip-nav[hidden] { display: none; }
+        .nw-strip-all { padding: 6px 10px; border: 3px solid var(--theme-primary); color: var(--theme-primary); font-size: 11px; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .nw-strip-all:hover { background: var(--theme-primary); color: #0F172A; }
+        .nw-strip-arrow { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: #0F172A; border: 3px solid #374151; color: #D1D5DB; }
+        .nw-strip-arrow:hover:not(:disabled) { border-color: var(--theme-primary); color: #fff; }
+        .nw-strip-arrow:disabled { opacity: .35; cursor: default; }
+        .nw-strip-arrow .nw-icon-flip { transform: scaleX(-1); }
+        .nw-strip-list { display: flex; gap: 10px; margin: 0; padding: 2px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 2px; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
+        .nw-strip-list::-webkit-scrollbar { display: none; }
+        .nw-strip-item { flex: 0 0 auto; scroll-snap-align: start; }
+        .nw-strip-link { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 108px; height: 100%; padding: 8px 6px; border: 3px solid transparent; text-align: center; transition: border-color .2s ease; }
+        .nw-strip-link:hover, .nw-strip-link:focus-visible { border-color: var(--theme-primary); outline: none; }
+        .nw-strip-link .nw-avatar { width: 64px; height: 64px; font-size: 18px; }
+        .nw-strip-link .nw-avatar img { object-position: center 20%; }
+        .nw-strip-name { width: 100%; color: #fff; font-size: 12px; font-weight: 900; text-transform: uppercase; line-height: 1.25; overflow-wrap: anywhere; }
+        .nw-strip-move { color: var(--theme-primary); font-size: 12px; font-weight: 900; white-space: nowrap; }
+        .nw-strip-all:focus-visible, .nw-strip-arrow:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        @media (max-width: 639px) {
+            .nw-strip { padding: 12px 12px 10px; margin-bottom: 20px; }
+            .nw-strip-nav { display: none; }
+            .nw-strip-link { width: 96px; }
+            .nw-strip-link .nw-avatar { width: 56px; height: 56px; font-size: 16px; }
+        }
+
         /* List view */
         .nw-list { display: flex; flex-direction: column; gap: 16px; }
         .nw-row { display: flex; align-items: stretch; gap: 20px; padding: 16px; }
@@ -400,6 +431,29 @@
             </button>
         </div>
 
+        <!-- Recent promotions strip: All tab only, hidden while searching or
+             filtering by tournament (filled from the promotions list) -->
+        <section id="promoStrip" class="nw-strip" aria-labelledby="promoStripTitle" hidden>
+            <div class="nw-strip-head">
+                <h2 id="promoStripTitle" class="nw-strip-title">
+                    <svg class="nw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    Recent promotions
+                </h2>
+                <div class="nw-strip-tools">
+                    <div id="promoStripNav" class="nw-strip-nav" hidden>
+                        <button type="button" id="promoStripPrev" class="nw-strip-arrow" aria-label="Scroll promotions back" aria-controls="promoStripList">
+                            <svg class="nw-icon nw-icon-flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                        <button type="button" id="promoStripNext" class="nw-strip-arrow" aria-label="Scroll promotions forward" aria-controls="promoStripList">
+                            <svg class="nw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+                    <button type="button" id="promoStripAll" class="nw-strip-all">See all<span class="sr-only"> promotions</span></button>
+                </div>
+            </div>
+            <ul id="promoStripList" class="nw-strip-list" aria-labelledby="promoStripTitle"></ul>
+        </section>
+
         <div id="loading" class="text-center py-16" role="status">
             <p class="text-gray-400 font-bold uppercase text-lg">Loading news...</p>
         </div>
@@ -538,6 +592,9 @@
     // a list (default) or a grid. Two or more non-promotion posts about the
     // same tournament become one group item, except while searching or while
     // a tournament filter (?tournament={id}) is set. 10 items at a time.
+    // On the All tab (no search, no tournament filter) promotions are shown
+    // in one "Recent promotions" strip at the top and the list below holds
+    // the other posts; the Promotions tab and searches still list them.
     // Every post value is written with textContent, never as HTML.
     // ============================================
     const N = KBFNews;
@@ -601,7 +658,9 @@
         changeTheme(savedTheme);
         readUrl(true);
         wireToolbar();
+        wireStrip();
         loadNews();
+        loadStrip();
     });
 
     document.getElementById('mobile-menu-btn').addEventListener('click', function() {
@@ -709,6 +768,7 @@
         p.set('limit', String(FETCH_SIZE));
         p.set('offset', String(offset));
         if (state.tab === 'tournament' || state.tab === 'promotions') p.set('type', state.tab);
+        else if (stripMode()) p.set('type', 'news');
         if (state.tournament) p.set('tournament', String(state.tournament));
         if (state.q) p.set('q', state.q);
         return '/api/announcements.php?' + p.toString();
@@ -757,6 +817,7 @@
         allPosts = [];
         serverTotal = 0;
         serverHasMore = true;
+        renderStrip();
         try {
             if (!(await fetchMore(seq))) return;
             if (!(await ensureItems(seq))) return;
@@ -796,8 +857,101 @@
         let list = allPosts;
         if (state.tab === 'tournament') list = list.filter(p => !p._promotion && hasTournament(p));
         if (state.tab === 'promotions') list = list.filter(p => p._promotion);
+        if (stripMode()) list = list.filter(p => !p._promotion);
         if (state.tournament) list = list.filter(p => Number(p.TournamentId) === state.tournament);
         return list;
+    }
+
+    // ============================================
+    // RECENT PROMOTIONS STRIP
+    // The latest promotions, loaded once; shown on the All tab when there is
+    // no search and no tournament filter. Swipe, scroll with the keyboard
+    // (Tab moves through the links) or use the arrow buttons.
+    // ============================================
+    const STRIP_SIZE = 12;
+    let stripPosts = null;      // null until loaded; [] when there are none or they failed
+
+    // All tab without search or tournament filter: promotions go in the strip
+    function stripMode() {
+        return state.tab === 'all' && !state.q && !state.tournament;
+    }
+
+    async function loadStrip() {
+        try {
+            const p = new URLSearchParams({ type: 'promotions', limit: String(STRIP_SIZE), offset: '0' });
+            const response = await fetch('/api/announcements.php?' + p.toString(), { credentials: 'include' });
+            const data = await response.json();
+            if (!data.success) throw new Error('not loaded');
+            stripPosts = (data.announcements || []).map(preparePost).filter(p => p._promotion);
+        } catch (error) {
+            console.error('Error loading recent promotions:', error);
+            stripPosts = [];
+        }
+        buildStrip();
+        renderStrip();
+    }
+
+    function buildStrip() {
+        const list = document.getElementById('promoStripList');
+        list.textContent = '';
+        (stripPosts || []).forEach(p => {
+            const name = N.promotionName(p);
+            const grades = N.promotionGrades(p);
+            const move = grades ? grades.from + ' to ' + grades.to : 'Promoted';
+            const li = N.el('li', 'nw-strip-item');
+            const a = N.el('a', 'nw-strip-link');
+            a.href = N.postHref(p);
+            a.setAttribute('aria-label', (name || 'Player') + (grades
+                ? ', promoted from grade ' + grades.from + ' to ' + grades.to
+                : ', promotion') + ', ' + N.formatDate(p));
+            a.appendChild(avatar(p, name));
+            a.appendChild(N.el('span', 'nw-strip-name nw-clamp-2', name));
+            a.appendChild(N.el('span', 'nw-strip-move', move));
+            li.appendChild(a);
+            list.appendChild(li);
+        });
+    }
+
+    function renderStrip() {
+        const strip = document.getElementById('promoStrip');
+        strip.hidden = !(stripMode() && stripPosts && stripPosts.length > 0);
+        updateStripNav();
+    }
+
+    // Arrow buttons only when the row overflows; each end disables its arrow
+    function updateStripNav() {
+        const strip = document.getElementById('promoStrip');
+        const list = document.getElementById('promoStripList');
+        const nav = document.getElementById('promoStripNav');
+        if (strip.hidden) return;
+        const max = list.scrollWidth - list.clientWidth;
+        nav.hidden = max <= 2;
+        document.getElementById('promoStripPrev').disabled = list.scrollLeft <= 2;
+        document.getElementById('promoStripNext').disabled = list.scrollLeft >= max - 2;
+    }
+
+    function scrollStrip(direction) {
+        const list = document.getElementById('promoStripList');
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        list.scrollBy({ left: direction * Math.max(120, list.clientWidth * 0.8), behavior: reduce ? 'auto' : 'smooth' });
+    }
+
+    function wireStrip() {
+        const list = document.getElementById('promoStripList');
+        let navTimer = null;
+        const later = () => { clearTimeout(navTimer); navTimer = setTimeout(updateStripNav, 80); };
+        list.addEventListener('scroll', later, { passive: true });
+        window.addEventListener('resize', later);
+        document.getElementById('promoStripPrev').addEventListener('click', () => scrollStrip(-1));
+        document.getElementById('promoStripNext').addEventListener('click', () => scrollStrip(1));
+        document.getElementById('promoStripAll').addEventListener('click', () => {
+            state.tab = 'promotions';
+            state.shown = PAGE_SIZE;
+            reload();
+            // The strip hides; keep focus on the tab that is now chosen
+            const tab = document.querySelector('.nw-tab[data-tab="promotions"]');
+            if (tab) tab.focus();
+        });
     }
 
     // Items to show: posts, promotions and (when not searching or filtering
@@ -857,8 +1011,10 @@
         container.textContent = '';
         container.className = state.view === 'grid' ? 'nw-grid' : 'nw-list';
 
+        renderStrip();
+        const stripShown = !document.getElementById('promoStrip').hidden;
         const none = list.length === 0 && !serverHasMore;
-        document.getElementById('noPosts').classList.toggle('hidden', !(none && !state.q));
+        document.getElementById('noPosts').classList.toggle('hidden', !(none && !state.q && !stripShown));
         document.getElementById('noResults').classList.toggle('hidden', !(none && state.q));
 
         const visible = items.slice(0, state.shown);
@@ -926,6 +1082,7 @@
         const src = safeImage(post.FeaturedImage);
         if (src) {
             const img = document.createElement('img');
+            img.className = 'kbf-photo';
             img.alt = '';
             img.loading = 'lazy';
             img.decoding = 'async';

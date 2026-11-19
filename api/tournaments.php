@@ -25,7 +25,9 @@ require_once __DIR__ . '/config-helpers.php';
 //                             OrganiserName: tournaments.manage_all
 //   DELETE ?id=               tournaments.manage_all, Pending or Rejected, no matches
 //
-// Admin Tournaments page (tournaments.approve or tournaments.manage_all):
+// Admin Tournaments page (tournaments.approve, tournaments.manage_all, or
+// tournaments.organise_own; with organise_own alone, the list, counts, panel and
+// history only ever cover tournaments they created):
 //   GET ?action=adminList     tab (upcoming|due|waiting|completed|rejected|all),
 //                             q, organiser, season (this|all|YYYY-Hn), offset;
 //                             tab counts, 50 a page (statuses: api/tournament-helpers.php)
@@ -324,9 +326,12 @@ function storeTournamentPoster(array $file) {
         return [null, 'Failed to save poster'];
     }
 
-    // Display version and thumbnail (a problem never stops the upload)
+    // Saved as WebP (JPEG/PNG when the server cannot write WebP), then the
+    // display version and thumbnail (a problem never stops the upload)
     require_once __DIR__ . '/image-helpers.php';
-    kbfMakeImageVariants($uploadDir . $filename);
+    $saved = kbfConvertStoredImage($uploadDir . $filename);
+    $filename = basename($saved);
+    kbfMakeImageVariants($saved);
 
     return [TOURNAMENT_POSTER_URL_DIR . $filename, null];
 }
@@ -490,7 +495,7 @@ function adminTournamentId() {
 }
 
 // The list: tab counts, filters and one page of rows
-function adminTournamentList(PDO $pdo, $currentUserId) {
+function adminTournamentList(PDO $pdo, $currentUserId, $ownOnly = false) {
     $tab = in_array($_GET['tab'] ?? '', ADMIN_TOURNAMENT_TABS, true) ? $_GET['tab'] : 'all';
     $q = cleanTournamentLine($_GET['q'] ?? '');
     $q = function_exists('mb_substr') ? mb_substr($q, 0, 100, 'UTF-8') : substr($q, 0, 100);
@@ -515,6 +520,11 @@ function adminTournamentList(PDO $pdo, $currentUserId) {
     // Filters other than the tab (the tab counts use them too)
     $where = ['1=1'];
     $params = [];
+    // Organisers: only the tournaments they created (rows and tab counts)
+    if ($ownOnly) {
+        $where[] = "t.CreatedByAdminId = ?";
+        $params[] = (int) $currentUserId;
+    }
     if ($q !== '') {
         $like = '%' . kbfLikeEscape($q) . '%';
         $where[] = "(t.Name LIKE ? OR " . organiserNameSql('t', 'c') . " LIKE ? OR t.Venue LIKE ? OR t.Location LIKE ?)";
@@ -621,13 +631,31 @@ function adminTournamentList(PDO $pdo, $currentUserId) {
         array_unshift($seasons, ['key' => $current['key'], 'name' => $current['name']]);
     }
 
+    // Organiser filter: every organiser name, or for organisers the names on their own tournaments
+    if ($ownOnly) {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT " . organiserNameSql('t', 'c') . " AS OrganiserName
+            FROM Tournaments t
+            LEFT JOIN Clubs c ON t.OrganizingClubId = c.ClubId
+            WHERE t.CreatedByAdminId = ?
+            ORDER BY OrganiserName
+            LIMIT 200
+        ");
+        $stmt->execute([(int) $currentUserId]);
+        $organiserNames = array_values(array_filter(array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN)), function ($n) {
+            return trim($n) !== '';
+        }));
+    } else {
+        $organiserNames = array_slice(array_column(array_values(organiserNameGroups($pdo)), 'name'), 0, 200);
+    }
+
     sendJSON([
         'success' => true,
         'tab' => $tab,
         'season' => $season,
         'currentSeason' => ['key' => $current['key'], 'name' => $current['name']],
         'seasons' => $seasons,
-        'organiserNames' => array_slice(array_column(array_values(organiserNameGroups($pdo)), 'name'), 0, 200),
+        'organiserNames' => $organiserNames,
         'counts' => $counts,
         'total' => $total,
         'offset' => $offset,
@@ -637,7 +665,7 @@ function adminTournamentList(PDO $pdo, $currentUserId) {
 }
 
 // One tournament for the side panel: status, reminders, results and posts
-function adminTournamentDetail(PDO $pdo) {
+function adminTournamentDetail(PDO $pdo, $currentUserId = 0, $ownOnly = false) {
     $id = adminTournamentId();
     $stmt = $pdo->prepare("
         SELECT t.TournamentId, t.Name, t.TournamentDate, t.Status, t.CreatedByAdminId,
@@ -654,24 +682,29 @@ function adminTournamentDetail(PDO $pdo) {
     ");
     $stmt->execute([$id]);
     $t = $stmt->fetch();
-    if (!$t) {
+    // Organisers: their own tournaments only (others read as not found)
+    if (!$t || ($ownOnly && (int) $t['CreatedByAdminId'] !== (int) $currentUserId)) {
         sendJSON(['success' => false, 'message' => 'Tournament not found'], 404);
     }
 
+    // Posts about it. Without content.all_news_gallery: published, visible
+    // posts plus the person's own (drafts and hidden ones of others stay private).
+    $allPosts = hasPermission('content.all_news_gallery') || !$ownOnly;
     $stmt = $pdo->prepare("
-        SELECT AnnouncementId, Title, IsPublished, IsVisible, CreatedDate, PublishedDate
+        SELECT AnnouncementId, Title, IsPublished, IsVisible, CreatedDate, PublishedDate, CreatedByAdminId
         FROM Announcements
-        WHERE TournamentId = ?
+        WHERE TournamentId = ?" . ($allPosts ? "" : " AND ((IsPublished = 1 AND IsVisible = 1) OR CreatedByAdminId = ?)") . "
         ORDER BY CreatedDate DESC, AnnouncementId DESC
     ");
-    $stmt->execute([$id]);
-    $posts = array_map(function ($p) {
+    $stmt->execute($allPosts ? [$id] : [$id, (int) $currentUserId]);
+    $posts = array_map(function ($p) use ($currentUserId) {
         return [
             'id' => (int) $p['AnnouncementId'],
             'title' => (string) $p['Title'],
             'published' => (int) $p['IsPublished'] === 1,
             'visible' => (int) $p['IsVisible'] === 1,
             'date' => $p['PublishedDate'] ?: $p['CreatedDate'],
+            'mine' => $currentUserId > 0 && (int) $p['CreatedByAdminId'] === (int) $currentUserId,
         ];
     }, $stmt->fetchAll());
 
@@ -701,8 +734,15 @@ function adminTournamentDetail(PDO $pdo) {
 }
 
 // The tournament's history: AuditLog entries about it, newest first
-function adminTournamentHistory(PDO $pdo) {
+function adminTournamentHistory(PDO $pdo, $currentUserId = 0, $ownOnly = false) {
     $id = adminTournamentId();
+    // Organisers: their own tournaments only
+    if ($ownOnly) {
+        $owned = loadTournamentForAccess($id);
+        if (!$owned || (int) $owned['CreatedByAdminId'] !== (int) $currentUserId) {
+            sendJSON(['success' => false, 'message' => 'Tournament not found'], 404);
+        }
+    }
     $stmt = $pdo->prepare("
         SELECT a.AuditId, a.CreatedDate, a.ActorUserId, a.Action, a.Details,
                u.FirstName, u.LastName
@@ -926,19 +966,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if (!isLoggedIn()) {
                 sendJSON(['success' => false, 'message' => 'Your session has expired. Please log in again.'], 401);
             }
-            if (!canSeeAllTournaments()) {
+            if (!canSeeAllTournaments() && !canSeeOwnTournaments()) {
                 sendJSON(['success' => false, 'message' => 'Insufficient permissions'], 403);
             }
+            // Organisers (tournaments.organise_own only): their own tournaments only
+            $ownOnly = !canSeeAllTournaments();
             require_once __DIR__ . '/tournament-helpers.php';
             require_once __DIR__ . '/report-helpers.php';
 
             if ($getAction === 'adminList') {
-                adminTournamentList($pdo, $currentUserId);
+                adminTournamentList($pdo, $currentUserId, $ownOnly);
             }
             if ($getAction === 'adminTournament') {
-                adminTournamentDetail($pdo);
+                adminTournamentDetail($pdo, $currentUserId, $ownOnly);
             }
-            adminTournamentHistory($pdo);
+            adminTournamentHistory($pdo, $currentUserId, $ownOnly);
         }
 
         if ($getAction === 'similar') {

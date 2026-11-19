@@ -320,7 +320,12 @@
             data.grades.forEach(g => {
                 const opt = document.createElement('option');
                 opt.value = String(g.id);
-                opt.textContent = g.shortName + ' - ' + g.name;
+                // "D (Intermediate - Medium)": the full name may already start with the short name
+                const short = String(g.shortName || '').trim();
+                const full = String(g.name || '').trim();
+                const head = full.slice(0, short.length + 1).toUpperCase();
+                opt.textContent = !full || full.toUpperCase() === short.toUpperCase() ? (short || full)
+                    : (!short || head === short.toUpperCase() + ' ' || head === short.toUpperCase() + '(' ? full : short + ' (' + full + ')');
                 select.appendChild(opt);
             });
 
