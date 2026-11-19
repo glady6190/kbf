@@ -77,6 +77,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -189,21 +190,11 @@ function goToCreatePost() {
     function displayPosts(posts) {
         const container = document.getElementById('postsList');
 
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
         container.innerHTML = posts.map(post => `
             <div class="post-card border-4 border-gray-700 p-6">
                 ${post.FeaturedImage ? `
                     <div class="mb-4 -mx-6 -mt-6">
-                        <img src="${escapeHtml(post.FeaturedImage)}" alt="${escapeHtml(post.Title)}" class="w-full h-48 object-contain bg-slate-800 border-b-4 border-gray-700">
+                        <img src="${escapeHtml(safeUrl(post.FeaturedImage))}" alt="${escapeHtml(post.Title)}" class="w-full h-48 object-contain bg-slate-800 border-b-4 border-gray-700">
                     </div>
                 ` : ''}
                 

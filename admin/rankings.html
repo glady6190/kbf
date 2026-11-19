@@ -180,6 +180,7 @@
         </section>
     </main>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/grade-change.js"></script>
     <script>
@@ -210,12 +211,6 @@
         return res.json();
     }
 
-    function esc(value) {
-        return String(value === null || value === undefined ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-
     function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
 
     function showMsg(text, kind) {
@@ -233,7 +228,7 @@
     }
 
     function avatarHtml(p) {
-        return '<span class="gr-avatar">' + (p.photo ? '<img src="' + esc(p.photo) + '" alt="">' : esc(p.initials)) + '</span>';
+        return '<span class="gr-avatar">' + (safeUrl(p.photo) ? '<img src="' + esc(safeUrl(p.photo)) + '" alt="">' : esc(p.initials)) + '</span>';
     }
 
     function moveHtml(p) {

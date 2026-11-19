@@ -76,7 +76,14 @@ if (!$isForcedChange) {
         $stmt = $pdo->prepare("UPDATE Users SET PasswordHash = ?, RequirePasswordChange = 0 WHERE UserId = ?");
         $stmt->execute([password_hash($input['newPassword'], PASSWORD_DEFAULT), $selfUserId]);
 
-        auditLog('password_changed', 'user', $selfUserId, null);
+        // Sign out every other session; this browser stays signed in
+        $newVersion = kbfBumpSessionVersion($selfUserId);
+        if ($newVersion !== null) {
+            $_SESSION['session_version'] = $newVersion;
+        }
+        session_regenerate_id(true);
+
+        auditLog('password_changed', 'user', $selfUserId, 'Other sessions signed out');
 
         sendJSON(['success' => true, 'message' => 'Password changed successfully']);
     } catch (PDOException $e) {
@@ -109,7 +116,8 @@ $userId = $_SESSION['temp_user_id'];
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-if (!isset($data['currentPassword']) || !isset($data['newPassword'])) {
+if (!is_array($data) || !isset($data['currentPassword']) || !isset($data['newPassword'])
+    || !is_string($data['currentPassword']) || !is_string($data['newPassword'])) {
     sendJSON(['success' => false, 'message' => 'Current and new password required'], 400);
 }
 
@@ -163,7 +171,10 @@ try {
         WHERE UserId = ?
     ");
     $stmt->execute([$newPasswordHash, $userId]);
-    
+
+    // Sign out any other session of this person
+    kbfBumpSessionVersion($userId);
+
     // Clear temporary session and create full session
     unset($_SESSION['temp_user_id']);
     unset($_SESSION['temp_email']);
@@ -184,19 +195,9 @@ try {
         ]);
     }
     
-    // Regenerate session ID
-    session_regenerate_id(true);
-    
-    // Set full session
-    $_SESSION['user_id'] = $user['UserId'];
-    $_SESSION['email'] = $user['Email'];
-    $_SESSION['role'] = $user['Role'];
-    $_SESSION['name'] = $user['FirstName'] . ' ' . $user['LastName'];
-    $_SESSION['category_id'] = $user['CategoryId'];
-    $_SESSION['club_id'] = $user['ClubId'];
-    $_SESSION['user_fingerprint'] = generateUserFingerprint();
-    $_SESSION['CREATED'] = time();
-    $_SESSION['LAST_ACTIVITY'] = time();
+    // A brand-new full session (the whole old one is cleared first; this
+    // reads the new session version)
+    kbfBeginUserSession($user);
     
     // Update last login
     $stmt = $pdo->prepare("UPDATE Users SET LastLoginDate = NOW() WHERE UserId = ?");

@@ -20,7 +20,7 @@ requireNotImpersonating();
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-if (!isset($data['email']) || empty(trim($data['email']))) {
+if (!is_array($data) || !isset($data['email']) || !is_string($data['email']) || trim($data['email']) === '') {
     sendJSON(['success' => false, 'message' => 'Email address is required'], 400);
 }
 
@@ -30,25 +30,36 @@ if (!$email) {
     sendJSON(['success' => false, 'message' => 'Invalid email format'], 400);
 }
 
+// The same reply in every case (account or not, limit reached or not)
+const FORGOT_PASSWORD_REPLY = 'If an account exists with this email, you will receive a password reset link shortly.';
+
 try {
-    // Rate limiting: Check for recent reset requests from this IP
+    // Limits: at most 3 requests per email and 10 per IP address per hour.
+    // Every request is counted in RequestLimits (unknown emails too); those
+    // rows are never removed when a new token is issued.
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) as recent_requests 
-        FROM PasswordResets 
-        WHERE IpAddress = ? AND CreatedAt > DATE_SUB(NOW(), INTERVAL 15 MINUTE)
-    ");
-    $stmt->execute([$ipAddress]);
-    $result = $stmt->fetch();
-    
-    if ($result['recent_requests'] >= 3) {
-        sendJSON([
-            'success' => false,
-            'message' => 'Too many reset requests. Please try again in 15 minutes.'
-        ], 429);
+    $emailKey = strtolower($email);
+
+    $perEmail = kbfRequestCount('reset_email', $emailKey, 3600);
+    $perIp = kbfRequestCount('reset_ip', $ipAddress, 3600);
+    kbfRequestRecord('reset_email', $emailKey);
+    kbfRequestRecord('reset_ip', $ipAddress);
+
+    if ($perEmail === null || $perIp === null) {
+        // security-hardening.sql not run yet: the old per-IP check
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM PasswordResets
+            WHERE IpAddress = ? AND CreatedAt > DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+        ");
+        $stmt->execute([$ipAddress]);
+        $limited = (int) $stmt->fetchColumn() >= 3;
+    } else {
+        $limited = $perEmail >= 3 || $perIp >= 10;
     }
-    
+    if ($limited) {
+        sendJSON(['success' => true, 'message' => FORGOT_PASSWORD_REPLY]);
+    }
+
     // Only people who can sign in (active, sign-in enabled, a password set,
     // and staff) can reset a password
     $stmt = $pdo->prepare("
@@ -96,7 +107,7 @@ try {
         $results = notify('password_reset_requested', [
             'person' => (int) $user['UserId'],
             'values' => [
-                'reset_link' => kbfSiteLink($pdo) . '/reset-password.html?token=' . urlencode($token),
+                'reset_link' => kbfSiteBaseUrl() . '/reset-password.html?token=' . urlencode($token),
             ],
             'secrets' => ['reset_link'],
             'relatedType' => 'user',
@@ -112,7 +123,7 @@ try {
     // Always return success message to prevent email enumeration
     sendJSON([
         'success' => true,
-        'message' => 'If an account exists with this email, you will receive a password reset link shortly.'
+        'message' => FORGOT_PASSWORD_REPLY
     ]);
     
 } catch(PDOException $e) {

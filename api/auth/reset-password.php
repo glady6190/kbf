@@ -20,12 +20,12 @@ requireNotImpersonating();
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-// Validate required fields
-if (!isset($data['token']) || empty(trim($data['token']))) {
+// Validate required fields (strings only: a wrong type is a 400)
+if (!is_array($data) || !isset($data['token']) || !is_string($data['token']) || trim($data['token']) === '') {
     sendJSON(['success' => false, 'message' => 'Reset token is required'], 400);
 }
 
-if (!isset($data['password']) || empty($data['password'])) {
+if (!isset($data['password']) || !is_string($data['password']) || $data['password'] === '') {
     sendJSON(['success' => false, 'message' => 'New password is required'], 400);
 }
 
@@ -76,25 +76,18 @@ try {
     }
     
     
-    // NEW: Rate limit password reset attempts (prevent brute force)
-$ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-$stmt = $pdo->prepare("
-    SELECT COUNT(*) as attempts
-    FROM PasswordResets
-    WHERE IpAddress = ? 
-    AND CreatedAt > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-");
-$stmt->execute([$ipAddress]);
-$result = $stmt->fetch();
+    // Limit: at most 10 failed token lookups (unknown, used or expired
+    // links) per IP address per hour
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $failedLookups = kbfRequestCount('reset_fail_ip', $ipAddress, 3600);
+    if ($failedLookups !== null && $failedLookups >= 10) {
+        $pdo->rollBack();
+        sendJSON([
+            'success' => false,
+            'message' => 'Too many password reset attempts. Please try again in 1 hour.'
+        ], 429);
+    }
 
-if ($result['attempts'] >= 10) {
-    $pdo->rollBack();
-    sendJSON([
-        'success' => false,
-        'message' => 'Too many password reset attempts. Please try again in 1 hour.'
-    ], 429);
-}
-    
     // Get reset request and lock the row
     $stmt = $pdo->prepare("
         SELECT pr.ResetId, pr.UserId, pr.Email, pr.ExpiresAt, pr.Used,
@@ -111,6 +104,7 @@ if ($result['attempts'] >= 10) {
     // Validate token exists
     if (!$reset) {
         $pdo->rollBack();
+        kbfRequestRecord('reset_fail_ip', $ipAddress);
         sendJSON([
             'success' => false,
             'message' => 'Invalid or expired reset link'
@@ -120,6 +114,7 @@ if ($result['attempts'] >= 10) {
     // Check if token has been used
     if ($reset['Used'] == 1) {
         $pdo->rollBack();
+        kbfRequestRecord('reset_fail_ip', $ipAddress);
         sendJSON([
             'success' => false,
             'message' => 'This reset link has already been used'
@@ -132,6 +127,7 @@ if ($result['attempts'] >= 10) {
     
     if ($now > $expiresAt) {
         $pdo->rollBack();
+        kbfRequestRecord('reset_fail_ip', $ipAddress);
         sendJSON([
             'success' => false,
             'message' => 'This reset link has expired. Please request a new one.'
@@ -163,7 +159,10 @@ if ($result['attempts'] >= 10) {
         WHERE UserId = ? AND Used = 0 AND ResetId != ?
     ");
     $stmt->execute([$reset['UserId'], $reset['ResetId']]);
-    
+
+    // Sign out every session of this person
+    kbfBumpSessionVersion($reset['UserId']);
+
     // Commit transaction
     $pdo->commit();
 
@@ -177,12 +176,10 @@ if ($result['attempts'] >= 10) {
         'relatedId' => (int) $reset['UserId'],
     ]);
     
-    // Invalidate all existing sessions for this user (force re-login)
-    // This is a security measure to log out any potentially compromised sessions
-    session_start();
+    // Every other session of this user ends through Users.SessionVersion
+    // (above); this browser's session is ended here if it is theirs
     if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $reset['UserId']) {
-        session_unset();
-        session_destroy();
+        kbfEndSession();
     }
     
     sendJSON([

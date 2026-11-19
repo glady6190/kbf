@@ -110,6 +110,7 @@ try {
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
     }
+    kbfRequireScalarFields($data);
     $action = is_string($data['action'] ?? null) ? $data['action'] : '';
 
     // ---------- VERIFY (pending sign-in) ----------

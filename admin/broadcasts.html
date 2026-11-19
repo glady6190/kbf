@@ -276,6 +276,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/kbf-editor.js"></script>
     <script>
@@ -336,12 +337,6 @@
     async function postForm(form) {
         const res = await authenticatedFetch(API, { method: 'POST', body: form });
         return res.json();
-    }
-
-    function esc(value) {
-        return String(value === null || value === undefined ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
@@ -798,7 +793,7 @@
     }
 
     function actionButton(label, action, id, extraClass) {
-        return '<button type="button" class="btn-plain btn-sm ' + (extraClass || '') + '" data-action="' + action + '" data-id="' + id + '"' + (canEdit ? '' : ' disabled') + '>' + esc(label) + '</button>';
+        return '<button type="button" class="btn-plain btn-sm ' + (extraClass || '') + '" data-action="' + action + '" data-id="' + esc(id) + '"' + (canEdit ? '' : ' disabled') + '>' + esc(label) + '</button>';
     }
 
     function renderList(rows) {

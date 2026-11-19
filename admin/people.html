@@ -381,6 +381,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button type="button" id="resetTwoStepBtn" class="btn-plain hidden">Reset 2-step</button>
                             <button type="button" id="passwordHelpBtn" class="btn-plain">Set temporary password</button>
+                            <button type="button" id="signOutEverywhereBtn" class="btn-plain">Sign out everywhere</button>
                             <button type="button" id="superAdminBtn" class="btn-plain">Make Super Admin</button>
                             <button type="button" id="impersonateBtn" class="btn-amber hidden">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -640,6 +641,7 @@
         </form>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/grade-change.js"></script>
     <script>
@@ -2111,6 +2113,28 @@
             showMsg('accessMessage', 'The password could not be helped with.', 'error');
         } finally {
             this.disabled = !(accessData && accessData.isActive);
+        }
+    });
+
+    document.getElementById('signOutEverywhereBtn').addEventListener('click', async function () {
+        const own = isOwnAccount();
+        const ok = await askConfirm('Sign out everywhere?',
+            own ? 'You will be signed out on every device, including this one.'
+                : firstNameOf() + ' will be signed out on every device and will need to sign in again.',
+            'Sign out everywhere', true);
+        if (!ok) return;
+        this.disabled = true;
+        try {
+            const data = await postStaff({ action: 'signOutEverywhere', userId: accessData.userId });
+            if (data.success && data.signedOut) {
+                window.location.href = '/login';
+                return;
+            }
+            showMsg('accessMessage', data.message || (data.success ? 'Signed out everywhere.' : 'Could not sign out everywhere.'), data.success ? 'ok' : 'error');
+        } catch (e) {
+            showMsg('accessMessage', 'Could not sign out everywhere.', 'error');
+        } finally {
+            this.disabled = false;
         }
     });
 

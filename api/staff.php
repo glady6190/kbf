@@ -14,6 +14,8 @@ require_once 'config.php';
 //   POST {action:'setLogin'}          sign-in on or off (Users.LoginEnabled)
 //   POST {action:'setSuperAdmin'}     make or remove Super Admin
 //   POST {action:'passwordHelp'}      reset email, or a new temporary password
+//   POST {action:'signOutEverywhere', userId}
+//                                     ends every session of that person
 //   POST {action:'startImpersonation', userId, password}
 //                                     view the site as another staff member
 //   POST {action:'stopImpersonation'} return to the Super Admin's own account
@@ -513,6 +515,7 @@ if ($method === 'POST') {
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
     }
+    kbfRequireScalarFields($data, ['labels', 'permissions', 'rules']);
     $action = is_string($data['action'] ?? null) ? $data['action'] : '';
 
     try {
@@ -708,6 +711,24 @@ if ($method === 'POST') {
             sendJSON(['success' => false, 'message' => 'Invalid user ID'], 400);
         }
 
+        // ---------- SIGN OUT EVERYWHERE (another person) ----------
+        if ($action === 'signOutEverywhere') {
+            $stmt = $pdo->prepare("SELECT UserId FROM Users WHERE UserId = ?");
+            $stmt->execute([$userId]);
+            if (!$stmt->fetch()) {
+                sendJSON(['success' => false, 'message' => 'Person not found'], 404);
+            }
+            if (kbfBumpSessionVersion($userId) === null) {
+                sendJSON(['success' => false, 'message' => 'This needs database/security-hardening.sql to be run first.'], 409);
+            }
+            auditLog('signed_out_everywhere', 'user', $userId, 'Signed out of every device by a Super Admin');
+            if ((int) $userId === $actorId) {
+                kbfEndSession();
+                sendJSON(['success' => true, 'signedOut' => true, 'message' => 'Signed out everywhere', 'redirectUrl' => '/login']);
+            }
+            sendJSON(['success' => true, 'message' => 'Signed out everywhere']);
+        }
+
         // ---------- UPDATE ACCESS ----------
         if ($action === 'update') {
             list($labels, $error) = readLabels($data['labels'] ?? []);
@@ -880,7 +901,8 @@ if ($method === 'POST') {
             }
 
             $temporaryPassword = setTemporaryPassword($pdo, $userId);
-            auditLog('temporary_password_set', 'user', $userId, 'Temporary password set by a Super Admin');
+            kbfBumpSessionVersion($userId);
+            auditLog('temporary_password_set', 'user', $userId, 'Temporary password set by a Super Admin; signed out everywhere');
 
             sendJSON([
                 'success' => true,
@@ -901,8 +923,12 @@ if ($method === 'POST') {
             }
             $stmt = $pdo->prepare("UPDATE Users SET TwoFactorRequired = ? WHERE UserId = ?");
             $stmt->execute([$data['required'] ? 1 : 0, $targetId]);
+            // Turning 2-step off for someone signs them out everywhere
+            if (!$data['required']) {
+                kbfBumpSessionVersion($targetId);
+            }
             auditLog('two_step_requirement_changed', 'user', $targetId,
-                $data['required'] ? '2-step verification required for this person' : '2-step verification no longer required for this person');
+                $data['required'] ? '2-step verification required for this person' : '2-step verification no longer required for this person; signed out everywhere');
             sendJSON(['success' => true, 'message' => $data['required'] ? 'Now required' : 'No longer required']);
         }
 
@@ -917,8 +943,9 @@ if ($method === 'POST') {
             }
             $pdo->beginTransaction();
             kbfClearTwoFactor($targetId);
+            kbfBumpSessionVersion($targetId);
             $pdo->commit();
-            auditLog('two_step_reset', 'user', $targetId, '2-step verification reset by a Super Admin; secret and backup codes cleared');
+            auditLog('two_step_reset', 'user', $targetId, '2-step verification reset by a Super Admin; secret and backup codes cleared; signed out everywhere');
             sendJSON(['success' => true, 'message' => '2-step verification has been reset']);
         }
 

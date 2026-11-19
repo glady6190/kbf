@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-if (!isset($data['email']) || !isset($data['password'])) {
+if (!is_array($data) || !isset($data['email']) || !isset($data['password'])
+    || !is_string($data['email']) || !is_string($data['password'])) {
     sendJSON(['success' => false, 'message' => 'Email and password required'], 400);
 }
 
@@ -77,12 +78,12 @@ try {
         // Record successful login (they authenticated correctly)
         recordLoginAttempt($email, true);
         
-        // Set minimal session for password change
-        session_regenerate_id(true);
+        // Set minimal session for password change (the whole old session,
+        // including any impersonation keys, is cleared first)
+        kbfClearSessionForSignIn();
         $_SESSION['temp_user_id'] = $user['UserId'];
         $_SESSION['temp_email'] = $user['Email'];
         $_SESSION['must_change_password'] = true;
-        $_SESSION['CREATED'] = time();
         
         // Generate CSRF token for password change form
         $csrfToken = generateCSRFToken();
@@ -118,19 +119,9 @@ try {
         ]);
     }
     
-    // Regenerate session ID to prevent session fixation
-    session_regenerate_id(true);
-    
-    // Set session variables
-    $_SESSION['user_id'] = $user['UserId'];
-    $_SESSION['email'] = $user['Email'];
-    $_SESSION['role'] = $user['Role'];
-    $_SESSION['name'] = $user['FirstName'] . ' ' . $user['LastName'];
-    $_SESSION['category_id'] = $user['CategoryId'];
-    $_SESSION['club_id'] = $user['ClubId'];
-    $_SESSION['user_fingerprint'] = generateUserFingerprint();
-    $_SESSION['CREATED'] = time();
-    $_SESSION['LAST_ACTIVITY'] = time();
+    // Clear the whole old session, regenerate the id (session fixation) and
+    // set the new values, including the session version and sign-in time
+    kbfBeginUserSession($user);
     
     // Generate CSRF token
     $csrfToken = generateCSRFToken();

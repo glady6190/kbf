@@ -105,6 +105,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -198,17 +199,6 @@
 
     function displayTournaments(tournaments) {
         const container = document.getElementById('tournamentsList');
-
-        // SECURITY: HTML escape function
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
 
         const user = window.kbfUser;
         const canPhotos = !!(user && (user.has('content.own_news_gallery') || user.has('content.all_news_gallery')));
@@ -405,14 +395,14 @@
                 const preview = document.createElement('div');
                 preview.className = 'relative border-2 border-gray-700 bg-slate-800 overflow-hidden';
                 preview.innerHTML = `
-                    <img src="${e.target.result}" alt="Preview ${index + 1}" class="w-full h-24 object-cover">
-                    <button type="button" onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition">
+                    <img src="${escapeHtml(e.target.result)}" alt="Preview ${Number(index) + 1}" class="w-full h-24 object-cover">
+                    <button type="button" onclick="removePhoto(${Number(index)})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                     <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 px-2 py-1">
-                        <p class="text-xs text-white font-bold truncate">${file.name}</p>
+                        <p class="text-xs text-white font-bold truncate">${escapeHtml(file.name)}</p>
                     </div>
                 `;
                 previewGrid.appendChild(preview);

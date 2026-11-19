@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 /**
  * Shared configuration helpers.
  *
@@ -65,6 +67,22 @@ function kbfSettingInt($key, $default, $min = null, $max = null) {
 // Upload limit in bytes for an upload_mb_* key (1 to 50 MB)
 function kbfUploadLimitBytes($key, $defaultMb) {
     return kbfSettingInt($key, $defaultMb, 1, 50) * 1024 * 1024;
+}
+
+// Is this a valid "Website address": https, a host name (optional port),
+// no path, no query, no fragment, no user info and no trailing slash
+function kbfIsValidSiteBaseUrl($value) {
+    return is_string($value)
+        && strlen($value) <= 255
+        && preg_match('#^https://[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*(?::\d{1,5})?$#', $value) === 1;
+}
+
+// The website address from Site settings (site_base_url), checked again on
+// every read. Every redirect and email link is built from this, never from
+// the request's Host header.
+function kbfSiteBaseUrl() {
+    $url = trim((string) kbfSetting('site_base_url', 'https://kbf-uk.org'));
+    return kbfIsValidSiteBaseUrl($url) ? $url : 'https://kbf-uk.org';
 }
 
 // The request's copy of the Settings table ($reset = true empties it)

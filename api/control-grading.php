@@ -470,6 +470,7 @@ if ($method === 'POST') {
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request body'], 400);
     }
+    kbfRequireScalarFields($data, ['grades', 'points']);
     $action = is_string($data['action'] ?? null) ? $data['action'] : '';
 
     if (!in_array($action, ['check', 'moveCheck'], true)) {

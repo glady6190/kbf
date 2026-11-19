@@ -172,6 +172,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -186,7 +187,6 @@
     // HELPER FUNCTIONS
     // ============================================
     const API = '/api/control-email.php';
-    const escapeHtml = KBFShell.escapeHtml;
 
     function getCSRFToken() {
         try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }

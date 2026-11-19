@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 // ============================================
 // KBF-UK: NOTIFICATION EVENTS AND EMAIL WORDING
 // The one place for every email's original subject and wording.
@@ -525,8 +527,7 @@ function kbfEmailLayout($innerHtml, $footerHtml = null) {
 // ============================================
 // Every link inside an email is built from site_base_url (Site settings)
 function kbfSiteLink($pdo) {
-    $url = rtrim((string) kbfSetting('site_base_url', 'https://kbf-uk.org'), '/');
-    return preg_match('#^https?://#i', $url) ? $url : 'https://kbf-uk.org';
+    return kbfSiteBaseUrl();
 }
 
 function kbfWhatsappLink($pdo) {
@@ -546,11 +547,67 @@ function kbfCleanHref($href) {
     if ($href === '' || preg_match('/[\s"\'<>`\\\\]/', $href)) {
         return null;
     }
+    // A placeholder is never allowed inside another address
     if (preg_match('#^(https?://|mailto:)#i', $href)) {
+        return (strpos($href, '{') === false && strpos($href, '}') === false) ? $href : null;
+    }
+    // A link placeholder as the whole address, e.g. {reset_link}; only
+    // {site_link} may be followed by a path on the site, e.g. {site_link}/register.html
+    if (preg_match('#^\{([a-z_]+)\}$#', $href, $m) && in_array($m[1], KBF_LINK_PLACEHOLDERS, true)) {
         return $href;
     }
-    if (preg_match('#^\{[a-z_]+\}[A-Za-z0-9/._?=&%\#~+-]*$#', $href)) {
+    if (preg_match('#^\{site_link\}/[A-Za-z0-9/._?=&%\#~+-]*$#', $href)) {
         return $href;
+    }
+    return null;
+}
+
+// Placeholders that produce a web address
+const KBF_LINK_PLACEHOLDERS = ['reset_link', 'site_link', 'submit_link', 'login_link', 'review_link', 'whatsapp_link'];
+
+// Checks that a link placeholder is used only as the whole address of a link
+// (href="{reset_link}", or {site_link}/path) or as plain text standing on its
+// own, never inside another address. Works on the raw and the cleaned HTML
+// and on subjects. Returns an error message, or null when the text is fine.
+function kbfCheckLinkPlaceholders($text) {
+    $text = (string) $text;
+    // Decode entities so &#123;reset_link&#125; cannot hide a placeholder
+    $decoded = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $decoded = rawurldecode($decoded);
+    $names = implode('|', KBF_LINK_PLACEHOLDERS);
+
+    // Every href that holds a link placeholder must be exactly that placeholder
+    if (preg_match_all('#\bhref\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s>]+))#i', $decoded, $hrefs, PREG_SET_ORDER)) {
+        foreach ($hrefs as $h) {
+            $value = trim($h[2] !== '' ? $h[2] : (($h[3] ?? '') !== '' ? $h[3] : ($h[4] ?? '')));
+            if (!preg_match('/\{(' . $names . ')\}/', $value, $m)) {
+                continue;
+            }
+            $ok = preg_match('#^\{(' . $names . ')\}$#', $value)
+                || preg_match('#^\{site_link\}/[A-Za-z0-9/._?=&%\#~+-]*$#', $value);
+            if (!$ok) {
+                return '{' . $m[1] . '} can only be the whole address of a link (for example href="{' . $m[1] . '}") or plain text on its own, never part of another address.';
+            }
+        }
+    }
+
+    // In text: nothing that looks like an address directly before or after
+    if (preg_match_all('/\{(' . $names . ')\}/', $decoded, $all, PREG_OFFSET_CAPTURE)) {
+        foreach ($all[0] as $i => $match) {
+            $name = $all[1][$i][0];
+            $start = $match[1];
+            $end = $start + strlen($match[0]);
+            $before = $start > 0 ? $decoded[$start - 1] : '';
+            $after = substr($decoded, $end, 2);
+            $beforeOk = $before === '' || preg_match('/[\s>(\["\']/', $before);
+            $afterOk = $after === ''
+                || preg_match('/^[\s<)\]"\']/', $after)
+                || preg_match('/^[.,;:!?]($|[\s<)\]"\'])/', $after)
+                || ($name === 'site_link' && $after[0] === '/');
+            if (!$beforeOk || !$afterOk) {
+                return '{' . $name . '} can only be the whole address of a link (for example href="{' . $name . '}") or plain text on its own, never part of another address.';
+            }
+        }
     }
     return null;
 }
@@ -757,7 +814,13 @@ function kbfGetTemplate($pdo, $templateKey) {
         $stmt->execute([$templateKey]);
         $row = $stmt->fetch();
         if ($row) {
-            return ['subject' => $row['Subject'], 'bodyHtml' => $row['BodyHtml'], 'custom' => true, 'updatedDate' => $row['UpdatedDate']];
+            // A saved wording that puts a link placeholder inside another
+            // address (saved before this check existed) is never used
+            if (kbfCheckLinkPlaceholders($row['Subject']) !== null || kbfCheckLinkPlaceholders($row['BodyHtml']) !== null) {
+                error_log('kbfGetTemplate: ' . $templateKey . ' has a link placeholder inside another address; the original wording is used');
+            } else {
+                return ['subject' => $row['Subject'], 'bodyHtml' => $row['BodyHtml'], 'custom' => true, 'updatedDate' => $row['UpdatedDate']];
+            }
         }
     } catch (PDOException $e) {
         // notifications.sql not run yet: the original wording is used

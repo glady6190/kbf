@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 // ============================================
 // KBF-UK: SHARED EMAIL SENDER
 // Every email the site sends goes through kbfSendEmail(). The SMTP set-up

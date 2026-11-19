@@ -62,7 +62,9 @@ const SITE_SETTINGS = [
     'maintenance_mode' => ['switch', '0', 'Show visitors a back-soon page'],
     'maintenance_message' => ['message', 'We are making some improvements. Please check back shortly.', 'Maintenance message'],
 ];
-const SITE_SUPER_ADMIN_KEYS = ['maintenance_mode', 'maintenance_message'];
+// Super Admin only: maintenance mode, and the website address (every email
+// link, including password reset links, is built from it)
+const SITE_SUPER_ADMIN_KEYS = ['maintenance_mode', 'maintenance_message', 'site_base_url'];
 
 // ---------- helpers ----------
 
@@ -134,8 +136,8 @@ function validateSetting($key, $value) {
             if (substr($value, -1) === '/') {
                 return [null, $label . ' must not end with a slash.'];
             }
-            return preg_match('#^https://[A-Za-z0-9.-]+(:\d+)?(/[^\s"\'<>]*)?$#', $value) && filter_var($value, FILTER_VALIDATE_URL) && strlen($value) <= 255
-                ? [$value, null] : [null, $label . ' must be an https address, for example https://kbf-uk.org'];
+            return kbfIsValidSiteBaseUrl($value) && filter_var($value, FILTER_VALIDATE_URL)
+                ? [$value, null] : [null, $label . ' must be an https address with no path or query, for example https://kbf-uk.org'];
         case 'optionalLink':
             if ($value === '') {
                 return ['', null];
@@ -232,7 +234,10 @@ if ($method === 'POST') {
         sendJSON(['success' => true, 'message' => 'Nothing to change']);
     }
 
-    // Maintenance mode: Super Admins only
+    // Maintenance mode and the website address: Super Admins only
+    if (isset($changes['site_base_url']) && !isSuperAdmin()) {
+        sendJSON(['success' => false, 'message' => 'Only a Super Admin can change the website address.', 'field' => 'site_base_url'], 403);
+    }
     if (array_intersect(array_keys($changes), SITE_SUPER_ADMIN_KEYS) && !isSuperAdmin()) {
         sendJSON(['success' => false, 'message' => 'Only a Super Admin can change maintenance mode.'], 403);
     }

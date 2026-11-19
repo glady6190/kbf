@@ -639,9 +639,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
 
-    if (!is_array($data) || !isset($data['tournamentId']) || !isset($data['matches'])) {
+    if (!is_array($data) || !isset($data['tournamentId']) || !isset($data['matches']) || !is_array($data['matches'])) {
         sendJSON(['success' => false, 'message' => 'Tournament ID and matches required'], 400);
     }
+    kbfRequireScalarFields($data, ['matches']);
 
     $tournamentId = filter_var($data['tournamentId'], FILTER_VALIDATE_INT);
     if (!$tournamentId) {
@@ -877,9 +878,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
 
-    if (!is_array($data) || !isset($data['tournamentId']) || !isset($data['matches'])) {
+    if (!is_array($data) || !isset($data['tournamentId']) || !isset($data['matches']) || !is_array($data['matches'])) {
         sendJSON(['success' => false, 'message' => 'Tournament ID and matches required'], 400);
     }
+    kbfRequireScalarFields($data, ['matches']);
 
     $tournamentId = filter_var($data['tournamentId'], FILTER_VALIDATE_INT);
     if (!$tournamentId) {

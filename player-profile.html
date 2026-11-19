@@ -517,6 +517,7 @@
         </script>
     </footer>
 
+    <script src="/js/escape.js"></script>
     <script>
     // ============================================
     // NAVIGATION AND THEME
@@ -561,11 +562,7 @@
     let profile = null;
     let range = 'all';
 
-    function esc(value) {
-        return String(value === null || value === undefined ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
+    // esc comes from /js/escape.js
 
     function fmt(n) { return Number(n || 0).toLocaleString('en-GB'); }
 

@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 // ============================================
 // KBF-UK: SHARED RULES FOR REPORTS AND DOWNLOADS
 // Used by api/control-reports.php and api/control-activity.php.
@@ -166,6 +168,9 @@ const KBF_ACTION_NAMES = [
     'login' => 'Signed in',
     'logout' => 'Signed out',
     'password_changed' => 'Changed their password',
+    'signed_out_everywhere' => 'Signed out everywhere',
+    'gallery_photos_uploaded' => 'Uploaded gallery photos',
+    'gallery_photo_deleted' => 'Deleted a gallery photo',
     'password_change_forced' => 'Changed a temporary password',
     'password_reset' => 'Reset their password',
     'password_reset_sent' => 'Sent a password reset email',

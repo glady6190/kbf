@@ -1207,6 +1207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode($json, true);
     }
 
+    kbfRequireScalarFields($data);
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
     }
@@ -1331,8 +1332,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // SECURITY: Validate inputs
-    $name = trim($data['name']);
+    // SECURITY: Validate inputs (tournament names never hold < or >)
+    $name = trim(str_replace(['<', '>'], '', (string) $data['name']));
 $venue = trim($data['venue']);
 $location = trim($data['location']);
 $postCode = isset($data['postCode']) ? trim($data['postCode']) : null;
@@ -1481,9 +1482,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
 
-    if (!isset($data['tournamentId'])) {
+    if (!is_array($data) || !isset($data['tournamentId'])) {
         sendJSON(['success' => false, 'message' => 'Tournament ID required'], 400);
     }
+    kbfRequireScalarFields($data);
 
     // Validate tournament ID
     $tournamentId = filter_var($data['tournamentId'], FILTER_VALIDATE_INT);
@@ -1530,7 +1532,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             $params = [];
 
             if (isset($data['name'])) {
-    $name = trim($data['name']);
+    // Tournament names never hold < or >
+    $name = trim(str_replace(['<', '>'], '', (string) $data['name']));
     if (strlen($name) < 3 || strlen($name) > 200) {
         sendJSON(['success' => false, 'message' => 'Tournament name must be between 3 and 200 characters'], 400);
     }

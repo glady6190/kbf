@@ -1339,6 +1339,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
     }
+    kbfRequireScalarFields($data, ['ids']);
 
     // ---------- approve selected registrations ----------
     if (($data['action'] ?? '') === 'approveSelected') {

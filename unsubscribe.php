@@ -9,17 +9,9 @@
  * exists — invalid/missing/unknown tokens all get the same neutral page.
  */
 
-// ---- Force HTTPS (before any output / DB work). Proxy-aware: Hostinger sits
-// behind a reverse proxy, so check the forwarded-proto header too. (This is
-// more robust than security-init.php, which only checks $_SERVER['HTTPS'].) ----
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-if (!$isHttps) {
-    $host = $_SERVER['HTTP_HOST'] ?? 'kbf-uk.org';
-    $uri  = $_SERVER['REQUEST_URI'] ?? '/unsubscribe.php';
-    header('Location: https://' . $host . $uri, true, 301);
-    exit;
-}
+// ---- Force HTTPS: done by api/config.php before the session starts
+// (proxy-aware). It redirects to the Website address from Site settings,
+// never to the request's Host header. ----
 
 require_once __DIR__ . '/api/config.php'; // provides $pdo
 

@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 // ============================================
 // KBF-UK: PER-USER PERMISSIONS (foundation)
 // Included by config.php, so it is available wherever config.php is.
@@ -379,7 +381,7 @@ function kbfStaffCookie($on) {
 const KBF_IMPERSONATION_BLOCKED_MESSAGE = 'Not available while viewing as someone else';
 
 // Session values that describe the signed-in user
-const KBF_SESSION_USER_KEYS = ['user_id', 'email', 'role', 'name', 'category_id', 'club_id'];
+const KBF_SESSION_USER_KEYS = ['user_id', 'email', 'role', 'name', 'category_id', 'club_id', 'session_version'];
 
 function isImpersonating() {
     return isset($_SESSION['impersonator']) && is_array($_SESSION['impersonator'])
@@ -435,6 +437,8 @@ function startImpersonation(array $target) {
     $_SESSION['name'] = trim($target['FirstName'] . ' ' . $target['LastName']);
     $_SESSION['category_id'] = $target['CategoryId'];
     $_SESSION['club_id'] = $target['ClubId'];
+    // Only the Super Admin's own version (kept under 'impersonator') is checked
+    unset($_SESSION['session_version']);
 
     session_regenerate_id(true);
     $_SESSION['CREATED'] = time();

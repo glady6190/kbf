@@ -665,6 +665,7 @@ $input = json_decode(file_get_contents('php://input'), true);
 if (!is_array($input)) {
     sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
 }
+kbfRequireScalarFields($input);
 $action = (string) ($input['action'] ?? '');
 
 // ---------- ADD A PLAYER ----------

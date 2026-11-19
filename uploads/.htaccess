@@ -2,23 +2,61 @@
 # UPLOADS DIRECTORY - STRICT SECURITY
 # ============================================
 
-# Prevent PHP execution in uploads directory
-<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi)$">
-    Require all denied
-</FilesMatch>
-
-# Only allow image files
-<FilesMatch "\.(jpg|jpeg|png|webp|gif|svg)$">
-    Require all granted
-</FilesMatch>
-
 # Prevent directory listing
 Options -Indexes
 
-# Disable PHP engine
+# 1. Deny everything by default
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+
+# 2. Allow only images (jpg, jpeg, png, webp, gif). No SVG: it can hold
+# script. uploads/broadcast-files/.htaccess also allows the download types
+# that folder needs (pdf, docx).
+<FilesMatch "\.(jpe?g|png|webp|gif)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Allow from all
+    </IfModule>
+</FilesMatch>
+
+# 3. Scripts never run here. These work on Apache and on LiteSpeed (which
+# honours RemoveHandler, SetHandler and ForceType in .htaccess); the
+# php_flag lines only apply where PHP runs as a module.
+<FilesMatch "\.(php\d?|phtml\d?|pht|phar|phps|inc|shtml?|cgi|fcgi|pl|py|jsp|aspx?|sh|htaccess|htpasswd)$">
+    SetHandler none
+    ForceType text/plain
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .pht .phar .phps .shtml .cgi .pl .py
+RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .pht .phar .phps
+AddType text/plain .php .php3 .php4 .php5 .php7 .php8 .phtml .pht .phar .phps .shtml .cgi .pl .py
 <IfModule mod_php7.c>
     php_flag engine off
 </IfModule>
 <IfModule mod_php8.c>
     php_flag engine off
+</IfModule>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule LiteSpeed>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
 </IfModule>

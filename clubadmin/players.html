@@ -157,6 +157,7 @@
         </div>
     </div>
 
+<script src="/js/escape.js"></script>
 <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -249,13 +250,6 @@
             return;
         }
 
-        function escapeHtml(text) {
-            if (text === null || text === undefined || text === '') return '';
-            const div = document.createElement('div');
-            div.textContent = String(text);
-            return div.innerHTML;
-        }
-
         tbody.innerHTML = allPlayers.map(player => `
             <tr class="hover:bg-slate-800 transition">
                 ${showContacts ? `
@@ -268,7 +262,7 @@
                 </td>` : ''}
                 <td class="px-3 sm:px-6 py-3 sm:py-4">
                     ${player.ProfilePhoto ?
-                        `<img src="${escapeHtml(player.ProfilePhoto)}" alt="${escapeHtml(player.FirstName)}" class="user-photo border-2 border-gray-700">` :
+                        `<img src="${escapeHtml(safeUrl(player.ProfilePhoto))}" alt="${escapeHtml(player.FirstName)}" class="user-photo border-2 border-gray-700">` :
                         `<div class="user-photo bg-slate-800 border-2 border-gray-700 flex items-center justify-center">
                             <span class="text-gray-500 font-black text-xs">${escapeHtml((player.FirstName || '').charAt(0))}${escapeHtml((player.LastName || '').charAt(0))}</span>
                         </div>`

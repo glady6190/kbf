@@ -257,6 +257,7 @@ if ($method === 'POST') {
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request body'], 400);
     }
+    kbfRequireScalarFields($data);
     $action = $data['action'] ?? '';
 
     try {

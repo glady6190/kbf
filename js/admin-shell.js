@@ -120,15 +120,11 @@
     };
 
     // ---------- helpers ----------
-    function escapeHtml(value) {
-        if (value === null || value === undefined) return '';
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
+    // Shared escaper from /js/escape.js (must be loaded before this file).
+    if (!window.KBF || typeof window.KBF.escapeHtml !== 'function') {
+        throw new Error('admin-shell.js needs /js/escape.js to be loaded first');
     }
+    var escapeHtml = window.KBF.escapeHtml;
 
     function icon(name, cls) {
         return '<svg class="' + (cls || 'w-4 h-4') + '" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">' +
@@ -329,6 +325,7 @@
                 '<div class="kbf-drop hidden" data-kbf-menu>' +
                     '<button type="button" data-kbf-action="password">' + icon('key') + 'Change password</button>' +
                     '<a href="/admin/two-step">' + icon('shield') + '2-step verification</a>' +
+                    '<button type="button" data-kbf-action="signout-everywhere">' + icon('signout') + 'Sign out everywhere</button>' +
                     '<button type="button" data-kbf-action="signout">' + icon('signout') + 'Sign out</button>' +
                 '</div>' +
             '</div>';
@@ -368,6 +365,7 @@
                         mobileLinks +
                         '<button type="button" class="kbf-mobile-link w-full text-left flex items-center gap-2" data-kbf-action="password">' + icon('key') + 'Change password</button>' +
                         '<a href="/admin/two-step" class="kbf-mobile-link flex items-center gap-2">' + icon('shield') + '2-step verification</a>' +
+                        '<button type="button" class="kbf-mobile-link w-full text-left flex items-center gap-2" data-kbf-action="signout-everywhere">' + icon('signout') + 'Sign out everywhere</button>' +
                         '<button type="button" class="w-full px-4 py-2 bg-slate-800 border-2 border-red-500 text-red-400 font-bold uppercase text-sm hover:bg-red-500 hover:text-slate-900 transition flex items-center gap-2" data-kbf-action="signout">' + icon('signout') + 'Sign out</button>' +
                     '</div>' +
                 '</div>' +
@@ -432,6 +430,9 @@
         });
         host.querySelectorAll('[data-kbf-action="signout"]').forEach(function (btn) {
             btn.addEventListener('click', signOut);
+        });
+        host.querySelectorAll('[data-kbf-action="signout-everywhere"]').forEach(function (btn) {
+            btn.addEventListener('click', function () { closeAllDropdowns(null); signOutEverywhere(); });
         });
     }
 
@@ -611,6 +612,28 @@
         }).catch(function () { /* ignore */ }).then(function () {
             try { sessionStorage.removeItem('csrf_token'); } catch (e) { /* ignore */ }
             go('/login');
+        });
+    }
+
+    // ---------- sign out everywhere (own account, every device) ----------
+    function signOutEverywhere() {
+        if (!window.confirm('Sign out on every device, including this one? You will need to sign in again.')) return;
+        fetch('/api/auth/sign-out-everywhere.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+            body: '{}'
+        }).then(function (res) {
+            return res.json().catch(function () { return { success: false }; });
+        }).then(function (data) {
+            if (data && data.success) {
+                try { sessionStorage.removeItem('csrf_token'); } catch (e) { /* ignore */ }
+                go('/login');
+                return;
+            }
+            window.alert((data && data.message) ? String(data.message) : 'Could not sign out everywhere. Please try again.');
+        }).catch(function () {
+            window.alert('Could not sign out everywhere. Please try again.');
         });
     }
 

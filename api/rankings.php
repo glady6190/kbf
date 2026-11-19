@@ -410,6 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_array($data) || !isset($data['userId']) || !isset($data['newCategoryId']) || !isset($data['reason'])) {
         sendJSON(['success' => false, 'message' => 'Player, new grade and reason are required'], 400);
     }
+    kbfRequireScalarFields($data);
 
     $userId = filter_var($data['userId'], FILTER_VALIDATE_INT);
     $newCategoryId = filter_var($data['newCategoryId'], FILTER_VALIDATE_INT);

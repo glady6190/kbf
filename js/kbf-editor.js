@@ -63,11 +63,11 @@
             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="' + ICONS[name] + '"/></svg>';
     }
 
-    function escapeHtml(value) {
-        return String(value == null ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // Shared escaper from /js/escape.js (must be loaded before this file).
+    if (!window.KBF || typeof window.KBF.escapeHtml !== 'function') {
+        throw new Error('kbf-editor.js needs /js/escape.js to be loaded first');
     }
+    var escapeHtml = window.KBF.escapeHtml;
 
     var counter = 0;
 

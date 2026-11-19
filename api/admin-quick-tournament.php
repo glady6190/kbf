@@ -20,6 +20,10 @@ requirePermission('tournaments.manage_all');
 
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
+if (!is_array($data)) {
+    sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
+}
+kbfRequireScalarFields($data);
 
 // Validate required fields
 $required = ['organizerName', 'tournamentName', 'venue', 'tournamentDate', 'location', 'categoriesOffered'];
@@ -34,7 +38,8 @@ list($organizerName, $organiserError) = cleanOrganiserName($data['organizerName'
 if ($organiserError !== null) {
     sendJSON(['success' => false, 'message' => $organiserError], 400);
 }
-$tournamentName = trim($data['tournamentName']);
+// Tournament names never hold < or > (defence in depth against markup)
+$tournamentName = trim(str_replace(['<', '>'], '', (string) $data['tournamentName']));
 $venue = trim($data['venue']);
 $location = trim($data['location']);
 $postCode = isset($data['postCode']) ? trim($data['postCode']) : null;

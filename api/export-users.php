@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/security-init.php';
 require_once 'config.php';
+require_once __DIR__ . '/report-helpers.php';
 
 // Login (401), then CSRF on writes, then players.view_export (403).
 // The export never includes emails or phone numbers; if they are ever added,
@@ -40,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     
     // Validate input
-    if (!isset($input['locations']) || !is_array($input['locations']) || empty($input['locations'])) {
+    if (!is_array($input) || !isset($input['locations']) || !is_array($input['locations']) || empty($input['locations'])) {
         sendJSON(['success' => false, 'message' => 'Please select at least one location'], 400);
     }
     
@@ -153,35 +154,38 @@ function exportCSV($users, $summary, $locations) {
     // UTF-8 BOM for Excel compatibility
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
     
+    // Every cell, summary rows included, goes through the shared CSV cell
+    // protection (kbfCsvCell: no cell can run as a formula)
+
     // Headers - Updated to 4 columns
-    fputcsv($output, ['Player ID', 'Name', 'Location', 'Grade']);
-    
+    kbfCsvRow($output, ['Player ID', 'Name', 'Location', 'Grade']);
+
     // Data rows - Merged first and last name
     foreach ($users as $user) {
-        fputcsv($output, [
+        kbfCsvRow($output, [
             $user['PlayerId'] ?: 'N/A',
             $user['FirstName'] . ' ' . $user['LastName'],  // Merged name
             $user['Location'],
             $user['Category'] ?: 'Unranked'
         ]);
     }
-    
+
     // Add summary (rest stays the same)
-    fputcsv($output, []);
-    fputcsv($output, ['=== SUMMARY ===']);
-    fputcsv($output, ['Total Players', $summary['total']]);
-    fputcsv($output, []);
-    
-    fputcsv($output, ['By Category']);
+    kbfCsvRow($output, []);
+    kbfCsvRow($output, ['SUMMARY']);
+    kbfCsvRow($output, ['Total Players', $summary['total']]);
+    kbfCsvRow($output, []);
+
+    kbfCsvRow($output, ['By Category']);
     foreach ($summary['by_category'] as $category => $count) {
-        fputcsv($output, ["Category $category", $count]);
+        kbfCsvRow($output, ["Category $category", $count]);
     }
-    
+
     if (count($locations) > 1 && !empty($summary['by_location'])) {
-        fputcsv($output, []);
-        fputcsv($output, ['By Location']);
+        kbfCsvRow($output, []);
+        kbfCsvRow($output, ['By Location']);
         foreach ($summary['by_location'] as $location => $count) {
-            fputcsv($output, [$location, $count]);
+            kbfCsvRow($output, [$location, $count]);
         }
     }
     

@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 // Load environment variables from .env file (never commit .env to version control)
 (function() {
     $envFile = dirname(__DIR__) . '/.env';
@@ -51,10 +53,36 @@ define('MAX_LOGIN_ATTEMPTS', kbfSettingInt('login_lockout_attempts_email', 5, 3,
 define('MAX_LOGIN_ATTEMPTS_PER_IP', kbfSettingInt('login_lockout_attempts_ip', 20, 10, 200)); // failed attempts per IP address within LOCKOUT_TIME
 define('LOCKOUT_TIME', kbfSettingInt('login_lockout_minutes', 15, 5, 120) * 60);
 
+// Never show PHP errors to visitors; log them instead
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+ini_set('log_errors', '1');
+
+// Force HTTPS (web requests only), before the session starts. The redirect
+// goes to the Website address (site_base_url), never to the request's Host
+// header. Proxy-aware: the forwarded-proto header counts as HTTPS too.
+if (PHP_SAPI !== 'cli') {
+    $kbfIsHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    if (!$kbfIsHttps) {
+        $kbfUri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        if ($kbfUri === '' || $kbfUri[0] !== '/' || (isset($kbfUri[1]) && ($kbfUri[1] === '/' || $kbfUri[1] === '\\'))) {
+            $kbfUri = '/';
+        }
+        header('Location: ' . kbfSiteBaseUrl() . preg_replace('/[\r\n]/', '', $kbfUri), true, 301);
+        exit;
+    }
+    unset($kbfIsHttps);
+}
+
+// A signed-in session ends this long after sign-in, however busy it is
+define('SESSION_ABSOLUTE_LIFETIME', 12 * 3600);
+
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
+    ini_set('session.use_strict_mode', 1);
     ini_set('session.cookie_samesite', 'Strict');
     
     // Enable secure flag if HTTPS
@@ -66,6 +94,16 @@ if (session_status() === PHP_SESSION_NONE) {
     
     // Session timeout check
     if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > SESSION_LIFETIME)) {
+        session_unset();
+        session_destroy();
+        session_start();
+    }
+    // Absolute limit: 12 hours from sign-in. A session signed in before this
+    // check existed starts its 12 hours now.
+    if (isset($_SESSION['user_id']) && !isset($_SESSION['SIGNED_IN_AT'])) {
+        $_SESSION['SIGNED_IN_AT'] = time();
+    }
+    if (isset($_SESSION['SIGNED_IN_AT']) && (time() - (int) $_SESSION['SIGNED_IN_AT'] > SESSION_ABSOLUTE_LIFETIME)) {
         session_unset();
         session_destroy();
         session_start();
@@ -93,6 +131,36 @@ if (in_array($origin, ALLOWED_ORIGINS)) {
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
 
+// Input types (web requests only): no query or form value is ever a list,
+// so a value sent as one (e.g. ?id[]=1) is a 400. Uploaded files are in
+// $_FILES and are not affected. A wrong type that still reaches a PHP
+// function (TypeError) is answered with a 400, never a PHP error; any other
+// uncaught error is logged and answered with a plain 500.
+if (PHP_SAPI !== 'cli') {
+    foreach ([$_GET, $_POST] as $kbfInputSource) {
+        foreach ($kbfInputSource as $kbfInputKey => $kbfInputValue) {
+            if (is_array($kbfInputValue)) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid value for ' . preg_replace('/[^A-Za-z0-9_]/', '', (string) $kbfInputKey)]);
+                exit;
+            }
+        }
+    }
+    unset($kbfInputSource, $kbfInputKey, $kbfInputValue);
+
+    set_exception_handler(function ($e) {
+        $isType = ($e instanceof TypeError) || ($e instanceof ValueError);
+        error_log(($isType ? 'Invalid input: ' : 'Uncaught error: ') . get_class($e) . ': ' . $e->getMessage()
+            . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if (!headers_sent()) {
+            http_response_code($isType ? 400 : 500);
+            header('Content-Type: application/json');
+        }
+        echo json_encode(['success' => false, 'message' => $isType ? 'Invalid request' : 'An error occurred. Please try again later.']);
+    });
+}
+
 // Security headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
@@ -104,11 +172,99 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 // The account is re-read from the database (once per request): a user who no
 // longer exists, has been deactivated, has had sign-in turned off or is no
 // longer staff is logged out immediately.
+// The browser fingerprint (user agent only, so a phone whose IP address
+// changes stays signed in) must match the one taken at sign-in.
 function isLoggedIn() {
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_fingerprint'])) {
         return false;
     }
+    if (!hash_equals((string) $_SESSION['user_fingerprint'], generateUserFingerprint())) {
+        kbfEndSession();
+        return false;
+    }
     return refreshSessionUser();
+}
+
+// End the session so this request is treated as signed out
+function kbfEndSession() {
+    session_unset();
+    session_destroy();
+    if (!headers_sent()) {
+        session_start();
+    } else {
+        $_SESSION = [];
+    }
+}
+
+// A request that only reads (GET, HEAD, OPTIONS)
+function kbfIsReadOnlyRequest() {
+    return in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD', 'OPTIONS'], true);
+}
+
+// Users.SessionVersion for a user: 0 when the column does not exist yet
+// (database/security-hardening.sql not run). Throws PDOException when the
+// database cannot be reached.
+function kbfReadSessionVersion($userId) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT SessionVersion FROM Users WHERE UserId = ?");
+        $stmt->execute([(int) $userId]);
+        $value = $stmt->fetchColumn();
+        return $value === false ? 0 : (int) $value;
+    } catch (PDOException $e) {
+        if (kbfIsMissingColumnError($e)) {
+            return 0;
+        }
+        throw $e;
+    }
+}
+
+function kbfIsMissingColumnError(PDOException $e) {
+    return $e->getCode() === '42S22' || stripos($e->getMessage(), 'Unknown column') !== false;
+}
+
+// Sign every session of this user out (password change, reset, temporary
+// password, 2-step turned off or reset, "Sign out everywhere"). Returns the
+// new version, or null when the column does not exist yet.
+function kbfBumpSessionVersion($userId) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("UPDATE Users SET SessionVersion = SessionVersion + 1 WHERE UserId = ?");
+        $stmt->execute([(int) $userId]);
+        return kbfReadSessionVersion($userId);
+    } catch (PDOException $e) {
+        if (kbfIsMissingColumnError($e)) {
+            error_log('kbfBumpSessionVersion: Users.SessionVersion missing; run database/security-hardening.sql');
+            return null;
+        }
+        throw $e;
+    }
+}
+
+// Start a brand-new session for a person who has passed every sign-in step.
+// The whole old session is cleared first (including any impersonation keys).
+function kbfBeginUserSession(array $user) {
+    $_SESSION = [];
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = $user['UserId'];
+    $_SESSION['email'] = $user['Email'];
+    $_SESSION['role'] = $user['Role'];
+    $_SESSION['name'] = $user['FirstName'] . ' ' . $user['LastName'];
+    $_SESSION['category_id'] = $user['CategoryId'];
+    $_SESSION['club_id'] = $user['ClubId'];
+    $_SESSION['user_fingerprint'] = generateUserFingerprint();
+    $_SESSION['session_version'] = kbfReadSessionVersion($user['UserId']);
+    $_SESSION['SIGNED_IN_AT'] = time();
+    $_SESSION['CREATED'] = time();
+    $_SESSION['LAST_ACTIVITY'] = time();
+}
+
+// Clear the whole session at the start of a sign-in (before a pending or
+// temporary state is set)
+function kbfClearSessionForSignIn() {
+    $_SESSION = [];
+    session_regenerate_id(true);
+    $_SESSION['CREATED'] = time();
 }
 
 // Re-reads the session user's account, once per request per user.
@@ -139,6 +295,11 @@ function refreshSessionUser() {
                 ");
                 $stmt->execute([impersonatorUserId()]);
                 $impersonatorOk = (bool) $stmt->fetch();
+                // The Super Admin's own sessions were signed out everywhere
+                if ($impersonatorOk && kbfReadSessionVersion(impersonatorUserId())
+                        !== (int) ($_SESSION['impersonator']['session_version'] ?? 0)) {
+                    $impersonatorOk = false;
+                }
 
                 $stmt = $pdo->prepare("
                     SELECT u.Role FROM Users u
@@ -148,20 +309,16 @@ function refreshSessionUser() {
                 $stmt->execute([$userId]);
                 $target = $stmt->fetch();
             } catch (PDOException $e) {
+                // Could not check: reading pages carry on, anything that
+                // writes data is treated as signed out
                 error_log('Impersonation refresh failed: ' . $e->getMessage());
-                return true;
+                return kbfIsReadOnlyRequest();
             }
 
             if (!$impersonatorOk) {
                 // The Super Admin can no longer sign in: end everything
                 $checkedUserId = null;
-                session_unset();
-                session_destroy();
-                if (!headers_sent()) {
-                    session_start();
-                } else {
-                    $_SESSION = [];
-                }
+                kbfEndSession();
                 return false;
             }
 
@@ -185,23 +342,23 @@ function refreshSessionUser() {
         ");
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
+        $sessionVersion = $user ? kbfReadSessionVersion($userId) : 0;
     } catch (PDOException $e) {
-        // Could not check: keep the session as before rather than lock everyone out
+        // Could not check: reading pages carry on, anything that writes data
+        // is treated as signed out (the session itself is kept)
         error_log('Session user refresh failed: ' . $e->getMessage());
-        return true;
+        return kbfIsReadOnlyRequest();
     }
 
-    if (!$user || (int) $user['IsActive'] !== 1 || (int) $user['CanSignIn'] !== 1) {
+    // Signed out everywhere (password changed or reset, temporary password,
+    // 2-step turned off or reset, or "Sign out everywhere")
+    $versionOk = $user && $sessionVersion === (int) ($_SESSION['session_version'] ?? 0);
+
+    if (!$user || (int) $user['IsActive'] !== 1 || (int) $user['CanSignIn'] !== 1 || !$versionOk) {
         // End the session so this request is treated as logged out
         // (same pattern as the inactivity timeout above)
         $checkedUserId = null;
-        session_unset();
-        session_destroy();
-        if (!headers_sent()) {
-            session_start();
-        } else {
-            $_SESSION = [];
-        }
+        kbfEndSession();
         return false;
     }
 
@@ -311,12 +468,98 @@ function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-// Generate user fingerprint for session validation
+// Generate user fingerprint for session validation. User agent only: the IP
+// address is left out so mobile users whose address changes stay signed in.
 function generateUserFingerprint() {
     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
     $salt = getenv('SESSION_FINGERPRINT_SALT') ?: '';
-    return hash('sha256', $userAgent . $ipAddress . $salt);
+    return hash('sha256', 'ua:' . $userAgent . $salt);
+}
+
+// ============================================
+// REQUEST LIMITS (table RequestLimits, database/security-hardening.sql)
+// Each counted request is one row. Rows are only ever removed when they are
+// more than a day old, never when a reset token is issued.
+// $key is hashed, so emails and IP addresses are not stored in plain text.
+// ============================================
+
+// How many requests in this bucket for this key in the last $windowSeconds.
+// Returns null when the table does not exist yet.
+function kbfRequestCount($bucket, $key, $windowSeconds) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM RequestLimits
+            WHERE Bucket = ? AND KeyHash = ? AND CreatedAt > DATE_SUB(NOW(), INTERVAL ? SECOND)
+        ");
+        $stmt->execute([(string) $bucket, hash('sha256', (string) $key), (int) $windowSeconds]);
+        return (int) $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log('kbfRequestCount: ' . $e->getMessage());
+        return null;
+    }
+}
+
+// Count one request (and tidy rows older than a day now and then)
+function kbfRequestRecord($bucket, $key) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("INSERT INTO RequestLimits (Bucket, KeyHash, CreatedAt) VALUES (?, ?, NOW())");
+        $stmt->execute([(string) $bucket, hash('sha256', (string) $key)]);
+        if (random_int(1, 50) === 1) {
+            $pdo->exec("DELETE FROM RequestLimits WHERE CreatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY)");
+        }
+    } catch (PDOException $e) {
+        error_log('kbfRequestRecord: ' . $e->getMessage());
+    }
+}
+
+// Read a JSON request body as an array; anything else is a 400
+function kbfJsonBody() {
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($data)) {
+        sendJSON(['success' => false, 'message' => 'Invalid request body'], 400);
+    }
+    return $data;
+}
+
+// Input type checks: a wrong type is a 400, never a PHP error.
+// Missing (or null) values are returned as $default.
+function kbfInputString(array $data, $key, $default = '') {
+    if (!array_key_exists($key, $data) || $data[$key] === null) {
+        return $default;
+    }
+    if (is_int($data[$key]) || is_float($data[$key])) {
+        return (string) $data[$key];
+    }
+    if (!is_string($data[$key])) {
+        sendJSON(['success' => false, 'message' => 'Invalid value for ' . $key], 400);
+    }
+    return $data[$key];
+}
+
+function kbfInputArray(array $data, $key, $default = []) {
+    if (!array_key_exists($key, $data) || $data[$key] === null) {
+        return $default;
+    }
+    if (!is_array($data[$key])) {
+        sendJSON(['success' => false, 'message' => 'Invalid value for ' . $key], 400);
+    }
+    return $data[$key];
+}
+
+// Reject any value in a JSON body (top level) that is an array or object,
+// except the keys listed in $arrayKeys. Used by endpoints that read every
+// field as text or numbers.
+function kbfRequireScalarFields($data, array $arrayKeys = []) {
+    if (!is_array($data)) {
+        return;
+    }
+    foreach ($data as $k => $v) {
+        if (is_array($v) && !in_array($k, $arrayKeys, true)) {
+            sendJSON(['success' => false, 'message' => 'Invalid value for ' . $k], 400);
+        }
+    }
 }
 
 // Per-user permissions, staff role labels and audit logging

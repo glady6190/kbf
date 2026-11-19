@@ -523,6 +523,7 @@
         </script>
     </footer>
 
+    <script src="/js/escape.js"></script>
     <script>
     const urlParams    = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('id');
@@ -559,16 +560,7 @@
         return `<svg class="${className || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOURNAMENT_ICONS[name] || ''}</svg>`;
     }
 
-    // Escapes text for both element content and attribute values
-    function escapeHtml(value) {
-        if (value === null || value === undefined) return '';
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
+    // escapeHtml comes from /js/escape.js
 
     const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

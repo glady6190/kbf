@@ -126,6 +126,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -199,14 +200,6 @@
             return;
         }
 
-        // SECURITY: HTML escape function
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
         container.innerHTML = `
             <div class="overflow-x-auto -mx-4 sm:mx-0">
                 <table class="min-w-full">
@@ -246,22 +239,22 @@
                     }
                     <div class="mt-2 md:hidden">
                         ${t.Status === 'Approved' && !hasMatches ? 
-                            `<a href="/clubadmin/submit-results?id=${t.TournamentId}" class="theme-primary-text font-black uppercase text-xs hover:opacity-80">Submit Results →</a>` :
+                            `<a href="/clubadmin/submit-results?id=${Number(t.TournamentId)}" class="theme-primary-text font-black uppercase text-xs hover:opacity-80">Submit Results →</a>` :
                         t.Status === 'Approved' && hasMatches ?
-                            `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase text-xs hover:opacity-80">View Results →</a>` :
+                            `<a href="/tournament-details?id=${Number(t.TournamentId)}" class="text-blue-400 font-black uppercase text-xs hover:opacity-80">View Results →</a>` :
                         t.Status === 'Completed' ?
-                            `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase text-xs hover:opacity-80">View Details →</a>` :
+                            `<a href="/tournament-details?id=${Number(t.TournamentId)}" class="text-blue-400 font-black uppercase text-xs hover:opacity-80">View Details →</a>` :
                             `<span class="text-gray-500 font-bold uppercase text-xs">No Actions</span>`
                         }
                     </div>
                 </td>
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm hidden md:table-cell">
                     ${t.Status === 'Approved' && !hasMatches ? 
-                        `<a href="/clubadmin/submit-results?id=${t.TournamentId}" class="theme-primary-text font-black uppercase hover:opacity-80">Submit Results →</a>` :
+                        `<a href="/clubadmin/submit-results?id=${Number(t.TournamentId)}" class="theme-primary-text font-black uppercase hover:opacity-80">Submit Results →</a>` :
                     t.Status === 'Approved' && hasMatches ?
-                        `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase hover:opacity-80">View Results →</a>` :
+                        `<a href="/tournament-details?id=${Number(t.TournamentId)}" class="text-blue-400 font-black uppercase hover:opacity-80">View Results →</a>` :
                     t.Status === 'Completed' ?
-                        `<a href="/tournament-details?id=${t.TournamentId}" class="text-blue-400 font-black uppercase hover:opacity-80">View Details →</a>` :
+                        `<a href="/tournament-details?id=${Number(t.TournamentId)}" class="text-blue-400 font-black uppercase hover:opacity-80">View Details →</a>` :
                         `<span class="text-gray-500 font-bold uppercase text-xs">No Actions</span>`
                     }
                 </td>

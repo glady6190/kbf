@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/security-init.php';
 require_once 'config.php';
+require_once __DIR__ . '/image-helpers.php';
+
+const ANNOUNCEMENT_IMAGE_URL_DIR = '/uploads/announcements';
 
 // CREATE uploads directory if it doesn't exist
 $uploadsDir = dirname(__DIR__) . '/uploads/announcements';
@@ -204,6 +207,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $showAuthor = isLoggedIn() && isStaff();
     $authorColumn = $showAuthor ? "CONCAT(u.FirstName, ' ', u.LastName) as AuthorName," : "";
     $authorJoin = $showAuthor ? "LEFT JOIN Users u ON a.CreatedByAdminId = u.UserId" : "";
+    // Hidden or unpublished posts: only staff with a content permission.
+    // Everyone else gets published, visible posts only.
+    $contentStaff = isLoggedIn() && hasAnyPermission(['content.all_news_gallery', 'content.own_news_gallery']);
+    $publicOnlySql = $contentStaff ? "" : " AND a.IsPublished = 1 AND a.IsVisible = 1";
 
     try {
         // My posts: every post the current user created, any status.
@@ -241,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
            t.Name as TournamentName, t.TournamentId
     FROM Announcements a
     JOIN Tournaments t ON a.TournamentId = t.TournamentId
-    WHERE t.OrganizingClubId = ? AND a.IsVisible = 1
+    WHERE t.OrganizingClubId = ? AND a.IsVisible = 1" . $publicOnlySql . "
     ORDER BY a.CreatedDate DESC
 ");
             $stmt->execute([$clubId]);
@@ -270,7 +277,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 FROM Announcements a
                 " . $authorJoin . "
                 LEFT JOIN Tournaments t ON a.TournamentId = t.TournamentId
-                WHERE a.AnnouncementId = ?
+                WHERE a.AnnouncementId = ?" . $publicOnlySql . "
             ");
             $stmt->execute([$announcementId]);
             $announcement = $stmt->fetch();
@@ -351,8 +358,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         // SECURITY: Validate and sanitize inputs
-        $title = isset($_POST['title']) ? trim($_POST['title']) : null;
-$content = isset($_POST['content']) ? trim($_POST['content']) : null;
+        foreach (['title', 'content', 'tournamentId'] as $field) {
+            if (isset($_POST[$field]) && !is_string($_POST[$field])) {
+                sendJSON(['success' => false, 'message' => 'Invalid value for ' . $field], 400);
+            }
+        }
+        // Titles never hold < or > (defence in depth against markup)
+        $title = isset($_POST['title']) ? trim(str_replace(['<', '>'], '', $_POST['title'])) : null;
+        $content = isset($_POST['content']) ? trim($_POST['content']) : null;
         $tournamentId = isset($_POST['tournamentId']) ? filter_var($_POST['tournamentId'], FILTER_VALIDATE_INT) : null;
         
         if (!$title || !$content) {
@@ -386,41 +399,19 @@ $content = isset($_POST['content']) ? trim($_POST['content']) : null;
                 
         // SECURITY: Handle image upload with validation
         $imagePath = null;
-        if (isset($_FILES['featuredImage']) && $_FILES['featuredImage']['error'] === UPLOAD_ERR_OK) {
+        if (isset($_FILES['featuredImage']) && is_array($_FILES['featuredImage'])
+            && !is_array($_FILES['featuredImage']['error'] ?? null)
+            && ($_FILES['featuredImage']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
             $file = $_FILES['featuredImage'];
-            
-            // SECURITY: Validate file type
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mimeType = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-            
-            if (!in_array($mimeType, $allowedTypes)) {
-                sendJSON(['success' => false, 'message' => 'Invalid image type. Only JPG, PNG, GIF, WEBP allowed'], 400);
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $tooBig = in_array($file['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
+                sendJSON(['success' => false, 'message' => $tooBig ? 'Image too large' : 'Image upload failed'], 400);
             }
-            
-            // SECURITY: Validate file size (Site settings upload_mb_news, 5 MB by default)
-            $newsLimit = kbfUploadLimitBytes('upload_mb_news', 5);
-            if ($file['size'] > $newsLimit) {
-                sendJSON(['success' => false, 'message' => 'Image too large. Maximum ' . ($newsLimit / 1048576) . 'MB'], 400);
-            }
-            
-            // SECURITY: Generate unique filename to prevent path traversal
-            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $extension = 'jpg';
-            }
-            $filename = uniqid('post_', true) . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
-            $uploadPath = $uploadsDir . '/' . $filename;
-            
-            // SECURITY: Ensure filename doesn't contain path traversal
-            $filename = basename($filename);
-            $uploadPath = realpath($uploadsDir) . '/' . $filename;
-            
-            if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-                $imagePath = '/uploads/announcements/' . $filename;
-            } else {
-                sendJSON(['success' => false, 'message' => 'Failed to upload image'], 500);
+            // Same checks as tournament posters, then re-encoded (no EXIF)
+            list($imagePath, $imageError) = kbfStoreImage($file['tmp_name'], true, $uploadsDir,
+                ANNOUNCEMENT_IMAGE_URL_DIR, 'post_', kbfUploadLimitBytes('upload_mb_news', 5));
+            if ($imageError !== null) {
+                sendJSON(['success' => false, 'message' => $imageError], 400);
             }
         }
         
@@ -456,9 +447,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
-    
-    if (!isset($data['postId'])) {
+
+    if (!is_array($data) || !isset($data['postId'])) {
         sendJSON(['success' => false, 'message' => 'Post ID required'], 400);
+    }
+    foreach (['title', 'content', 'featuredImage'] as $field) {
+        if (isset($data[$field]) && !is_string($data[$field])) {
+            sendJSON(['success' => false, 'message' => 'Invalid value for ' . $field], 400);
+        }
+    }
+    if (is_array($data['postId'])) {
+        sendJSON(['success' => false, 'message' => 'Invalid post ID'], 400);
     }
     
     // SECURITY: Validate post ID
@@ -473,11 +472,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         // Build update query
         $updates = [];
         $params = [];
-        
-        // Update title if provided
-        // Update title if provided
+        $oldImage = null;
+        $newImage = null;
+
+        // Update title if provided (never < or >)
 if (isset($data['title'])) {
-    $title = trim($data['title']);
+    $title = trim(str_replace(['<', '>'], '', $data['title']));
     if (strlen($title) < 3 || strlen($title) > 200) {
         sendJSON(['success' => false, 'message' => 'Title must be between 3 and 200 characters'], 400);
     }
@@ -496,41 +496,19 @@ if (isset($data['content'])) {
 }
         
         // Update featured image if provided
-        if (isset($data['featuredImage']) && !empty($data['featuredImage'])) {
-            // Handle base64 image
-            $imageData = $data['featuredImage'];
-            
-            // Check if it's a base64 image
-            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
-                $imageData = substr($imageData, strpos($imageData, ',') + 1);
-                $type = strtolower($type[1]); // jpg, png, gif
-                
-                if (!in_array($type, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                    sendJSON(['success' => false, 'message' => 'Invalid image type'], 400);
-                }
-                
-                $imageData = base64_decode($imageData);
-                
-                if ($imageData === false) {
-                    sendJSON(['success' => false, 'message' => 'Base64 decode failed'], 400);
-                }
-                
-                // Validate file size (Site settings upload_mb_news, 5 MB by default)
-                $newsLimit = kbfUploadLimitBytes('upload_mb_news', 5);
-                if (strlen($imageData) > $newsLimit) {
-                    sendJSON(['success' => false, 'message' => 'Image too large. Maximum ' . ($newsLimit / 1048576) . 'MB'], 400);
-                }
-                
-                // Generate unique filename
-                $filename = uniqid('post_', true) . '_' . bin2hex(random_bytes(8)) . '.' . $type;
-                $uploadPath = $uploadsDir . '/' . $filename;
-                
-                if (file_put_contents($uploadPath, $imageData)) {
-                    $imagePath = '/uploads/announcements/' . $filename;
-                    $updates[] = "FeaturedImage = ?";
-                    $params[] = $imagePath;
-                }
+        // A new image (data URI): the same checks as tournament posters, then
+        // re-encoded (no EXIF). The old file is deleted after the update.
+        if (isset($data['featuredImage']) && strpos($data['featuredImage'], 'data:') === 0) {
+            list($newImage, $imageError) = kbfStoreDataUriImage($data['featuredImage'], $uploadsDir,
+                ANNOUNCEMENT_IMAGE_URL_DIR, 'post_', kbfUploadLimitBytes('upload_mb_news', 5));
+            if ($imageError !== null) {
+                sendJSON(['success' => false, 'message' => $imageError], 400);
             }
+            $stmt = $pdo->prepare("SELECT FeaturedImage FROM Announcements WHERE AnnouncementId = ?");
+            $stmt->execute([$postId]);
+            $oldImage = $stmt->fetchColumn();
+            $updates[] = "FeaturedImage = ?";
+            $params[] = $newImage;
         }
         
         // Update visibility if provided (hide/show; public pages only list IsVisible = 1)
@@ -553,16 +531,31 @@ if (isset($data['content'])) {
 
         // Add postId to params
         $params[] = $postId;
-        
+
         $query = "UPDATE Announcements SET " . implode(", ", $updates) . " WHERE AnnouncementId = ?";
-        
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        
+
+        try {
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
+        } catch (PDOException $e) {
+            if ($newImage !== null) {
+                kbfDeleteStoredImage($newImage, ANNOUNCEMENT_IMAGE_URL_DIR);
+            }
+            throw $e;
+        }
+
         if ($stmt->rowCount() === 0) {
+            if ($newImage !== null) {
+                kbfDeleteStoredImage($newImage, ANNOUNCEMENT_IMAGE_URL_DIR);
+            }
             sendJSON(['success' => false, 'message' => 'Post not found or no changes made'], 404);
         }
-        
+
+        // The replaced image file goes
+        if ($newImage !== null && is_string($oldImage) && $oldImage !== '' && $oldImage !== $newImage) {
+            kbfDeleteStoredImage($oldImage, ANNOUNCEMENT_IMAGE_URL_DIR);
+        }
+
         sendJSON(['success' => true, 'message' => 'Post updated successfully']);
         
     } catch(PDOException $e) {
@@ -587,14 +580,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     try {
         requirePostAccess($announcementId);
 
-        // SECURITY: Soft delete - just hide it
-        $stmt = $pdo->prepare("UPDATE Announcements SET IsVisible = 0 WHERE AnnouncementId = ?");
+        $stmt = $pdo->prepare("SELECT FeaturedImage FROM Announcements WHERE AnnouncementId = ?");
         $stmt->execute([$announcementId]);
-        
+        $oldImage = $stmt->fetchColumn();
+
+        // SECURITY: Soft delete - the post is hidden and its image removed
+        $stmt = $pdo->prepare("UPDATE Announcements SET IsVisible = 0, FeaturedImage = NULL WHERE AnnouncementId = ?");
+        $stmt->execute([$announcementId]);
+
         if ($stmt->rowCount() === 0) {
             sendJSON(['success' => false, 'message' => 'Announcement not found'], 404);
         }
-        
+
+        // Delete the image file (it is no longer online)
+        if (is_string($oldImage) && $oldImage !== '') {
+            kbfDeleteStoredImage($oldImage, ANNOUNCEMENT_IMAGE_URL_DIR);
+        }
+
         sendJSON(['success' => true, 'message' => 'Announcement deleted successfully']);
     } catch(PDOException $e) {
         error_log('Announcement deletion error: ' . $e->getMessage());

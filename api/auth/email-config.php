@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 require_once __DIR__ . '/../security-init.php';
 // KBF-UK emails.
 // Event emails (approvals, password resets, promotions and the rest) are sent

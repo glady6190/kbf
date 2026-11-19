@@ -62,21 +62,10 @@ if (isset($_SESSION['must_change_password']) && !isset($_SESSION['temp_user_id']
     unset($_SESSION['must_change_password']);
 }
 
-// Validate user fingerprint for full sessions
+// Full sessions (isLoggedIn() also checks the browser fingerprint, the
+// session version and the absolute 12-hour limit)
 if (isLoggedIn()) {
-    $currentFingerprint = generateUserFingerprint();
-    
-    // Session hijacking detection
-    if (!isset($_SESSION['user_fingerprint']) || $_SESSION['user_fingerprint'] !== $currentFingerprint) {
-        session_unset();
-        session_destroy();
-        sendJSON([
-            'success' => true,
-            'loggedIn' => false,
-            'message' => 'Session invalid'
-        ]);
-    }
-    
+
     // Per-user access, read fresh through api/permissions.php
     $access = currentAccess();
     $isSuperAdmin = isSuperAdmin();

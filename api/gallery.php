@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/security-init.php';
 require_once 'config.php';
+require_once __DIR__ . '/image-helpers.php';
 
 // ============================================
 // PUBLIC: GET ALL TOURNAMENTS WITH PHOTOS
@@ -169,8 +170,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJSON(['success' => false, 'message' => 'Maximum 10 photos per tournament'], 400);
         }
         
-        // Check if photos were uploaded
-        if (!isset($_FILES['photos']) || empty($_FILES['photos']['name'][0])) {
+        // Check if photos were uploaded (photos[] only)
+        if (!isset($_FILES['photos']) || !is_array($_FILES['photos']['name'] ?? null)
+            || !is_array($_FILES['photos']['tmp_name'] ?? null) || !is_array($_FILES['photos']['error'] ?? null)
+            || empty($_FILES['photos']['name'][0])) {
             sendJSON(['success' => false, 'message' => 'No photos uploaded'], 400);
         }
         
@@ -199,47 +202,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJSON(['success' => false, 'message' => 'Session error: User ID not found'], 500);
         }
         
+        // Same checks as tournament posters (finfo, getimagesize, extension
+        // from the detected type, random name, Site settings size limit), then
+        // re-encoded with GD so location and camera data are removed.
+        // Messages give the photo's number, never the uploaded file name.
+        $galleryLimit = kbfUploadLimitBytes('upload_mb_gallery', 15);
+        $urlDir = '/uploads/gallery/' . $tournamentId;
         for ($i = 0; $i < $fileCount; $i++) {
             // Skip if error
-            if ($filesArray['error'][$i] !== UPLOAD_ERR_OK) {
+            if (($filesArray['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
                 continue;
             }
-            
-            $fileName = $filesArray['name'][$i];
+
             $fileTmpName = $filesArray['tmp_name'][$i];
-            $fileSize = $filesArray['size'][$i];
-            
-            // Validate file size (Site settings upload_mb_gallery, 15 MB by default)
-            $galleryLimit = kbfUploadLimitBytes('upload_mb_gallery', 15);
-            if ($fileSize > $galleryLimit) {
-                sendJSON(['success' => false, 'message' => 'File ' . $fileName . ' exceeds ' . ($galleryLimit / 1048576) . 'MB limit'], 400);
+            if (!is_string($fileTmpName)) {
+                continue;
             }
-            
-            // Validate file type
-            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-            
-            if (!in_array($fileExtension, $allowedExtensions)) {
-                sendJSON(['success' => false, 'message' => 'File ' . $fileName . ' has invalid format. Only JPG, PNG, WEBP allowed'], 400);
+
+            list($filePath, $imageError) = kbfStoreImage($fileTmpName, true, $uploadDir, $urlDir, 'photo_', $galleryLimit, 'Photo ' . ($i + 1));
+            if ($imageError !== null) {
+                if ($uploadedPhotos) {
+                    auditLog('gallery_photos_uploaded', 'tournament', $tournamentId,
+                        count($uploadedPhotos) . ' photo(s) uploaded for tournament ' . (int) $tournamentId . ' before an error');
+                }
+                $prefix = strpos($imageError, 'Photo ') === 0 ? '' : 'Photo ' . ($i + 1) . ': ';
+                sendJSON(['success' => false, 'message' => $prefix . $imageError, 'photos' => $uploadedPhotos], 400);
             }
-            
-            // Verify it's actually an image
-            $imageInfo = getimagesize($fileTmpName);
-            if ($imageInfo === false) {
-                sendJSON(['success' => false, 'message' => 'File ' . $fileName . ' is not a valid image'], 400);
-            }
-            
-            // Generate unique filename
-            $newFileName = uniqid('photo_', true) . '.' . $fileExtension;
-            $uploadPath = $uploadDir . $newFileName;
-            
-            // Move uploaded file
-            if (!move_uploaded_file($fileTmpName, $uploadPath)) {
-                sendJSON(['success' => false, 'message' => 'Failed to upload ' . $fileName], 500);
-            }
-            
+
             // Insert into database
-            $filePath = '/uploads/gallery/' . $tournamentId . '/' . $newFileName;
             $insertQuery = "
                 INSERT INTO GalleryPhotos (TournamentId, FilePath, UploadedBy, DisplayOrder)
                 VALUES (?, ?, ?, ?)
@@ -259,6 +249,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
         }
         
+        if ($uploadedPhotos) {
+            auditLog('gallery_photos_uploaded', 'tournament', $tournamentId,
+                count($uploadedPhotos) . ' photo(s) uploaded for tournament ' . (int) $tournamentId);
+        }
+
         sendJSON([
             'success' => true,
             'message' => count($uploadedPhotos) . ' photo(s) uploaded successfully',
@@ -281,7 +276,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     
     try {
         $input = json_decode(file_get_contents('php://input'), true);
-        $photoId = (int)($input['photoId'] ?? 0);
+        if (!is_array($input) || is_array($input['photoId'] ?? null)) {
+            sendJSON(['success' => false, 'message' => 'Photo ID is required'], 400);
+        }
+        $photoId = (int) filter_var($input['photoId'] ?? 0, FILTER_VALIDATE_INT);
         
         if (!$photoId) {
             sendJSON(['success' => false, 'message' => 'Photo ID is required'], 400);
@@ -306,17 +304,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // Verify access to the photo's tournament (ownership from the database)
         requireGalleryTournamentAccess($photo);
         
-        // Delete file from server
-        $filePath = __DIR__ . '/../' . $photo['FilePath'];
-        if (file_exists($filePath)) {
-            unlink($filePath);
-        }
-        
         // Delete from database
         $deleteQuery = "DELETE FROM GalleryPhotos WHERE PhotoId = ?";
         $stmt = $pdo->prepare($deleteQuery);
         $stmt->execute([$photoId]);
-        
+
+        // Delete the file, only ever inside this tournament's gallery folder
+        kbfDeleteStoredImage((string) $photo['FilePath'], '/uploads/gallery/' . (int) $photo['TournamentId']);
+
+        auditLog('gallery_photo_deleted', 'tournament', (int) $photo['TournamentId'], 'Photo ' . (int) $photoId . ' deleted');
+
         sendJSON([
             'success' => true,
             'message' => 'Photo deleted successfully'

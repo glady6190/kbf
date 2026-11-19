@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 /**
  * Security Initialization
  * Handles HTTPS enforcement and additional security policies
@@ -6,14 +8,14 @@
  */
 // ============================================
 // FORCE HTTPS - CRITICAL SECURITY
+// Done in config.php (loaded next by every endpoint), which redirects to the
+// Website address from Site settings (site_base_url). Redirects and links are
+// never built from the request's Host header.
 // ============================================
-if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') {
-    if (!empty($_SERVER['HTTP_HOST']) && !empty($_SERVER['REQUEST_URI'])) {
-        $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-        header('Location: ' . $redirect, true, 301);
-        exit;
-    }
-}
+
+// Never show PHP errors to visitors; log them instead
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 
 // ============================================
 // CONTENT SECURITY POLICY

@@ -63,6 +63,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
   <script>
     // Page guard (shared shell): needs content.all_news_gallery
@@ -118,14 +119,6 @@
 
             const container = document.getElementById('announcementsList');
 
-            // SECURITY: HTML escape function
-            function escapeHtml(text) {
-                if (!text) return '';
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-
             if (data.success && data.announcements.length > 0) {
                 container.innerHTML = data.announcements.map(ann => `
                     <div class="border-4 border-gray-700 bg-slate-800 p-5 ${ann.IsVisible == 0 ? 'opacity-60' : ''}">
@@ -138,22 +131,22 @@
                                 ${ann.IsVisible == 1 ? 'Visible' : 'Hidden'}
                             </span>
                         </div>
-                        ${ann.FeaturedImage ? `<img src="${escapeHtml(ann.FeaturedImage)}" alt="${escapeHtml(ann.Title)}" class="w-full h-32 object-contain bg-slate-700 border-4 border-gray-700 mb-4">` : ''}
+                        ${ann.FeaturedImage ? `<img src="${escapeHtml(safeUrl(ann.FeaturedImage))}" alt="${escapeHtml(ann.Title)}" class="w-full h-32 object-contain bg-slate-700 border-4 border-gray-700 mb-4">` : ''}
                         <p class="text-sm text-gray-300 mb-3 font-semibold">${escapeHtml(ann.Content.substring(0, 150))}${ann.Content.length > 150 ? '...' : ''}</p>
                         <div class="flex justify-between items-center text-xs mb-4 pb-4 border-b-4 border-gray-700">
                             <span class="text-gray-400 font-bold uppercase">Posted by ${escapeHtml(ann.AuthorName)}</span>
                             <span class="text-gray-400 font-bold uppercase">${new Date(ann.PublishedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="toggleVisibility(${ann.AnnouncementId}, ${ann.IsVisible == 1 ? 0 : 1})"
+                            <button onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1})"
                                     class="flex-1 px-3 py-2 ${ann.IsVisible == 1 ? 'bg-yellow-500' : 'bg-green-500'} text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:opacity-90 transition">
                                 ${ann.IsVisible == 1 ? 'Hide' : 'Show'}
                             </button>
-                            <button onclick="deleteAnnouncement(${ann.AnnouncementId})" 
+                            <button onclick="deleteAnnouncement(${Number(ann.AnnouncementId)})"
                                     class="px-3 py-2 bg-red-500 text-white border-4 border-gray-700 font-black uppercase text-xs hover:bg-red-600 transition">
                                 Delete
                             </button>
-                            <a href="/post?id=${ann.AnnouncementId}" target="_blank"
+                            <a href="/post?id=${encodeURIComponent(ann.AnnouncementId)}" target="_blank"
                                class="px-3 py-2 bg-indigo-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-indigo-400 transition">
                                 View
                             </a>

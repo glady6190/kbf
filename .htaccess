@@ -9,6 +9,15 @@ Options +FollowSymLinks
 RewriteEngine On
 
 # ============================================
+# ALLOW PHP EXECUTION (except in uploads)
+# ============================================
+# By default, allow PHP execution everywhere. This comes BEFORE the deny
+# rules below: a later section wins, so every deny below overrides it.
+<FilesMatch "\.php$">
+    Require all granted
+</FilesMatch>
+
+# ============================================
 # PROTECT SENSITIVE FILES
 # ============================================
 # Block access to config files
@@ -21,18 +30,21 @@ RewriteEngine On
     Require all denied
 </FilesMatch>
 
-# Block access to backup and sensitive file types
-<FilesMatch "\.(bak|config|sql|log|sh|ini)$">
+# Block access to backup and sensitive file types (.sql, .md, .log, .env ...)
+<FilesMatch "\.(bak|config|sql|md|log|env|sh|ini|lock|dist)$">
     Require all denied
 </FilesMatch>
 
-# ============================================
-# ALLOW PHP EXECUTION (except in uploads)
-# ============================================
-# By default, allow PHP execution everywhere
-<FilesMatch "\.php$">
-    Require all granted
+# Block Composer files and the old default page
+<FilesMatch "^(composer\.json|composer\.lock|default\.php)$">
+    Require all denied
 </FilesMatch>
+
+# Block whole folders: Composer libraries, local tool settings, database
+# scripts, runtime storage and scheduled jobs (each also has its own rules
+# where possible)
+RewriteRule ^(vendor|\.claude|database|storage|jobs)(/|$) - [F,L]
+RewriteRule (^|/)\.env - [F,L]
 
 # ============================================
 # CORS HEADERS FOR API
@@ -59,8 +71,10 @@ RewriteEngine On
 # ============================================
 # HTTPS ENFORCEMENT
 # ============================================
+# Always to the site's own address (the Website address in Site settings),
+# never to the request's Host header
 RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteRule ^ https://kbf-uk.org%{REQUEST_URI} [L,R=301]
 
 # ============================================
 # MAINTENANCE MODE (Site settings, Super Admin only)
@@ -96,16 +110,8 @@ RewriteRule ^([^.]+)\.html$ /$1 [R=301,L]
 # ============================================
 # UPLOADS DIRECTORY ACCESS
 # ============================================
-# Explicitly allow access to uploads directory
-<Directory "/uploads">
-    Require all granted
-</Directory>
-
-# Allow image files in uploads (fallback rule)
-<FilesMatch "^uploads/.*\.(jpg|jpeg|png|webp|gif)$">
-    Require all granted
-</FilesMatch>
-
+# What can be served from uploads/ is decided by uploads/.htaccess
+# (deny by default, images only, no scripts).
 # Prevent rewrites for uploads directory
 RewriteRule ^uploads/ - [L]
 

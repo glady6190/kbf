@@ -45,6 +45,16 @@ const KBF_CHANNEL_COLUMNS = [
     'news' => ['NewsPostApplies', 'NewsPostEnabled', 'News post'],
 ];
 
+// The wording (and attachments) of the two password emails can only be
+// changed by a Super Admin: they carry the password reset link
+const KBF_SUPER_ADMIN_TEMPLATE_EVENTS = ['password_reset_requested', 'password_reset_completed'];
+
+function requireTemplateEditor($eventKey) {
+    if (in_array($eventKey, KBF_SUPER_ADMIN_TEMPLATE_EVENTS, true) && !isSuperAdmin()) {
+        sendJSON(['success' => false, 'message' => 'Only a Super Admin can change the wording of the password emails.'], 403);
+    }
+}
+
 // ---------- helpers ----------
 function readEventKey($value) {
     return (is_string($value) && isset(KBF_NOTIFY_EVENTS[$value])) ? $value : null;
@@ -220,7 +230,9 @@ if ($method === 'GET') {
                 'reminderDays' => $key === 'results_overdue' ? kbfSettingInt('results_reminder_days', 7, 1, 60) : null,
                 'dailyLimit' => kbfMailSettings($pdo)['limit'],
                 'attachmentLimit' => kbfAttachmentMaxBytes(),
-                'canEdit' => !isImpersonating(),
+                // The password emails: Super Admins only
+                'canEdit' => !isImpersonating()
+                    && (!in_array($key, KBF_SUPER_ADMIN_TEMPLATE_EVENTS, true) || isSuperAdmin()),
             ]);
         }
 
@@ -318,9 +330,26 @@ if ($method === 'POST') {
                 if (readAudience($key, $audience) === null || !$settings[$audience]['applies'] || !is_array($t)) {
                     continue;
                 }
+                if (!is_string($t['subject'] ?? '') || !is_string($t['bodyHtml'] ?? '')) {
+                    sendJSON(['success' => false, 'message' => 'Invalid request body'], 400);
+                }
+                $rawBody = (string) ($t['bodyHtml'] ?? '');
                 $subject = cleanSubject($t['subject'] ?? '');
-                $body = kbfCleanEmailHtml((string) ($t['bodyHtml'] ?? ''));
+                $body = kbfCleanEmailHtml($rawBody);
                 $tab = $def['audiences'][$audience];
+                // Links: a link placeholder only as a whole address or plain text
+                foreach ([$subject, $rawBody, $body] as $checkText) {
+                    $linkError = kbfCheckLinkPlaceholders($checkText);
+                    if ($linkError !== null) {
+                        sendJSON(['success' => false, 'message' => $tab . ': ' . $linkError, 'audience' => $audience], 400);
+                    }
+                }
+                // The password emails: Super Admins only (only when the wording changes)
+                $current = kbfGetTemplate($pdo, kbfTemplateKey($key, $audience));
+                if ($current['subject'] !== $subject
+                    || ($current['bodyHtml'] !== $body && kbfCleanEmailHtml($current['bodyHtml']) !== $body)) {
+                    requireTemplateEditor($key);
+                }
                 if ($subject === '') {
                     sendJSON(['success' => false, 'message' => $tab . ': the subject is required.', 'audience' => $audience], 400);
                 }
@@ -460,6 +489,7 @@ if ($method === 'POST') {
             if ($key === null || $audience === null) {
                 sendJSON(['success' => false, 'message' => 'Unknown email'], 404);
             }
+            requireTemplateEditor($key);
             $templateKey = kbfTemplateKey($key, $audience);
             $stmt = $pdo->prepare("DELETE FROM EmailTemplates WHERE TemplateKey = ?");
             $stmt->execute([$templateKey]);
@@ -539,6 +569,7 @@ if ($method === 'POST') {
             if ($key === null || $audience === null) {
                 sendJSON(['success' => false, 'message' => 'Unknown email'], 404);
             }
+            requireTemplateEditor($key);
             $file = $_FILES['file'] ?? null;
             if (!$file || !is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
                 $tooBig = $file && in_array($file['error'] ?? 0, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
@@ -591,6 +622,7 @@ if ($method === 'POST') {
             if (!$row) {
                 sendJSON(['success' => false, 'message' => 'File not found'], 404);
             }
+            requireTemplateEditor(explode('.', (string) $row['TemplateKey'])[0]);
             $stmt = $pdo->prepare("DELETE FROM TemplateAttachments WHERE Id = ?");
             $stmt->execute([$id]);
 

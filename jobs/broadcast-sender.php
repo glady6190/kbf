@@ -100,7 +100,8 @@ try {
     // 1. SETTINGS
     // ============================================
     $batchSize = (int) getSetting($pdo, 'broadcast_batch_size', 20);
-    $baseUrl   = rtrim((string) getSetting($pdo, 'site_base_url', 'https://kbf-uk.org'), '/');
+    $baseUrl   = trim((string) getSetting($pdo, 'site_base_url', 'https://kbf-uk.org'));
+    if (!kbfIsValidSiteBaseUrl($baseUrl)) { $baseUrl = 'https://kbf-uk.org'; }
     $retention = (int) getSetting($pdo, 'email_log_retention_days', 180);
     if ($batchSize < 1) { $batchSize = 20; }
 

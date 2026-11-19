@@ -1864,6 +1864,8 @@
         </script>
     </footer>
 
+    <!-- Shared HTML escaping helpers -->
+    <script src="/js/escape.js"></script>
     <!-- Shared news and promotion helpers (also used by news.html) -->
     <script src="/js/news-helpers.js"></script>
     <script>
@@ -1892,13 +1894,6 @@
         const arrow = document.getElementById('mobile-dropdown-arrow');
         dropdown.classList.toggle('active');
         arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 
     // ============================================

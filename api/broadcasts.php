@@ -151,6 +151,7 @@ function bReadBody() {
         return [$_POST, true];
     }
     $data = json_decode(file_get_contents('php://input'), true);
+    kbfRequireScalarFields($data, ['targetGrades']);
     return [is_array($data) ? $data : null, false];
 }
 
@@ -186,9 +187,16 @@ function bReadMessage(array $data) {
     if ($subject === '' || strlen($subject) > 255) {
         bFail('The subject is required and must be 1 to 255 characters.', 400, 'subject');
     }
-    $bodyHtml = kbfCleanEmailHtml(is_string($data['bodyHtml'] ?? null) ? $data['bodyHtml'] : '');
+    $rawBody = is_string($data['bodyHtml'] ?? null) ? $data['bodyHtml'] : '';
+    $bodyHtml = kbfCleanEmailHtml($rawBody);
     if (trim(strip_tags($bodyHtml)) === '') {
         bFail('The message is required.', 400, 'body');
+    }
+    foreach ([$rawSubject, $rawBody, $bodyHtml] as $checkText) {
+        $linkError = kbfCheckLinkPlaceholders($checkText);
+        if ($linkError !== null) {
+            bFail($linkError, 400, 'body');
+        }
     }
     $unknown = kbfUnknownPlaceholders($rawSubject . ' ' . $bodyHtml, KBF_BROADCAST_PLACEHOLDERS);
     if ($unknown) {

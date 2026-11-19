@@ -88,7 +88,7 @@
                     <div>
                         <label class="label" for="site_base_url">Website address</label>
                         <input class="field" type="url" id="site_base_url" autocomplete="off" aria-describedby="site_base_url-hint">
-                        <p class="hint" id="site_base_url-hint">Used to build links in emails. No slash at the end.</p>
+                        <p class="hint" id="site_base_url-hint">Used to build links in emails, including password reset links. https only, no path and no slash at the end. Only a Super Admin can change it.</p>
                     </div>
                     <div>
                         <label class="label" for="social_facebook">Facebook page (optional)</label>
@@ -205,6 +205,7 @@
         </div>
     </div>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -327,6 +328,8 @@
             const maintenanceLocked = !canEdit || !isSuper;
             document.getElementById('maintenance_mode').disabled = maintenanceLocked;
             document.getElementById('maintenance_message').disabled = maintenanceLocked;
+            // The website address builds every email link: Super Admins only
+            document.getElementById('site_base_url').disabled = maintenanceLocked;
             document.getElementById('maintenanceReadOnly').classList.toggle('hidden', isSuper);
             document.getElementById('readOnlyNote').classList.toggle('hidden', canEdit);
             document.getElementById('saveBtn').disabled = !canEdit;
@@ -376,6 +379,7 @@
     function collect() {
         const out = {};
         TEXT_KEYS.forEach(k => { out[k] = document.getElementById(k).value.trim(); });
+        if (!isSuper) delete out.site_base_url;
         UPLOADS.forEach(u => { out[u.key] = document.getElementById(u.key).value.trim(); });
         SWITCH_KEYS.forEach(k => { out[k] = switchOn(k) ? '1' : '0'; });
         if (isSuper) {

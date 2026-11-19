@@ -198,6 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_array($input)) {
         sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
     }
+    kbfRequireScalarFields($input);
 
     if (isset($input['role']) && $input['role'] !== '' && $input['role'] !== 'Player') {
         sendJSON(['success' => false, 'message' => 'Staff are added on the Staff page'], 400);
@@ -430,10 +431,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
-    
-    if (!isset($data['userId'])) {
+
+    if (!is_array($data) || !isset($data['userId'])) {
         sendJSON(['success' => false, 'message' => 'User ID required'], 400);
     }
+    kbfRequireScalarFields($data);
     
     $userId = filter_var($data['userId'], FILTER_VALIDATE_INT);
     if (!$userId) {

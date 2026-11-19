@@ -1,4 +1,6 @@
 <?php
+// Include-only: refuse to run when requested directly
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__)) { http_response_code(404); exit; }
 // ============================================
 // KBF-UK: 2-STEP VERIFICATION (authenticator app)
 // Included by config.php, so it is available wherever config.php is.
@@ -433,12 +435,9 @@ function twoStepNextStep($userId) {
 }
 
 function startTwoStepPending($userId, $mode) {
-    session_regenerate_id(true);
-    // Never a full session while pending
-    foreach (['user_id', 'email', 'role', 'name', 'category_id', 'club_id', 'user_fingerprint',
-              'temp_user_id', 'temp_email', 'must_change_password', 'two_step_setup'] as $key) {
-        unset($_SESSION[$key]);
-    }
+    // Never a full session while pending: the whole old session (including
+    // any impersonation keys) is cleared
+    kbfClearSessionForSignIn();
     $_SESSION['two_step_pending'] = [
         'user_id' => (int) $userId,
         'mode' => $mode === 'setup' ? 'setup' : 'verify',
@@ -497,18 +496,8 @@ function completeSignIn($userId) {
         return false;
     }
 
-    clearTwoStepPending();
-    session_regenerate_id(true);
-
-    $_SESSION['user_id'] = $user['UserId'];
-    $_SESSION['email'] = $user['Email'];
-    $_SESSION['role'] = $user['Role'];
-    $_SESSION['name'] = $user['FirstName'] . ' ' . $user['LastName'];
-    $_SESSION['category_id'] = $user['CategoryId'];
-    $_SESSION['club_id'] = $user['ClubId'];
-    $_SESSION['user_fingerprint'] = generateUserFingerprint();
-    $_SESSION['CREATED'] = time();
-    $_SESSION['LAST_ACTIVITY'] = time();
+    // A brand-new session: the whole old one is cleared first
+    kbfBeginUserSession($user);
 
     $stmt = $pdo->prepare("UPDATE Users SET LastLoginDate = NOW() WHERE UserId = ?");
     $stmt->execute([$user['UserId']]);
