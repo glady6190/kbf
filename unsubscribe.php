@@ -25,6 +25,8 @@ require_once __DIR__ . '/api/config-helpers.php';
 
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('X-Robots-Tag: noindex, nofollow');
+// The page uses only its own inline styles and posts only to itself (SEC-16)
+header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'");
 
 function unsubContactEmail() {
     $email = trim((string) kbfSetting('contact_email', 'admin@kbf-uk.org'));

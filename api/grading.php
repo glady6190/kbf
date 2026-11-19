@@ -533,14 +533,8 @@ function kbfRunSeasonReset($pdo, $timestamp = null) {
 // ============================================
 // POINTS PER PLACING
 // ============================================
-const KBF_PLACING_ROWS = [
-    // placing => [[RoundType, Outcome, Reason], ...]
-    'winners' => [['Final', 'Winner', 'Winner']],
-    'runnersUp' => [['Final', 'Loser', 'Runner-up']],
-    'semiFinalists' => [['SemiFinal', 'Winner', 'Semi-Finalist'], ['SemiFinal', 'Loser', 'Semi-Finalist']],
-    'quarterFinalists' => [['QuarterFinal', 'Winner', 'Quarter-Finalist'], ['QuarterFinal', 'Loser', 'Quarter-Finalist']],
-];
-const KBF_PLACING_DEFAULTS = ['winners' => 100, 'runnersUp' => 75, 'semiFinalists' => 50, 'quarterFinalists' => 30];
+// KBF_PLACING_ROWS and KBF_PLACING_DEFAULTS are in api/config-helpers.php
+// (one table shared with getRoundPointsMap)
 
 // Read fresh from RoundPoints (not the per-request cache), with the
 // historical values when a row is missing

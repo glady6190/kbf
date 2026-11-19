@@ -247,6 +247,8 @@ FROM (
     UNION ALL SELECT 'session_timeout_minutes' UNION ALL SELECT 'audit_log_retention_days'
     UNION ALL SELECT 'terms_version' UNION ALL SELECT 'results_reminder_days'
     UNION ALL SELECT 'close_to_promotion_points' UNION ALL SELECT 'email_reserve_normal'
+    UNION ALL SELECT 'retention_ip_days' UNION ALL SELECT 'retention_email_body_days'
+    UNION ALL SELECT 'retention_rejected_registration_days' UNION ALL SELECT 'file_cleanup_mode'
 ) e
 LEFT JOIN Settings s ON s.SettingKey = e.SettingKey
 WHERE s.SettingKey IS NULL;

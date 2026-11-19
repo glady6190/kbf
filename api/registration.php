@@ -4,16 +4,18 @@ require_once __DIR__ . '/security-init.php';
 require_once 'config.php';
 require_once __DIR__ . '/config-helpers.php';
 require_once __DIR__ . '/grading.php';
-require_once __DIR__ . '/auth/email-config.php';
+require_once __DIR__ . '/notify.php';
 
 
 
 // The one reply for every accepted form, new or duplicate (SEC-13)
 const KBF_REGISTRATION_REPLY = 'Thank you. We will email you shortly.';
 
-// Load reCAPTCHA configuration
-$recaptchaConfig = require_once 'recaptcha-config.php';
-define('RECAPTCHA_SECRET_KEY', $recaptchaConfig['secret_key']);
+// reCAPTCHA: the secret key comes from .env (RECAPTCHA_SECRET_KEY) and is
+// never sent to the browser. The public site key is written in register.html
+// (data-sitekey); when the keys are changed in Google's console, update both
+// .env and register.html.
+define('RECAPTCHA_SECRET_KEY', getenv('RECAPTCHA_SECRET_KEY'));
 
 /**
  * Verify reCAPTCHA response with Google
@@ -118,10 +120,7 @@ if ($result['count'] >= $perIpLimit) {
     }
 
     // The version agreed to always comes from Site settings, never from the browser
-    $termsVersion = substr(trim((string) kbfSetting('terms_version', '2026-11')), 0, 20);
-    if ($termsVersion === '') {
-        $termsVersion = '2026-11';
-    }
+    $termsVersion = kbfTermsVersion();
 
     // Validate required fields
     $requiredFields =['firstName', 'lastName', 'email', 'phoneNumber', 'location', 'categoryId'];
@@ -337,7 +336,7 @@ $phoneNumber = $cleanPhoneNumber;
         }
         
         // Resize image and fix EXIF orientation
-        if (!resizeImage($uploadPath, 500, 500)) {
+        if (!resizeImage($uploadPath, KBF_PROFILE_PHOTO_SIZE, KBF_PROFILE_PHOTO_SIZE)) {
             unlink($uploadPath);
             sendJSON(['success' => false, 'message' => 'Failed to process image'], 500);
         }
@@ -354,12 +353,9 @@ $phoneNumber = $cleanPhoneNumber;
 $pdo->beginTransaction();
 
 try {
-    // Lock BOTH tables to prevent race conditions during ID generation
-    $pdo->query("SELECT RegistrationId FROM PlayerRegistrations ORDER BY RegistrationId DESC LIMIT 1 FOR UPDATE");
-    $pdo->query("SELECT UserId FROM Users ORDER BY UserId DESC LIMIT 1 FOR UPDATE");
-    
     // New KBF ID: the highest number is kept in Settings (locked row), so
-    // no table is scanned (api/config-helpers.php kbfNextKbfId)
+    // no table is scanned; kbfNextKbfId also locks Users then
+    // PlayerRegistrations, the same order as every other caller
     $playerId = kbfNextKbfId($pdo);
     
     // Insert into PlayerRegistrations

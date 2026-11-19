@@ -1060,7 +1060,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
            p4.FirstName as Partner2FirstName, p4.LastName as Partner2LastName, p4.PlayerId as Partner2PlayerId,
            c4.ShortName as Partner2Category,
            COALESCE(p1.IsRemoved, 0) as P1Removed, COALESCE(p2.IsRemoved, 0) as Partner1Removed,
-           COALESCE(p3.IsRemoved, 0) as P2Removed, COALESCE(p4.IsRemoved, 0) as Partner2Removed
+           COALESCE(p3.IsRemoved, 0) as P2Removed, COALESCE(p4.IsRemoved, 0) as Partner2Removed,
+           (COALESCE(p1.IsActive, 1) = 0) as P1Inactive, (COALESCE(p2.IsActive, 1) = 0) as Partner1Inactive,
+           (COALESCE(p3.IsActive, 1) = 0) as P2Inactive, (COALESCE(p4.IsActive, 1) = 0) as Partner2Inactive
     FROM Matches m
     LEFT JOIN Categories cat ON m.CategoryId = cat.CategoryId
     LEFT JOIN Users p1 ON m.Player1Id = p1.UserId
@@ -1755,7 +1757,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
             sendJSON(['success' => false, 'message' => 'Tournaments with results cannot be deleted'], 409);
         }
 
-        // Delete related records first (foreign key cascade might handle this)
+        // Gallery photo files are removed after the commit (QUAL-12)
+        $stmt = $pdo->prepare("SELECT FilePath FROM GalleryPhotos WHERE TournamentId = ?");
+        $stmt->execute([$tournamentId]);
+        $galleryFiles = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Delete related records first. TournamentCategories and
+        // TournamentPhotos are old tables that still exist on the live
+        // database (base-schema-live.sql); GalleryPhotos would also go by its
+        // ON DELETE CASCADE.
+        $stmt = $pdo->prepare("DELETE FROM GalleryPhotos WHERE TournamentId = ?");
+        $stmt->execute([$tournamentId]);
+
         $stmt = $pdo->prepare("DELETE FROM TournamentCategories WHERE TournamentId = ?");
         $stmt->execute([$tournamentId]);
 
@@ -1784,6 +1797,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
         if ($posterRow && !empty($posterRow['PosterPath'])) {
             deleteTournamentPoster($posterRow['PosterPath']);
+        }
+
+        // Gallery photos, their display versions and thumbnails, then the
+        // tournament's own gallery folder (uploads/gallery/<id>/) if empty
+        require_once __DIR__ . '/image-helpers.php';
+        $galleryUrlDir = '/uploads/gallery/' . (int) $tournamentId;
+        foreach ($galleryFiles as $galleryPath) {
+            kbfDeleteStoredImage((string) $galleryPath, $galleryUrlDir);
+        }
+        $galleryDir = dirname(__DIR__) . $galleryUrlDir;
+        if (is_dir($galleryDir)) {
+            foreach (scandir($galleryDir) ?: [] as $name) {
+                // Anything left there belonged only to this tournament
+                if (preg_match('/^[A-Za-z0-9_\-]+(\.(d|t))?\.(jpe?g|png|webp|gif)$/i', $name) && is_file($galleryDir . '/' . $name)) {
+                    @unlink($galleryDir . '/' . $name);
+                }
+            }
+            @rmdir($galleryDir);
         }
 
         sendJSON(['success' => true, 'message' => 'Tournament deleted successfully']);

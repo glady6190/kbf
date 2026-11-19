@@ -12,6 +12,28 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
  * them — the same pattern the rest of api/ follows.
  */
 
+// ============================================
+// SHARED BUSINESS CONSTANTS (one place each)
+// ============================================
+
+// KBF IDs are this prefix plus a number of at least 3 digits (KBFUK001)
+const KBF_ID_PREFIX = 'KBFUK';
+
+// Player photos are scaled to fit inside this square (pixels)
+const KBF_PROFILE_PHOTO_SIZE = 500;
+
+// Points per placing: which RoundPoints rows each placing is stored in, and
+// the historical values used when a row is missing (getRoundPointsMap,
+// kbfPlacingPoints in api/grading.php)
+const KBF_PLACING_ROWS = [
+    // placing => [[RoundType, Outcome, Reason], ...]
+    'winners' => [['Final', 'Winner', 'Winner']],
+    'runnersUp' => [['Final', 'Loser', 'Runner-up']],
+    'semiFinalists' => [['SemiFinal', 'Winner', 'Semi-Finalist'], ['SemiFinal', 'Loser', 'Semi-Finalist']],
+    'quarterFinalists' => [['QuarterFinal', 'Winner', 'Quarter-Finalist'], ['QuarterFinal', 'Loser', 'Quarter-Finalist']],
+];
+const KBF_PLACING_DEFAULTS = ['winners' => 100, 'runnersUp' => 75, 'semiFinalists' => 50, 'quarterFinalists' => 30];
+
 /**
  * Fetch a single value from the Settings table.
  *
@@ -151,21 +173,14 @@ function getRoundPointsMap($pdo) {
         return $cached;
     }
 
-    // Historical hardcoded values — the behaviour-preserving fallback.
-    $fallback = [
-        'Final' => [
-            'Winner' => ['points' => 100, 'reason' => 'Winner'],
-            'Loser'  => ['points' => 75,  'reason' => 'Runner-up'],
-        ],
-        'SemiFinal' => [
-            'Winner' => ['points' => 50, 'reason' => 'Semi-Finalist'],
-            'Loser'  => ['points' => 50, 'reason' => 'Semi-Finalist'],
-        ],
-        'QuarterFinal' => [
-            'Winner' => ['points' => 30, 'reason' => 'Quarter-Finalist'],
-            'Loser'  => ['points' => 30, 'reason' => 'Quarter-Finalist'],
-        ],
-    ];
+    // Historical values — the behaviour-preserving fallback (Final 100/75,
+    // SemiFinal 50/50, QuarterFinal 30/30), from the shared placing table
+    $fallback = [];
+    foreach (KBF_PLACING_ROWS as $placing => $targets) {
+        foreach ($targets as $t) {
+            $fallback[$t[0]][$t[1]] = ['points' => KBF_PLACING_DEFAULTS[$placing], 'reason' => $t[2]];
+        }
+    }
 
     try {
         $stmt = $pdo->query("SELECT RoundType, Outcome, Points, Reason FROM RoundPoints");
@@ -304,6 +319,12 @@ function kbfJobRunFinish($pdo, $runId, $status, $summary) {
  * @return string
  */
 function kbfNextKbfId($pdo) {
+    // Every caller locks the two tables in this one order (Users, then
+    // PlayerRegistrations), so a sign-up and an admin "add player" at the
+    // same moment wait for each other instead of deadlocking
+    $pdo->query("SELECT UserId FROM Users ORDER BY UserId DESC LIMIT 1 FOR UPDATE");
+    $pdo->query("SELECT RegistrationId FROM PlayerRegistrations ORDER BY RegistrationId DESC LIMIT 1 FOR UPDATE");
+
     $stmt = $pdo->prepare("SELECT SettingValue FROM Settings WHERE SettingKey = 'last_kbf_id_number' FOR UPDATE");
     $stmt->execute();
     $stored = $stmt->fetchColumn();
@@ -313,8 +334,8 @@ function kbfNextKbfId($pdo) {
         $lastNumber = 0;
         foreach (['Users', 'PlayerRegistrations'] as $table) {
             $max = $pdo->query("
-                SELECT MAX(CAST(SUBSTRING(PlayerId, 6) AS UNSIGNED)) FROM $table
-                WHERE PlayerId LIKE 'KBFUK%'
+                SELECT MAX(CAST(SUBSTRING(PlayerId, " . (strlen(KBF_ID_PREFIX) + 1) . ") AS UNSIGNED)) FROM $table
+                WHERE PlayerId LIKE '" . KBF_ID_PREFIX . "%'
             ")->fetchColumn();
             $lastNumber = max($lastNumber, (int) $max);
         }
@@ -328,7 +349,7 @@ function kbfNextKbfId($pdo) {
     ");
     for ($i = 0; $i < 1000; $i++) {
         $lastNumber++;
-        $kbfId = 'KBFUK' . str_pad((string) $lastNumber, 3, '0', STR_PAD_LEFT);
+        $kbfId = KBF_ID_PREFIX . str_pad((string) $lastNumber, 3, '0', STR_PAD_LEFT);
         $taken->execute([$kbfId, $kbfId]);
         if ((int) $taken->fetchColumn() === 0) {
             break;
@@ -341,6 +362,22 @@ function kbfNextKbfId($pdo) {
     ");
     $save->execute([(string) $lastNumber]);
     return $kbfId;
+}
+
+// ============================================
+// TERMS VERSION
+// ============================================
+
+/**
+ * The current terms version (setting terms_version, e.g. "2026-11"), as
+ * saved in TermsVersion when someone agrees to the terms (at most 20
+ * characters). Used by registration and by staff adding a player.
+ *
+ * @return string
+ */
+function kbfTermsVersion() {
+    $version = substr(trim((string) kbfSetting('terms_version', '2026-11')), 0, 20);
+    return $version === '' ? '2026-11' : $version;
 }
 
 // ============================================
@@ -382,6 +419,19 @@ function kbfMaskRemovedInMatches(array $rows, $keepIds = false) {
                 }
             }
             unset($row[$flag]);
+
+            // Deactivated players (SEC-18): for visitors who are not staff
+            // the name stays (results stay readable) but nothing links to a
+            // profile: no user id, KBF ID or grade
+            $inactiveFlag = str_replace('Removed', 'Inactive', $flag);
+            if (!empty($row[$inactiveFlag]) && !$keepIds) {
+                foreach ([$keys[2], $keys[3], $keys[4]] as $key) {
+                    if (array_key_exists($key, $row)) {
+                        $row[$key] = null;
+                    }
+                }
+            }
+            unset($row[$inactiveFlag]);
         }
     }
     unset($row);

@@ -712,6 +712,8 @@
                 : '<span class="text-gray-300 font-bold">Guest</span>';
         }
         if (partner.type === 'former') return '<span class="text-gray-400 font-bold">Former member</span>';
+        // A player who is no longer active: the name only, no profile link
+        if (partner.type === 'name') return '<span class="text-gray-300 font-bold">' + esc(partner.name) + '</span>';
         return '<a class="pp-link" href="/player-profile?id=' + encodeURIComponent(partner.id) + '">' + esc(partner.name) + '</a>';
     }
 

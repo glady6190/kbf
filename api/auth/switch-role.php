@@ -5,8 +5,8 @@ require_once '../config.php';
 // ============================================
 // ROLE SWITCHING - NO LONGER USED
 // Access now comes from per-user permissions, so there is nothing to switch.
-// This endpoint changes nothing. The script that called it is removed in
-// Stage 3b.
+// This endpoint changes nothing and nothing on the site calls it. It is
+// kept deliberately as a 410 stub so an old address gets a clear answer.
 // ============================================
 
 sendJSON([

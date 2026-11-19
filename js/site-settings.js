@@ -72,15 +72,33 @@
         });
     }
 
+    // "Last updated" on the terms (.kf-terms-updated) from the terms_version
+    // setting: "2026-11" reads "Last updated: November 2026"
+    var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+        'August', 'September', 'October', 'November', 'December'];
+    function fillTermsDate(root) {
+        var version = String(get('termsVersion', ''));
+        if (!version) return;
+        var m = /^(\d{4})-(\d{2})$/.exec(version);
+        var text = (m && +m[2] >= 1 && +m[2] <= 12)
+            ? 'Last updated: ' + MONTHS[+m[2] - 1] + ' ' + m[1]
+            : 'Version: ' + version;
+        (root || document).querySelectorAll('.kf-terms-updated').forEach(function (el) { el.textContent = text; });
+    }
+
     // For content added after the page loaded (such as the terms pop-up)
     function applyTo(root) {
         return ready.then(function () {
-            if (data && root) fillEmail(root);
+            if (data && root) {
+                fillEmail(root);
+                fillTermsDate(root);
+            }
         });
     }
 
     function fillFooter() {
         fillEmail(document);
+        fillTermsDate(document);
 
         var links = [
             { key: 'facebook', label: 'Facebook', url: get('social.facebook', '') },

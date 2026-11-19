@@ -509,6 +509,13 @@
                     <span class="block text-xs text-gray-400 font-semibold mt-0.5">Uses the 'Player added by an admin' email.</span>
                 </span>
             </label>
+            <label class="flex items-start gap-3 p-3 bg-slate-800 border-2 border-gray-700 cursor-pointer">
+                <input type="checkbox" id="aTerms" class="perm-check mt-0.5">
+                <span>
+                    <span class="block text-sm font-bold text-white">The terms were explained and they agreed</span>
+                    <span class="block text-xs text-gray-400 font-semibold mt-0.5">Records the current terms version and today's date. Under 18: a parent or guardian agreed. Leave unticked if not; their record then shows no terms record.</span>
+                </span>
+            </label>
 
             <div id="dupeBox" class="hidden msg-warn border-2 p-4 space-y-3" role="alert">
                 <p id="dupeText" class="text-sm font-bold"></p>
@@ -1476,7 +1483,7 @@
 
         document.getElementById('dTerms').textContent = p.termsVersion
             ? 'Agreed to the terms (version ' + p.termsVersion + ')' + (p.termsAcceptedDate ? ' on ' + formatDate(p.termsAcceptedDate) : '')
-            : 'Agreed to an earlier version';
+            : 'No terms record (added by staff, or registered before terms were recorded)';
         document.getElementById('dNotStaff').classList.toggle('hidden', !(me.isSuperAdmin && !p.isStaff));
 
         const activeBtn = document.getElementById('activeBtn');
@@ -2477,6 +2484,7 @@
             photo: addPhoto,
             gradeId: document.getElementById('aGrade').value || null,
             sendKbfId: document.getElementById('aSendId').checked,
+            termsExplained: document.getElementById('aTerms').checked,
             confirmDuplicates: confirmDuplicates
         };
         const missing = [['firstName', 'First name'], ['lastName', 'Surname'], ['email', 'Email'], ['mobile', 'Mobile'], ['city', 'City']]

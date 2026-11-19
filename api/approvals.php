@@ -210,6 +210,15 @@ function apReactivateMember(PDO $pdo, $registrationId) {
         kbfDeleteImageVariants($file);
     }
 
+    // The member's account already holds their details: the registration's
+    // copies are cleared (QUAL-08); the nightly job tries again on a problem
+    try {
+        require_once __DIR__ . '/data-retention.php';
+        kbfClearApprovedRegistrations($pdo, [(int) $registrationId]);
+    } catch (\Throwable $e) {
+        error_log('Reactivate member: registration ' . (int) $registrationId . ' details not cleared: ' . $e->getMessage());
+    }
+
     auditLog('player_reactivated', 'user', (int) $member['UserId'],
         'Player: ' . apName($member['FirstName'], $member['LastName']) . '; reactivated from registration ' . (int) $registrationId);
 
@@ -824,6 +833,19 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                     @unlink($file);
                 }
                 kbfDeleteImageVariants($file);
+            }
+        }
+
+        // Approved registration: the details are now on the member's account,
+        // so the registration's copies (contact details, year of birth, photo
+        // path, IP address) are cleared (QUAL-08). A problem never undoes the
+        // decision; the nightly job tries again.
+        if ($type === 'registration' && $status === 'Approved') {
+            try {
+                require_once __DIR__ . '/data-retention.php';
+                kbfClearApprovedRegistrations($pdo, [(int) $id]);
+            } catch (\Throwable $e) {
+                error_log('Approval: registration ' . (int) $id . ' details not cleared: ' . $e->getMessage());
             }
         }
 

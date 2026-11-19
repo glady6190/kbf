@@ -98,7 +98,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Generate summary statistics
         $summary = generateSummary($users, $locations);
-        
+
+        // Activity log: who downloaded the player list, which cities, how many rows
+        auditLog('players_exported', 'report', null,
+            'Player list (' . strtoupper($format) . '), ' . count($users) . ' players; cities: '
+            . mb_substr(implode(', ', $locations), 0, 300));
+
         // Export based on format
         if ($format === 'csv') {
             exportCSV($users, $summary, $locations);

@@ -21,7 +21,7 @@ RewriteEngine On
 # PROTECT SENSITIVE FILES
 # ============================================
 # Block access to config files
-<FilesMatch "^(config|security-init|recaptcha-config)\.php$">
+<FilesMatch "^(config|security-init)\.php$">
     Require all denied
 </FilesMatch>
 
@@ -86,11 +86,32 @@ RewriteRule ^tailwind\.config\.js$ - [F,L]
 # ============================================
 # SECURITY HEADERS
 # ============================================
+# Every response: no type guessing, only same-site framing, referrer limited
+# to the site's origin on other sites, HTTPS remembered for one year (no
+# preload), and camera, microphone and location turned off. (The obsolete
+# X-XSS-Protection header is no longer sent.)
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "DENY"
-    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# Content-Security-Policy for the HTML pages (SEC-16). Everything comes from
+# the site itself, except these services, used only on the registration page:
+#   - Google reCAPTCHA: scripts from www.google.com and www.gstatic.com,
+#     its check box shown in a frame from www.google.com
+#   - the phone number field (intl-tel-input): script, stylesheet and flag
+#     images from cdn.jsdelivr.net
+# Inline scripts and styles stay allowed for now (the pages still use them).
+# Images may also be data: or blob: (photo previews before upload).
+# No plugins (object-src), no other base address, forms only post to the
+# site, and only the site itself may show these pages in a frame.
+<IfModule mod_headers.c>
+    <FilesMatch "\.html$">
+        Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https://cdn.jsdelivr.net https://www.gstatic.com; font-src 'self' data:; connect-src 'self'; frame-src https://www.google.com https://recaptcha.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    </FilesMatch>
 </IfModule>
 
 # ============================================

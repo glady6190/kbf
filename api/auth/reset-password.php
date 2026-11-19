@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../security-init.php';
 require_once '../config.php';
-require_once 'email-config.php';
+require_once __DIR__ . '/../notify.php';
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

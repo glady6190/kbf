@@ -780,7 +780,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
            p3.FirstName as P2FirstName, p3.LastName as P2LastName, p3.PlayerId as P2PlayerId,
            p4.FirstName as Partner2FirstName, p4.LastName as Partner2LastName, p4.PlayerId as Partner2PlayerId,
            COALESCE(p1.IsRemoved, 0) as P1Removed, COALESCE(p2.IsRemoved, 0) as Partner1Removed,
-           COALESCE(p3.IsRemoved, 0) as P2Removed, COALESCE(p4.IsRemoved, 0) as Partner2Removed
+           COALESCE(p3.IsRemoved, 0) as P2Removed, COALESCE(p4.IsRemoved, 0) as Partner2Removed,
+           (COALESCE(p1.IsActive, 1) = 0) as P1Inactive, (COALESCE(p2.IsActive, 1) = 0) as Partner1Inactive,
+           (COALESCE(p3.IsActive, 1) = 0) as P2Inactive, (COALESCE(p4.IsActive, 1) = 0) as Partner2Inactive
     FROM Matches m
     LEFT JOIN Categories cat ON m.CategoryId = cat.CategoryId
     LEFT JOIN Users p1 ON m.Player1Id = p1.UserId

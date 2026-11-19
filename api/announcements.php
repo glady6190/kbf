@@ -511,11 +511,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tournamentId,
             $_SESSION['user_id']
         ]);
-        
+        $newPostId = (int) $pdo->lastInsertId();
+
+        auditLog('post_created', 'post', $newPostId,
+            'Post "' . mb_substr($title, 0, 80) . '"' . ($tournamentId ? ' (tournament ' . (int) $tournamentId . ')' : ''));
+
         sendJSON([
-            'success' => true, 
+            'success' => true,
             'message' => 'Post published successfully',
-            'announcementId' => $pdo->lastInsertId()
+            'announcementId' => $newPostId
         ]);
         
     } catch(PDOException $e) {
@@ -638,6 +642,21 @@ if (isset($data['content'])) {
             kbfDeleteStoredImage($oldImage, ANNOUNCEMENT_IMAGE_URL_DIR);
         }
 
+        // Activity log: a visibility-only change is shown/hidden, anything else an edit
+        $changed = [];
+        if (isset($data['title'])) { $changed[] = 'title'; }
+        if (isset($data['content'])) { $changed[] = 'content'; }
+        if ($newImage !== null) { $changed[] = 'image'; }
+        if (empty($changed) && isset($isVisible)) {
+            auditLog($isVisible ? 'post_shown' : 'post_hidden', 'post', $postId, 'Post ' . (int) $postId);
+        } else {
+            $detail = 'Post ' . (int) $postId . ': changed ' . implode(', ', $changed);
+            if (isset($isVisible)) {
+                $detail .= $isVisible ? '; shown' : '; hidden';
+            }
+            auditLog('post_edited', 'post', $postId, $detail);
+        }
+
         sendJSON(['success' => true, 'message' => 'Post updated successfully']);
         
     } catch(PDOException $e) {
@@ -678,6 +697,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         if (is_string($oldImage) && $oldImage !== '') {
             kbfDeleteStoredImage($oldImage, ANNOUNCEMENT_IMAGE_URL_DIR);
         }
+
+        auditLog('post_deleted', 'post', $announcementId, 'Post ' . (int) $announcementId . ' deleted (hidden, image removed)');
 
         sendJSON(['success' => true, 'message' => 'Announcement deleted successfully']);
     } catch(PDOException $e) {

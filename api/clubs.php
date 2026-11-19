@@ -7,6 +7,8 @@ require_once 'config.php';
 // Clubs are no longer used: tournaments record a free-text organiser name.
 // Every request (read, create, edit, delete) returns HTTP 410 Gone.
 // The Clubs table, its rows and the ClubId columns are kept as they are.
+// Nothing on the site calls this endpoint; it is kept deliberately as a 410
+// stub so an old address gets a clear answer.
 // ============================================
 
 sendJSON([

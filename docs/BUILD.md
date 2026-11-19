@@ -47,3 +47,18 @@ Its SHA-256 checksum should be
 `67f1c5e3f5a03406a7bf5badf5ada09b79f3ae78ec43450c15f7e983068da346`
 (listed in `sha256sums.txt` on the same release page). To check it in
 PowerShell: `Get-FileHash tools\tailwindcss-windows-x64.exe`.
+
+## Maintenance mode
+
+When a Super Admin switches maintenance mode on (Site settings), visitors
+see the back-soon page. Staff still see the whole site because signing in
+sets a small browser cookie, `kbf_staff`, which tells the web server to let
+them past the back-soon page. The cookie is renewed while the person stays
+signed in and is removed when they sign out.
+
+This cookie is only a convenience switch. It holds no secret, so anyone who
+sets it by hand can also get past the back-soon page and look at the public
+pages. It grants nothing else: every admin page and every action still
+checks the real sign-in on the server. So do not rely on maintenance mode to
+hide information from the public; use it only to show a friendly page while
+work is going on.

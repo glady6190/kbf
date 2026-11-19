@@ -81,8 +81,8 @@ try {
         sendJSON(['success' => false, 'message' => 'Failed to upload photo'], 500);
     }
     
-    // Resize image to 500x500 and fix EXIF orientation
-    if (!resizeImage($uploadPath, 500, 500)) {
+    // Resize image to fit KBF_PROFILE_PHOTO_SIZE (500x500) and fix EXIF orientation
+    if (!resizeImage($uploadPath, KBF_PROFILE_PHOTO_SIZE, KBF_PROFILE_PHOTO_SIZE)) {
         unlink($uploadPath);
         sendJSON(['success' => false, 'message' => 'Failed to process image'], 500);
     }

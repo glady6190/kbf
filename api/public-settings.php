@@ -12,7 +12,7 @@ require_once __DIR__ . '/grading.php';
 //   links, whether registration is open (and its message, youngest birth year
 //   and photo limit), the home page ticker speed, sponsor seconds and
 //   promotions strip switch, the maintenance message and whether maintenance
-//   mode is on. Nothing private.
+//   mode is on, and the current terms version. Nothing private.
 // ============================================
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -68,6 +68,8 @@ try {
         'maintenanceMessage' => (string) kbfSetting('maintenance_message', 'We are making some improvements. Please check back shortly.'),
         // Whether maintenance mode is on (the staff sign-in page says so)
         'maintenanceMode' => kbfSettingInt('maintenance_mode', 0, 0, 1) === 1,
+        // The current terms version (terms page "Last updated")
+        'termsVersion' => kbfTermsVersion(),
         'pointsPerPlacing' => kbfPlacingPoints($pdo),
         'grades' => $grades,
         'season' => [

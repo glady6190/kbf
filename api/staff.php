@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/security-init.php';
 require_once 'config.php';
+require_once __DIR__ . '/data-retention.php';
 
 // ============================================
 // STAFF AND ACCESS API (Super Admin only)
@@ -24,6 +25,8 @@ require_once 'config.php';
 //   POST {action:'setTwoStepPolicy', policy}          off | optional | required_admins | required_all
 //   POST {action:'setTwoStepRequired', userId, required: bool}
 //   POST {action:'resetTwoStep', userId}              clears their secret and backup codes
+//   POST {action:'setDataRetention', retention: {ipDays, emailBodyDays, rejectedDays, fileCleanupMode}}
+//                                     keeping periods and unused-file clean-up (report | delete)
 //
 // Order of checks: logged in (401), CSRF on writes (403), Super Admin (403).
 // Temporary passwords are returned ONCE in the response. They are never stored
@@ -457,6 +460,7 @@ if ($method === 'GET') {
                 'staffTotal' => (int) $counts['total'],
                 'staffSetUp' => (int) $counts['setUp'],
                 'signInRules' => signInRulesNow(),
+                'retention' => kbfRetentionNow(),
             ]);
         }
 
@@ -669,6 +673,56 @@ if ($method === 'POST') {
                 auditLog('two_step_policy_changed', 'setting', null, 'Policy: ' . $before . ' -> ' . $policy);
             }
             sendJSON(['success' => true, 'message' => 'Settings saved', 'twoStepPolicy' => $policy]);
+        }
+
+        // ---------- DATA RETENTION ----------
+        // Super Admin only (checked above), CSRF checked, blocked while
+        // impersonating. Periods in days and the unused-file clean-up mode;
+        // the nightly job applies them (api/data-retention.php).
+        if ($action === 'setDataRetention') {
+            $input = is_array($data['retention'] ?? null) ? $data['retention'] : [];
+            $new = [];
+            foreach (KBF_RETENTION_RULES as $field => $r) {
+                $value = $input[$field] ?? null;
+                if (is_string($value) && preg_match('/^\s*\d{1,4}\s*$/', $value)) {
+                    $value = (int) trim($value);
+                }
+                if (!is_int($value) || $value < $r[2] || $value > $r[3]) {
+                    sendJSON(['success' => false, 'message' => $r[1] . ' must be from ' . $r[2] . ' to ' . $r[3] . ' days.', 'field' => $field], 400);
+                }
+                $new[$field] = $value;
+            }
+            $mode = $input['fileCleanupMode'] ?? null;
+            if (!is_string($mode) || !in_array($mode, KBF_FILE_CLEANUP_MODES, true)) {
+                sendJSON(['success' => false, 'message' => 'Choose what happens to unused files.', 'field' => 'fileCleanupMode'], 400);
+            }
+            $new['fileCleanupMode'] = $mode;
+
+            $old = kbfRetentionNow();
+            $keys = ['fileCleanupMode' => 'file_cleanup_mode'];
+            foreach (KBF_RETENTION_RULES as $field => $r) {
+                $keys[$field] = $r[0];
+            }
+            $stmt = $pdo->prepare("
+                INSERT INTO Settings (SettingKey, SettingValue) VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)
+            ");
+            $changed = [];
+            foreach ($keys as $field => $key) {
+                if ((string) $old[$field] !== (string) $new[$field]) {
+                    $stmt->execute([$key, (string) $new[$field]]);
+                    $changed[] = $key . ': ' . $old[$field] . ' -> ' . $new[$field];
+                }
+            }
+            foreach ($changed as $line) {
+                auditLog('setting_changed', 'setting', null, $line);
+            }
+            kbfSettingsForget();
+            sendJSON([
+                'success' => true,
+                'message' => $changed ? 'Data retention saved' : 'Nothing to change',
+                'retention' => kbfRetentionNow(),
+            ]);
         }
 
         // ---------- SIGN-IN RULES ----------

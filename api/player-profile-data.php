@@ -111,6 +111,8 @@ function kbfSendPublicProfile($pdo, $userId) {
                p4.FirstName AS Partner2FirstName, p4.LastName AS Partner2LastName,
                COALESCE(p1.IsRemoved, 0) AS P1Removed, COALESCE(p2.IsRemoved, 0) AS Partner1Removed,
                COALESCE(p3.IsRemoved, 0) AS P2Removed, COALESCE(p4.IsRemoved, 0) AS Partner2Removed,
+               (COALESCE(p1.IsActive, 1) = 0) AS P1Inactive, (COALESCE(p2.IsActive, 1) = 0) AS Partner1Inactive,
+               (COALESCE(p3.IsActive, 1) = 0) AS P2Inactive, (COALESCE(p4.IsActive, 1) = 0) AS Partner2Inactive,
                COALESCE(pph.PointsAwarded, 0) AS PointsAwarded,
                COALESCE($careerOnlySql, 0) AS CareerOnly
         FROM Matches m
@@ -187,6 +189,10 @@ function kbfSendPublicProfile($pdo, $userId) {
             $p = $slots[$partnerOf[$mine]];
             if ((int) $m[$p[4]] === 1) {
                 $g['partner'] = ['type' => 'former', 'name' => 'Former member'];
+            } elseif (!empty($m[$p[0]]) && (int) $m[str_replace('Removed', 'Inactive', $p[4])] === 1 && !(isLoggedIn() && isStaff())) {
+                // A deactivated partner (SEC-18): the name only, no link to a
+                // profile, for visitors who are not staff
+                $g['partner'] = ['type' => 'name', 'name' => trim(kbfProfileText($m[$p[1]]) . ' ' . kbfProfileText($m[$p[2]]))];
             } elseif (!empty($m[$p[0]])) {
                 $g['partner'] = [
                     'type' => 'player',

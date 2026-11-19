@@ -157,10 +157,46 @@ try {
         $cleanupNote .= '; trimmed ' . implode(', ', $trimmed);
     }
 
+    // Data retention (Security page, "Data retention"): IP addresses, email
+    // text, rejected and approved applications (api/data-retention.php)
+    $retentionNote = '';
+    try {
+        require_once dirname(__DIR__) . '/api/data-retention.php';
+        $retained = kbfApplyDataRetention($pdo);
+        echo "Data retention: " . ($retained ? implode(', ', $retained) : 'nothing to clear') . "\n";
+        if ($retained) {
+            $retentionNote = '; retention: ' . implode(', ', $retained);
+        }
+    } catch (\Throwable $e) {
+        error_log('ranking-calculator: data retention error: ' . $e->getMessage());
+        $retentionNote = '; data retention could not run';
+    }
+
+    // Unused uploaded files (profiles, registrations, news images): only
+    // listed unless file_cleanup_mode is "delete"
+    $filesNote = '';
+    try {
+        require_once dirname(__DIR__) . '/api/data-retention.php';
+        $files = kbfCleanUnusedUploads($pdo, kbfFileCleanupMode());
+        $filesLine = $files['mode'] === 'delete'
+            ? $files['deleted'] . ' unused files deleted (' . $files['images'] . ' images)'
+            : $files['files'] . ' unused files found (' . $files['images'] . ' images, ' . round($files['bytes'] / 1048576, 1) . ' MB), report only';
+        if ($files['error']) {
+            $filesLine .= ' - ' . $files['error'];
+        }
+        echo "Unused files: " . $filesLine . ($files['log'] ? ' (' . $files['log'] . ')' : '') . "\n";
+        if ($files['files'] > 0 || $files['error']) {
+            $filesNote = '; ' . $filesLine;
+        }
+    } catch (\Throwable $e) {
+        error_log('ranking-calculator: unused files error: ' . $e->getMessage());
+        $filesNote = '; unused files check could not run';
+    }
+
     kbfJobRunFinish($pdo, $runId, $errorCount > 0 ? 'error' : 'ok',
         'Recalculated ' . $successCount . ' player' . ($successCount === 1 ? '' : 's')
         . ($errorCount > 0 ? ', ' . $errorCount . ' error' . ($errorCount === 1 ? '' : 's') : '')
-        . $digestNote . $reminderNote . $cleanupNote);
+        . $digestNote . $reminderNote . $cleanupNote . $retentionNote . $filesNote);
 
 } catch (PDOException $e) {
     kbfJobRunFinish($pdo, $runId, 'error', 'Error: ' . $e->getMessage());

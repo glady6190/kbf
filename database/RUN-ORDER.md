@@ -45,6 +45,7 @@ is the record of where the migrations start from.
 | 17 | `security-hardening.sql` | Nothing special. | `Users` has SessionVersion, 0 for everybody. A `RequestLimits` table exists. |
 | 18 | `schema-fixes.sql` | All of 1 to 17 have finished (it uses their columns). The backup is done: this script rebuilds eight tables to change their collation. On a very large table this can take a minute. | See below. |
 | 19 | `request-ids.sql` | Script 18 has finished. | A `RequestIds` table exists (empty). Pages that create news posts, tournaments, players or results can no longer create a duplicate by sending the same form twice. |
+| 20 | `data-retention.sql` | Script 18 has finished (`Settings.SettingValue` is TEXT). | Settings retention_ip_days (90), retention_email_body_days (30), retention_rejected_registration_days (365) and file_cleanup_mode (`report`) exist. Nothing else changes: the nightly job applies them from its next run (see below). |
 
 ### After `schema-fixes.sql`
 
@@ -67,6 +68,19 @@ is the record of where the migrations start from.
   - ResultsApprovalQueue: idx_tournament
   - Tournaments: idx_organizing_club
   - Users: idx_player_id, idx_isactive
+
+### After `data-retention.sql`
+
+- The first nightly run after the upload blanks IP addresses older than 90
+  days, clears the text of sent and failed emails older than 30 days, clears
+  rejected applications decided more than 365 days ago (up to 500 a night)
+  and clears the copies of contact details, year of birth, photo and IP
+  address kept on approved applications. Its summary on the Overview page
+  ("Scheduled jobs") says how many.
+- Unused photo and news image files are only listed at first
+  (`file_cleanup_mode` = `report`): the count is in the job summary and the
+  list in `storage/logs/file-cleanup-YYYY-MM-DD.log` on the server. Read that
+  list before a Super Admin chooses "Delete them" on the Security page.
 
 ## After every script
 

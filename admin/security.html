@@ -177,6 +177,64 @@
                             class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save sign-in rules</button>
                 </div>
             </section>
+
+            <!-- ============================ -->
+            <!-- DATA RETENTION -->
+            <!-- ============================ -->
+            <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-4 sm:p-8" aria-labelledby="retentionHeading">
+                <h2 id="retentionHeading" class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase mb-2">Data retention</h2>
+                <p class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed mb-5 sm:mb-6">How long personal details are kept. The nightly job applies these and records what it cleared under Scheduled jobs (Overview) and in the activity log. Rows are kept for counts; only the personal details in them are cleared. The activity log period is under Sign-in rules.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="ret-ipDays" class="block text-xs font-black theme-primary-text uppercase mb-2">Keep internet (IP) addresses for</label>
+                        <div class="flex items-center gap-2"><input type="number" id="ret-ipDays" class="rule-input" min="7" max="3650" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">days</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">7 to 3,650. In the activity log, sign-in attempts, password resets and registrations.</p>
+                    </div>
+                    <div>
+                        <label for="ret-emailBodyDays" class="block text-xs font-black theme-primary-text uppercase mb-2">Keep the text of sent emails for</label>
+                        <div class="flex items-center gap-2"><input type="number" id="ret-emailBodyDays" class="rule-input" min="7" max="3650" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">days</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">7 to 3,650. Sent and failed emails keep their log line; emails still waiting are never cleared.</p>
+                    </div>
+                    <div>
+                        <label for="ret-rejectedDays" class="block text-xs font-black theme-primary-text uppercase mb-2">Keep rejected applications for</label>
+                        <div class="flex items-center gap-2"><input type="number" id="ret-rejectedDays" class="rule-input" min="30" max="3650" step="1" inputmode="numeric"><span class="text-xs font-bold text-gray-400 uppercase">days</span></div>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">30 to 3,650. Then the applicant's details and photo are removed. Approved applications are cleared as soon as the details are on the member's account.</p>
+                    </div>
+                </div>
+
+                <fieldset class="mt-5 sm:mt-6">
+                    <legend class="block text-xs font-black theme-primary-text uppercase mb-2">Unused photo and news image files</legend>
+                    <p class="text-xs text-gray-400 font-semibold mb-3">Files in the profile, registration and news image folders that nothing on the site uses any more, and are more than a day old.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="choice-card block p-4 bg-slate-800 cursor-pointer transition">
+                            <span class="flex items-start gap-3">
+                                <input type="radio" name="fileCleanupMode" value="report" class="choice-radio mt-0.5">
+                                <span>
+                                    <span class="block text-sm font-black uppercase text-white">Report only</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-1">The nightly job counts them and lists them in a log file on the server. Nothing is deleted.</span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="choice-card block p-4 bg-slate-800 cursor-pointer transition">
+                            <span class="flex items-start gap-3">
+                                <input type="radio" name="fileCleanupMode" value="delete" class="choice-radio mt-0.5">
+                                <span>
+                                    <span class="block text-sm font-black uppercase text-white">Delete them</span>
+                                    <span class="block text-xs text-gray-400 font-semibold mt-1">The nightly job deletes them, with their display versions and thumbnails. This cannot be undone.</span>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div id="retentionMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
+
+                <div class="mt-5 sm:mt-6 flex justify-end">
+                    <button type="button" id="saveRetentionBtn" onclick="saveRetention()"
+                            class="w-full sm:w-auto px-6 sm:px-8 py-3 theme-primary-bg theme-on-primary font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-40">Save data retention</button>
+                </div>
+            </section>
         </div>
 
         </main>
@@ -261,6 +319,81 @@
         document.getElementById('setUpCount').textContent = 'Set up so far: ' + setUp + ' of ' + total + ' staff';
 
         renderRules(data.signInRules || {});
+        renderRetention(data.retention || {});
+    }
+
+    // ============================================
+    // DATA RETENTION
+    // ============================================
+    const RETENTION_FIELDS = ['ipDays', 'emailBodyDays', 'rejectedDays'];
+    let savedCleanupMode = 'report';
+
+    function renderRetention(retention) {
+        RETENTION_FIELDS.forEach(f => {
+            const input = document.getElementById('ret-' + f);
+            input.value = retention[f] != null ? retention[f] : '';
+            KBF.clearFieldError(input);
+        });
+        savedCleanupMode = retention.fileCleanupMode === 'delete' ? 'delete' : 'report';
+        document.querySelectorAll('input[name="fileCleanupMode"]').forEach(input => {
+            input.checked = input.value === savedCleanupMode;
+        });
+    }
+
+    function showRetentionMessage(text, ok) {
+        const box = document.getElementById('retentionMessage');
+        box.textContent = text;
+        box.setAttribute('role', ok ? 'status' : 'alert');
+        box.className = ok
+            ? 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
+            : 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
+    }
+
+    async function saveRetention() {
+        const retention = {};
+        RETENTION_FIELDS.forEach(f => {
+            const input = document.getElementById('ret-' + f);
+            KBF.clearFieldError(input);
+            retention[f] = input.value.trim();
+        });
+        const chosen = document.querySelector('input[name="fileCleanupMode"]:checked');
+        retention.fileCleanupMode = chosen ? chosen.value : 'report';
+
+        if (retention.fileCleanupMode === 'delete' && savedCleanupMode !== 'delete') {
+            const yes = await KBFDialog.confirm({
+                title: 'Delete unused files?',
+                message: 'From tonight, the nightly job deletes photo and news image files that nothing on the site uses and that are more than a day old. Check the latest report first. Deleted files cannot be brought back.',
+                confirmText: 'Delete unused files'
+            });
+            if (!yes) return;
+        }
+
+        const btn = document.getElementById('saveRetentionBtn');
+        if (KBF.isBusy(btn)) return;
+        const restoreBtn = KBF.setBusy(btn, 'Saving...');
+        try {
+            const res = await authenticatedFetch('/api/staff.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'setDataRetention', retention: retention })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                if (data.field) {
+                    const input = document.getElementById('ret-' + data.field);
+                    if (input) { KBF.showFieldError(input, data.message || 'Check this value'); input.focus(); }
+                }
+                showRetentionMessage(data.message || 'Could not save data retention', false);
+                return;
+            }
+            renderRetention(data.retention || {});
+            showRetentionMessage(data.message || 'Data retention saved', true);
+        } catch (e) {
+            console.error('Save data retention error:', e);
+            showRetentionMessage('Could not save data retention. Please try again.', false);
+        } finally {
+            restoreBtn();
+        }
     }
 
     // ============================================

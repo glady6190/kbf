@@ -187,7 +187,7 @@ if ($method === 'GET') {
 
             $stmt = $pdo->prepare("
                 SELECT Id, EventKey, Priority, ToEmail, ToName, Subject, Status, Attempts, LastError,
-                       CreatedDate, SentDate
+                       CreatedDate, SentDate, (BodyHtml IS NULL AND BodyText IS NULL) AS NoBody
                 FROM EmailLog
                 $whereSql
                 ORDER BY Id DESC
@@ -215,7 +215,9 @@ if ($method === 'GET') {
                     'lastError' => $r['LastError'],
                     'createdDate' => $r['CreatedDate'],
                     'sentDate' => $r['SentDate'],
-                    'canResend' => $r['Status'] === 'failed' && !in_array($r['EventKey'], KBF_MAIL_NO_RESEND_EVENTS, true),
+                    // Text cleared after the keeping period: nothing to send again
+                    'canResend' => $r['Status'] === 'failed' && !in_array($r['EventKey'], KBF_MAIL_NO_RESEND_EVENTS, true)
+                        && (int) $r['NoBody'] !== 1,
                 ];
             }, $rows);
 
@@ -362,7 +364,8 @@ if ($method === 'POST') {
 
             $pdo->beginTransaction();
             $stmt = $pdo->prepare("
-                SELECT Id, EventKey, Status, ToEmail, BroadcastId, RelatedType, RelatedId
+                SELECT Id, EventKey, Status, ToEmail, BroadcastId, RelatedType, RelatedId,
+                       (BodyHtml IS NULL AND BodyText IS NULL) AS NoBody
                 FROM EmailLog WHERE Id = ? FOR UPDATE
             ");
             $stmt->execute([$id]);
@@ -375,6 +378,11 @@ if ($method === 'POST') {
             if ($row['Status'] !== 'failed') {
                 $pdo->rollBack();
                 sendJSON(['success' => false, 'message' => 'Only failed emails can be resent'], 400);
+            }
+            if ((int) $row['NoBody'] === 1) {
+                // The text was cleared after the keeping period (Security page)
+                $pdo->rollBack();
+                sendJSON(['success' => false, 'message' => 'The text of this email is no longer kept, so it cannot be resent.'], 400);
             }
             if (in_array($row['EventKey'], KBF_MAIL_NO_RESEND_EVENTS, true)) {
                 // The stored copy has no link, so it cannot be sent again

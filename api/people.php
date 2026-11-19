@@ -757,21 +757,26 @@ if ($action === 'add') {
 
         $pdo->beginTransaction();
 
-        // KBF ID: one more than the highest in Users and PlayerRegistrations
-        $pdo->query("SELECT UserId FROM Users ORDER BY UserId DESC LIMIT 1 FOR UPDATE");
-        $pdo->query("SELECT RegistrationId FROM PlayerRegistrations ORDER BY RegistrationId DESC LIMIT 1 FOR UPDATE");
-        // (the highest number is kept in Settings: kbfNextKbfId)
+        // KBF ID: the next number (kept in Settings; kbfNextKbfId takes the
+        // table locks in the shared order)
         $kbfId = kbfNextKbfId($pdo);
+
+        // Terms: when staff tick that the terms were explained and agreed to
+        // (by a parent or guardian for under-18s), the current version and
+        // today's date are recorded; otherwise there is no terms record
+        $termsExplained = !empty($input['termsExplained']);
+        $termsVersion = $termsExplained ? kbfTermsVersion() : null;
 
         // Players never have a password, a staff role or a club.
         // Role 'Player' is the display-only value every player row has.
         $stmt = $pdo->prepare("
             INSERT INTO Users
             (PlayerId, Email, PasswordHash, FirstName, LastName, Location, PostCode, PhoneNumber,
-             YearOfBirth, ProfilePhoto, Role, CategoryId, TotalPoints, IsActive, CreatedDate)
-            VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, 'Player', ?, 0, 1, NOW())
+             YearOfBirth, ProfilePhoto, Role, CategoryId, TotalPoints, IsActive, CreatedDate,
+             TermsVersion, TermsAcceptedDate)
+            VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, 'Player', ?, 0, 1, NOW(), ?, " . ($termsExplained ? 'NOW()' : 'NULL') . ")
         ");
-        $stmt->execute([$kbfId, $email, $firstName, $lastName, $city, $postCode, $mobile, $yearOfBirth, $photo, $gradeId]);
+        $stmt->execute([$kbfId, $email, $firstName, $lastName, $city, $postCode, $mobile, $yearOfBirth, $photo, $gradeId, $termsVersion]);
         $newId = (int) $pdo->lastInsertId();
 
         $stmt = $pdo->prepare("
@@ -787,7 +792,8 @@ if ($action === 'add') {
 
         $gradeShort = (string) pValue($pdo, "SELECT ShortName FROM Categories WHERE CategoryId = ?", [$gradeId]);
         auditLog('player_created', 'user', $newId,
-            'Player: ' . pName($firstName, $lastName) . ' (' . $kbfId . '); grade: ' . pText($gradeShort) . '; city: ' . pText($city));
+            'Player: ' . pName($firstName, $lastName) . ' (' . $kbfId . '); grade: ' . pText($gradeShort) . '; city: ' . pText($city)
+            . ($termsExplained ? '; terms ' . $termsVersion . ' explained by staff' : '; no terms record'));
 
         // "Send their KBF ID": the player_added email, even when the event is
         // switched off in Notifications, because the admin chose to send it
@@ -992,9 +998,9 @@ if ($action === 'remove') {
 
         // Their registration rows (by KBF ID, or by email for anyone without one)
         if ($kbfId !== null && $kbfId !== '') {
-            $regs = pRows($pdo, "SELECT RegistrationId, ProfilePhoto FROM PlayerRegistrations WHERE PlayerId = ? FOR UPDATE", [$kbfId]);
+            $regs = pRows($pdo, "SELECT RegistrationId, ProfilePhoto, FirstName, LastName, Email, PhoneNumber, Location FROM PlayerRegistrations WHERE PlayerId = ? FOR UPDATE", [$kbfId]);
         } elseif ($oldEmail !== '') {
-            $regs = pRows($pdo, "SELECT RegistrationId, ProfilePhoto FROM PlayerRegistrations WHERE Email = ? FOR UPDATE", [$oldEmail]);
+            $regs = pRows($pdo, "SELECT RegistrationId, ProfilePhoto, FirstName, LastName, Email, PhoneNumber, Location FROM PlayerRegistrations WHERE Email = ? FOR UPDATE", [$oldEmail]);
         } else {
             $regs = [];
         }
@@ -1032,6 +1038,26 @@ if ($action === 'remove') {
             ");
             $stmt->execute(array_merge([$placeholderEmail], $regIds));
         }
+
+        // 2b. Their name, email, phone and town in stored text (activity log,
+        // email log, approval history, old activity log, notifications):
+        // replaced with "Former member" / "removed"; emails to their address
+        // lose their text; their notifications and reset links are deleted.
+        // Before step 3, which replaces their address in the email log.
+        // Matching rule (only this person's own values; other names in the
+        // same row stay): see kbfErasePersonText() in api/data-retention.php.
+        require_once __DIR__ . '/data-retention.php';
+        $identities = [[
+            'firstName' => $p['FirstName'], 'lastName' => $p['LastName'], 'email' => $oldEmail,
+            'phone' => $p['PhoneNumber'], 'location' => $p['Location'],
+        ]];
+        foreach ($regs as $r) {
+            $identities[] = [
+                'firstName' => $r['FirstName'], 'lastName' => $r['LastName'], 'email' => $r['Email'],
+                'phone' => $r['PhoneNumber'], 'location' => $r['Location'],
+            ];
+        }
+        kbfErasePersonText($pdo, $id, $regIds, $identities, [$oldEmail], 'Former member');
 
         // 3. Emails to their address: address and name replaced
         if ($oldEmail !== '') {
@@ -1085,7 +1111,8 @@ if ($action === 'remove') {
             'success' => true,
             'message' => 'The player was removed at their request. Their personal details are gone and this cannot be undone. '
                 . 'Their KBF ID, grade and points history are kept and shown as "Former member".'
-                . ($hiddenPosts > 0 ? ' ' . $hiddenPosts . ' promotion news post' . ($hiddenPosts === 1 ? ' was' : 's were') . ' hidden.' : ''),
+                . ($hiddenPosts > 0 ? ' ' . $hiddenPosts . ' promotion news post' . ($hiddenPosts === 1 ? ' was' : 's were') . ' hidden.' : '')
+                . ' Their name was also replaced in the logs and emails. Please check other news posts, broadcasts and gallery photos by hand.',
             'kbfId' => $kbfId,
         ]);
 

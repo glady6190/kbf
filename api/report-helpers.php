@@ -234,6 +234,11 @@ const KBF_ACTION_NAMES = [
     'sponsor_deleted' => 'Removed a sponsor',
     'sponsor_active_changed' => 'Showed or hid a sponsor',
     'sponsors_reordered' => 'Reordered sponsors',
+    'post_created' => 'Published a news post',
+    'post_edited' => 'Edited a news post',
+    'post_hidden' => 'Hid a news post',
+    'post_shown' => 'Showed a news post',
+    'post_deleted' => 'Deleted a news post',
     // Control centre
     'setting_changed' => 'Changed a setting',
     'maintenance_mode_changed' => 'Switched maintenance mode',
@@ -256,6 +261,7 @@ const KBF_ACTION_NAMES = [
     'grade_players_moved' => 'Moved players to another grade',
     'placing_points_changed' => 'Changed points per placing',
     'report_downloaded' => 'Downloaded a report',
+    'players_exported' => 'Exported the player list',
     // Scheduled jobs (System)
     'job:broadcast-sender' => 'Email sender ran',
     'job:ranking-calculator' => 'Nightly recalculation ran',
