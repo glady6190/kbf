@@ -19,7 +19,7 @@
         .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
         .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
         .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
-        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .theme-switcher-btn.active::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         
@@ -176,7 +176,7 @@
     }
     
     .iti__search-input {
-        font-size: 14px !important;
+        font-size: 16px !important; /* under 16px makes iPhones zoom in */
     }
 }
 
@@ -231,7 +231,7 @@
 }
 
 .dropdown-toggle::after {
-    content: '▼';
+    content: '';
     font-size: 0.6rem;
     margin-left: 5px;
     transition: transform 0.3s;
@@ -276,6 +276,9 @@
 
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
+    <link rel="stylesheet" href="/assets/css/public-ui.css">
+    <script src="/js/escape.js"></script>
+    <script src="/js/public-ui.js" defer></script>
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -294,11 +297,11 @@
                 </div>
                 <div>
                     <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
-                    <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                    <p class="kbf-nav-tagline text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
                 </div>
             </a>
-            
-            <div class="hidden md:flex items-center space-x-2">
+
+            <div class="kbf-desktop-nav hidden lg:flex items-center space-x-2">
                 <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
                 <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
                 <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
@@ -306,10 +309,8 @@
                 
                 <!-- Dropdown More Menu -->
                 <div class="dropdown">
-                    <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
-                        More
-                    </a>
-                    <div class="dropdown-menu">
+                    <button type="button" class="dropdown-toggle text-white font-black px-5 py-2 border-b-4 theme-primary-border uppercase text-sm tracking-wider" aria-expanded="false" aria-controls="more-menu">More</button>
+                    <div class="dropdown-menu" id="more-menu">
                         <a href="/news">News</a>
                         <a href="/register">Register</a>
                     </div>
@@ -324,16 +325,16 @@
                 </div>
                 
                 <div class="ml-4">
-                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
-                        Login
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all whitespace-nowrap">
+                        Staff<span class="sr-only"> sign in</span>
                     </a>
                 </div>
             </div>
-            
+
             <!-- Mobile menu button -->
-            <div class="md:hidden flex items-center">
-                <button id="mobile-menu-btn" class="theme-primary-text p-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+            <div class="lg:hidden flex items-center">
+                <button type="button" id="mobile-menu-btn" class="theme-primary-text p-2" aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
+                    <svg class="w-6 h-6" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
@@ -342,7 +343,7 @@
     </div>
     
     <!-- Mobile menu -->
-    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+    <div id="mobile-menu" class="hidden lg:hidden bg-slate-800 border-t-2 theme-primary-border">
         <div class="px-2 pt-2 pb-3 space-y-1">
             <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
             <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
@@ -351,9 +352,9 @@
             
             <!-- Mobile Dropdown More -->
             <div>
-                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                <button type="button" id="mobile-more-btn" onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center" aria-expanded="false" aria-controls="mobile-dropdown-content">
                     More
-                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                    <span id="mobile-dropdown-arrow" class="kbf-chevron" aria-hidden="true"></span>
                 </button>
                 <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
                     <a href="/news">News</a>
@@ -372,7 +373,7 @@
                 </div>
             </div>
             
-            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Staff sign in</a>
         </div>
     </div>
 </nav>
@@ -397,56 +398,59 @@
                     <!-- Name Fields -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-    <label class="block text-xs font-black theme-primary-text uppercase mb-2">First Name *</label>
-    <input type="text" name="firstName" id="firstName" required 
-           minlength="2" maxlength="50"
-           pattern="[A-Za-z\s\-']+"
-           title="First name must be at least 2 characters and contain only letters, spaces, hyphens, or apostrophes"
-           class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+    <label for="firstName" class="block text-xs font-black theme-primary-text uppercase mb-2">First Name *</label>
+    <input type="text" name="firstName" id="firstName" required
+           minlength="2" maxlength="50" autocomplete="given-name"
+           pattern="[\p{L}\p{M}][\p{L}\p{M}\s'’.\-]*"
+           title="First name: at least 2 characters. Letters (accents are fine), spaces, apostrophes and hyphens"
+           aria-describedby="firstNameHint"
+           class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
            placeholder="John">
-    <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Minimum 2 characters</p>
+    <p id="firstNameHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Minimum 2 characters</p>
 </div>
 <div>
-    <label class="block text-xs font-black theme-primary-text uppercase mb-2">Surname *</label>
-    <input type="text" name="lastName" id="lastName" required 
-           minlength="2" maxlength="50"
-           pattern="[A-Za-z\s\-']+"
-           title="Surname must be at least 2 characters and contain only letters, spaces, hyphens, or apostrophes"
-           class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+    <label for="lastName" class="block text-xs font-black theme-primary-text uppercase mb-2">Surname *</label>
+    <input type="text" name="lastName" id="lastName" required
+           minlength="2" maxlength="50" autocomplete="family-name"
+           pattern="[\p{L}\p{M}][\p{L}\p{M}\s'’.\-]*"
+           title="Surname: at least 2 characters. Letters (accents are fine), spaces, apostrophes and hyphens"
+           aria-describedby="lastNameHint"
+           class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
            placeholder="Smith">
-    <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Minimum 2 characters</p>
+    <p id="lastNameHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Minimum 2 characters</p>
 </div>
                     </div>
 
                     <!-- Contact Fields -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                            <label class="block text-xs font-black theme-primary-text uppercase mb-2">Email Address *</label>
-                            <input type="email" name="email" required 
-                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+                            <label for="email" class="block text-xs font-black theme-primary-text uppercase mb-2">Email Address *</label>
+                            <input type="email" name="email" id="email" required autocomplete="email"
+                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
                                    placeholder="your.email@example.com">
                         </div>
                         <div>
-    <label class="block text-xs font-black theme-primary-text uppercase mb-2">Mobile Number *</label>
-    <input type="tel" id="phoneNumber" name="phoneNumber" required 
-           class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+    <label for="phoneNumber" class="block text-xs font-black theme-primary-text uppercase mb-2">Mobile Number *</label>
+    <input type="tel" id="phoneNumber" name="phoneNumber" required autocomplete="tel"
+           aria-describedby="phoneNumberHint"
+           class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
            placeholder="Enter phone number">
     <input type="hidden" id="fullPhoneNumber" name="fullPhoneNumber">
-    <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Include country code</p>
+    <p id="phoneNumberHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Include country code</p>
 </div>
                     </div>
 
                     <!-- Location Fields -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                            <label class="block text-xs font-black theme-primary-text uppercase mb-2">City *</label>
-                            <input type="text" name="location" required 
-                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition">
+                            <label for="cityInput" class="block text-xs font-black theme-primary-text uppercase mb-2">City *</label>
+                            <input type="text" name="location" id="cityInput" required autocomplete="address-level2" maxlength="100"
+                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition">
                         </div>
                         <div>
-                            <label class="block text-xs font-black theme-primary-text uppercase mb-2">Post Code (Optional)</label>
-                            <input type="text" name="postCode" 
-                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+                            <label for="postCode" class="block text-xs font-black theme-primary-text uppercase mb-2">Postcode (Optional)</label>
+                            <input type="text" name="postCode" id="postCode" autocomplete="postal-code"
+                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
                                    placeholder="M1 1AA">
                         </div>
                     </div>
@@ -454,37 +458,38 @@
                     <!-- Year of Birth & Category -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                            <label class="block text-xs font-black theme-primary-text uppercase mb-2">Year of Birth (Optional)</label>
-                            <input type="number" name="yearOfBirth" min="1940" max="2020" 
-                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+                            <label for="yearOfBirth" class="block text-xs font-black theme-primary-text uppercase mb-2">Year of Birth (Optional)</label>
+                            <input type="number" name="yearOfBirth" id="yearOfBirth" min="1940" max="2020" inputmode="numeric"
+                                   aria-describedby="yearOfBirthHint"
+                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
                                    placeholder="1990">
-                            <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Helps us organize age-group events</p>
+                            <p id="yearOfBirthHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Helps us organise age-group events</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-black theme-primary-text uppercase mb-2">Choose Your Category *</label>
-                            <select name="categoryId" id="categorySelect" required 
-        class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition">
+                            <label for="categorySelect" class="block text-xs font-black theme-primary-text uppercase mb-2">Choose your grade *</label>
+                            <select name="categoryId" id="categorySelect" required aria-describedby="categorySelectHint"
+        class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold uppercase text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition">
     <option value="">Loading categories...</option>
 </select>
-                            <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Admin will review and may adjust based on skill level</p>
+                            <p id="categorySelectHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Admin will review and may adjust based on skill level</p>
                         </div>
                     </div>
 
                     <!-- Profile Photo Upload -->
 <div>
-    <label class="block text-xs font-black theme-primary-text uppercase mb-2">Upload Photo (Optional)</label>
+    <label for="profilePhotoInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Upload Photo (Optional)</label>
     <div class="flex flex-col gap-3 sm:gap-4">
         <div class="flex-1">
-            <input type="file" name="profilePhoto" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp" 
+            <input type="file" name="profilePhoto" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp" aria-describedby="photoLimitText"
                    onchange="previewPhoto(event)"
-                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:font-black file:bg-gray-700 file:text-white hover:file:bg-gray-600">
+                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:font-black file:bg-gray-700 file:text-white hover:file:bg-gray-600">
             <p id="photoLimitText" class="text-xs text-gray-500 mt-2 uppercase font-bold">JPG, PNG or WEBP (Max 5MB)</p>
         </div>
         
         <!-- Loading Indicator -->
         <div id="photoLoading" class="hidden justify-center sm:justify-start">
             <div class="border-2 sm:border-4 border-gray-700 bg-slate-800 p-6 sm:p-8 text-center" style="width: 200px;">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-emerald-500 mb-3"></div>
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-[var(--theme-primary)] mb-3"></div>
                 <p class="text-xs sm:text-sm font-black theme-primary-text uppercase">Processing Image...</p>
             </div>
         </div>
@@ -502,7 +507,7 @@
     <p class="text-xs sm:text-sm font-semibold mb-3" style="color: #9CA3AF;">If the player is under 18, a parent or guardian must complete this form.</p>
     <label class="flex items-start cursor-pointer">
         <input type="checkbox" name="termsAccepted" id="termsCheckbox" required
-               class="mt-1 w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-700 bg-slate-900 checked:bg-emerald-500 focus:ring-0 focus:ring-offset-0">
+               class="mt-1 w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-700 bg-slate-900 checked:bg-[var(--theme-primary)] focus:ring-0 focus:ring-offset-0">
         <span class="ml-3 text-xs sm:text-sm font-bold text-gray-300 uppercase">
             I agree to the <button type="button" onclick="openTermsModal()" class="theme-primary-text hover:opacity-80 underline">terms and conditions</button>, including how my information is used for grading and shown on the website, and understand that my registration is subject to admin approval. *
         </span>
@@ -511,7 +516,7 @@
                     
                     <!-- reCAPTCHA Widget -->
 <div class="border-2 sm:border-4 border-gray-700 p-4 sm:p-6 bg-slate-800">
-    <label class="block text-xs font-black theme-primary-text uppercase mb-4">Verify You're Human *</label>
+    <p id="recaptchaLabel" class="block text-xs font-black theme-primary-text uppercase mb-4">Verify You're Human *</p>
     <div class="recaptcha-container">
         <div class="g-recaptcha" data-sitekey="6LdOrVYsAAAAAKeeFTUOw7Dpgf7kNHkp2ZzCtpRq"></div>
     </div>
@@ -519,13 +524,13 @@
 </div>
 
                     <!-- Message Display -->
-                    <div id="messageBox" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+                    <div id="messageBox" role="alert" aria-live="assertive" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
 
                     <!-- Submit Button -->
                     <div class="flex justify-center pt-4">
                         <button type="submit" id="submitBtn" 
                                 class="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 theme-primary-bg text-slate-900 font-black uppercase text-sm sm:text-base lg:text-lg brutal-shadow transition-all hover:scale-105">
-                            Submit Registration →
+                            Submit registration
                         </button>
                     </div>
                 </div>
@@ -537,6 +542,95 @@
         </div>
     </div>
 
+    <!-- Footer (same as the other public pages) -->
+    <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
+        <link rel="stylesheet" href="/assets/css/site-footer.css">
+        <div class="kf-wrap">
+            <!-- Columns -->
+            <div class="kf-cols">
+                <div class="kf-brand">
+                    <div class="kf-brand-row">
+                        <div class="kf-logo">
+                            <div class="kf-logo-glow"></div>
+                            <div class="kf-logo-ring">
+                                <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="kf-brand-name">KBF-UK</span>
+                            <span class="kf-brand-sub">Kerala Badminton Federation UK</span>
+                        </div>
+                    </div>
+                    <p class="kf-tagline">Building champions, one match at a time.</p>
+                </div>
+
+                <nav aria-label="Explore">
+                    <h3 class="kf-heading">Explore</h3>
+                    <ul class="kf-links">
+                        <li><a href="/" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Home</a></li>
+                        <li><a href="/rankings" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Grading</a></li>
+                        <li><a href="/tournaments" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Tournaments</a></li>
+                        <li><a href="/news" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>News</a></li>
+                        <li><a href="/gallery" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Gallery</a></li>
+                    </ul>
+                </nav>
+
+                <nav aria-label="Organisers">
+                    <h3 class="kf-heading">Organisers</h3>
+                    <ul class="kf-links">
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Staff sign in</a></li>
+                        <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
+                    </ul>
+                </nav>
+
+                <div class="kf-contact">
+                    <h3 class="kf-heading">Contact</h3>
+                    <a href="mailto:admin@kbf-uk.org" class="kf-contact-link">
+                        <span class="kf-mail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </span>
+                        <span class="kf-contact-text">
+                            <span class="kf-contact-email">admin@kbf-uk.org</span>
+                            <span class="kf-contact-note">General and sponsorship enquiries</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="kf-bottom">
+                <p class="kf-copy">&copy; <span id="kf-year">2026</span> KBF-UK. All rights reserved.</p>
+                <div class="kf-bottom-right">
+                    <div class="kf-bottom-links">
+                        <a href="/terms" class="kf-terms">Terms</a>
+                        <p class="kf-credit">Website designed by <a href="https://graeyna.com/" target="_blank" rel="noopener">Graeyna</a></p>
+                    </div>
+                    <button type="button" id="kf-back-to-top" class="kf-top" aria-label="Back to top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            // Copyright year updates itself; 2026 in the markup is the fallback
+            var yearEl = document.getElementById('kf-year');
+            if (yearEl) {
+                yearEl.textContent = String(Math.max(2026, new Date().getFullYear()));
+            }
+
+            // Back to top: smooth, or instant for reduced motion
+            var topBtn = document.getElementById('kf-back-to-top');
+            if (topBtn) {
+                topBtn.addEventListener('click', function () {
+                    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
+                });
+            }
+        })();
+        </script>
+    </footer>
+
     <!-- Success Modal - Responsive -->
     <div id="successModal" class="success-modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border-2 sm:border-4 theme-primary-border p-6 sm:p-8 max-w-lg w-full">
@@ -546,9 +640,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <h2 class="text-xl sm:text-2xl lg:text-3xl font-black uppercase mb-3 sm:mb-4 theme-primary-text">Registration Submitted!</h2>
+                <h2 class="text-xl sm:text-2xl lg:text-3xl font-black uppercase mb-3 sm:mb-4 theme-primary-text">Thank you</h2>
                 <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm mb-4 sm:mb-6">
-                    Your application has been received and is pending review. You'll receive an email with your membership ID once approved.
+                    We will email you shortly. Please check your inbox, and your spam folder too.
                 </p>
                 <button onclick="closeSuccessModal()" 
                         class="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 theme-primary-bg text-slate-900 font-black uppercase text-xs sm:text-sm brutal-shadow transition-all">
@@ -564,7 +658,7 @@
         <!-- Modal Header - Sticky -->
         <div class="bg-slate-800 border-b-2 sm:border-b-4 theme-primary-border p-4 sm:p-6 flex justify-between items-center flex-shrink-0">
             <h2 class="text-lg sm:text-xl lg:text-2xl font-black uppercase theme-primary-text">Terms & Conditions</h2>
-            <button onclick="closeTermsModal()" class="theme-primary-text hover:opacity-80 text-3xl sm:text-4xl font-black leading-none w-10 h-10 flex items-center justify-center">&times;</button>
+            <button type="button" onclick="closeTermsModal()" aria-label="Close" class="theme-primary-text hover:opacity-80 text-3xl sm:text-4xl font-black leading-none w-11 h-11 flex items-center justify-center"><span aria-hidden="true">&times;</span></button>
         </div>
         
         <!-- Modal Content - Scrollable -->
@@ -587,6 +681,7 @@
     </div>
 </div>
 
+    <script src="/js/kbf-forms.js"></script>
     <script>
     // ============================================
     // GLOBAL VARIABLES
@@ -603,7 +698,7 @@
 
     function changeTheme(theme) {
         document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('badminton-theme', theme);
+        KBF.storage.set('badminton-theme', theme);
         document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
             btn.classList.remove('active');
             if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
@@ -616,13 +711,18 @@
 
     function toggleMobileDropdown() {
         const dropdown = document.getElementById('mobile-dropdown-content');
-        const arrow = document.getElementById('mobile-dropdown-arrow');
-        dropdown.classList.toggle('active');
-        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+        const open = dropdown.classList.toggle('active');
+        const btn = document.getElementById('mobile-more-btn');
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     function updateFullPhoneNumber() {
-        if (phoneInput && phoneInput.isValidNumber()) {
+        if (!phoneInput) {
+            // Phone widget not loaded: send the typed number as it is
+            document.getElementById('fullPhoneNumber').value = document.getElementById('phoneNumber').value.trim();
+            return;
+        }
+        if (phoneInput.isValidNumber()) {
             const fullNumber = phoneInput.getNumber();
             document.getElementById('fullPhoneNumber').value = fullNumber;
         }
@@ -632,20 +732,29 @@
     // INITIALIZATION
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        const savedTheme = KBF.storage.get('badminton-theme', 'emerald');
         changeTheme(savedTheme);
         
         const input = document.querySelector("#phoneNumber");
         
-        phoneInput = window.intlTelInput(input, {
-            initialCountry: "gb",
-            preferredCountries: ["gb", "in", "us"],
-            separateDialCode: true,
-            nationalMode: false,
-            autoPlaceholder: "aggressive",
-            formatOnDisplay: true,
-            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/js/utils.js"
-        });
+        // The phone widget is loaded from a CDN; when it is blocked the plain
+        // field is used and the number is checked more simply on submit.
+        if (typeof window.intlTelInput === 'function') {
+            try {
+                phoneInput = window.intlTelInput(input, {
+                    initialCountry: "gb",
+                    preferredCountries: ["gb", "in", "us"],
+                    separateDialCode: true,
+                    nationalMode: false,
+                    autoPlaceholder: "aggressive",
+                    formatOnDisplay: true,
+                    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/js/utils.js"
+                });
+            } catch (err) {
+                console.error('Phone input could not start:', err);
+                phoneInput = null;
+            }
+        }
         
         input.addEventListener('blur', function() {
             updateFullPhoneNumber();
@@ -779,68 +888,124 @@
     document.getElementById('registrationForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
+        const form = this;
         const submitBtn = document.getElementById('submitBtn');
         const messageBox = document.getElementById('messageBox');
-        
-        if (!phoneInput.isValidNumber()) {
-            messageBox.className = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-            messageBox.textContent = 'Please enter a valid phone number';
+        const ERROR_CLASS = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold text-xs sm:text-sm';
+        const hasForms = !!(window.KBF && KBF.showFieldError);
+
+        function showError(text) {
+            messageBox.className = ERROR_CLASS;
+            messageBox.textContent = text;
             messageBox.classList.remove('hidden');
             messageBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function fieldError(id, text) {
+            // Shown (and announced) next to the field; the general box is
+            // only used when the field helper is missing
+            if (hasForms) KBF.showFieldError(id, text);
+            else showError(text);
+            const field = document.getElementById(id);
+            if (field) field.focus();
+        }
+
+        function resetRecaptcha() {
+            try { if (window.grecaptcha) grecaptcha.reset(); } catch (err) { /* widget not loaded */ }
+        }
+
+        if (hasForms && KBF.isBusy(submitBtn)) return;
+        if (hasForms) KBF.clearFormErrors(form);
+        messageBox.classList.add('hidden');
+
+        // Names: letters in any language, spaces, apostrophes and hyphens
+        const nameChecks = [['firstName', 'First name'], ['lastName', 'Surname']];
+        for (const [id, label] of nameChecks) {
+            const value = document.getElementById(id).value.trim();
+            const valid = value.length >= 2 && (hasForms ? KBF.isValidName(value) : true);
+            if (!valid) {
+                fieldError(id, label + ' must be at least 2 characters: letters (accents are fine), spaces, apostrophes and hyphens.');
+                return;
+            }
+        }
+
+        let phoneCheck = null;
+        if (phoneInput) {
+            // null when the number checker (utils) could not load
+            try { phoneCheck = phoneInput.isValidNumber(); } catch (err) { phoneCheck = null; }
+        }
+        if (phoneInput && phoneCheck !== null) {
+            if (!phoneCheck) {
+                fieldError('phoneNumber', 'Please enter a valid mobile number.');
+                return;
+            }
+        } else {
+            let typed = document.getElementById('phoneNumber').value.replace(/[\s()\-]/g, '');
+            if (phoneInput && typed && typed.charAt(0) !== '+') {
+                // Widget shown without its checker: add the chosen country code
+                try {
+                    const dial = (phoneInput.getSelectedCountryData() || {}).dialCode;
+                    if (dial) typed = '+' + dial + typed.replace(/^0+/, '');
+                } catch (err) { /* keep as typed */ }
+            }
+            if (!/^\+\d{7,15}$/.test(typed)) {
+                fieldError('phoneNumber', 'Please enter your mobile number with the country code, for example +44 7700 900123.');
+                return;
+            }
+            document.getElementById('fullPhoneNumber').value = typed;
+        }
+
+        if (phoneCheck !== null) updateFullPhoneNumber();
+
+        if (!window.grecaptcha || typeof grecaptcha.getResponse !== 'function') {
+            showError('The "verify you are human" check could not load. Please check your connection, turn off any content blocker for this site and reload the page.');
+            return;
+        }
+        let recaptchaResponse = '';
+        try {
+            recaptchaResponse = grecaptcha.getResponse();
+        } catch (err) {
+            recaptchaResponse = '';
+        }
+        if (!recaptchaResponse) {
+            showError('Please complete the "verify you are human" check.');
             return;
         }
 
-        updateFullPhoneNumber();
-        
-        const recaptchaResponse = grecaptcha.getResponse();
-        if (!recaptchaResponse) {
-            messageBox.className = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-            messageBox.textContent = 'Please complete the reCAPTCHA verification';
-            messageBox.classList.remove('hidden');
-            messageBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-        }
-        
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'SUBMITTING...';
-        messageBox.classList.add('hidden');
-        
+        const restore = hasForms ? KBF.setBusy(submitBtn, 'Registering...') : function () {};
+        if (!hasForms) submitBtn.disabled = true;
+
         try {
-            const formData = new FormData(this);
+            const formData = new FormData(form);
             formData.append('recaptcha_response', recaptchaResponse);
-            
+
             const response = await fetch('/api/registration.php', {
                 method: 'POST',
                 credentials: 'include',
                 body: formData
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 document.getElementById('successModal').classList.add('show');
                 document.body.style.overflow = 'hidden';
-                
-                this.reset();
-                grecaptcha.reset();
-                phoneInput.setNumber('');
+
+                form.reset();
+                resetRecaptcha();
+                if (phoneInput) phoneInput.setNumber('');
                 document.getElementById('photoPreview').classList.remove('show');
             } else {
-                messageBox.className = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-                messageBox.textContent = result.message || 'Registration failed. Please try again.';
-                messageBox.classList.remove('hidden');
-                grecaptcha.reset();
-                messageBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showError(result.message || 'Registration failed. Please try again.');
+                resetRecaptcha();
             }
         } catch (error) {
             console.error('Error:', error);
-            messageBox.className = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-            messageBox.textContent = 'An error occurred. Please try again.';
-            messageBox.classList.remove('hidden');
-            grecaptcha.reset();
+            showError('The registration could not be sent. Please check your connection and try again.');
+            resetRecaptcha();
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'SUBMIT REGISTRATION →';
+            restore();
+            if (!hasForms) submitBtn.disabled = false;
         }
     });
 

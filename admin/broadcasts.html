@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Broadcasts - Admin</title>
+    <title>Broadcasts - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -26,9 +26,13 @@
         .btn-danger { color: #fca5a5; }
         .btn-danger:hover:not(:disabled) { border-color: #ef4444; color: #fff; }
         .btn-solid:focus-visible, .btn-plain:focus-visible, .choice-card:focus-visible, .grade-btn:focus-visible, .when-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        /* Touch targets at least 44px */
+        .btn-solid, .btn-plain, .grade-btn, .when-btn { min-height: 44px; }
+        .btn-sm { min-width: 44px; }
 
         /* Fields */
         .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field[aria-invalid="true"] { border-color: #ef4444; }
         .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
@@ -222,7 +226,7 @@
         <!-- SENT AND SCHEDULED -->
         <!-- ============================ -->
         <section class="bg-slate-900 border-2 sm:border-4 border-gray-700" aria-labelledby="historyHeading">
-            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-4 border-gray-700 bg-slate-800 flex items-center justify-between gap-3">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-4 border-gray-700 bg-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <h2 id="historyHeading" class="text-lg sm:text-xl font-black theme-primary-text uppercase">Sent and scheduled</h2>
                 <p id="refreshNote" class="hidden text-xs text-gray-400 font-bold uppercase">Updating while sending</p>
             </div>
@@ -277,6 +281,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/kbf-editor.js"></script>
     <script>
@@ -305,7 +311,6 @@
     let countSeq = 0;
     let countTimer = null;
     let pollTimer = null;
-    let lastFocus = null;
 
     // ---------- helpers ----------
     function getCSRFToken() {
@@ -564,12 +569,11 @@
 
     function checkCompose() {
         showMsg('composeMessage', '');
-        document.getElementById('subjectInput').removeAttribute('aria-invalid');
+        KBF.clearFieldError('subjectInput');
         const subject = document.getElementById('subjectInput').value.trim();
         if (!subject) {
-            document.getElementById('subjectInput').setAttribute('aria-invalid', 'true');
+            KBF.showFieldError('subjectInput', 'Add a subject.');
             document.getElementById('subjectInput').focus();
-            showMsg('composeMessage', 'Add a subject.', 'error');
             return false;
         }
         if (!editorText()) { showMsg('composeMessage', 'Write the message.', 'error'); editor.focus(); return false; }
@@ -607,13 +611,15 @@
 
     function failMessage(data, fallback) {
         showMsg('composeMessage', (data && data.message) || fallback, 'error');
-        if (data && data.field === 'subject') document.getElementById('subjectInput').setAttribute('aria-invalid', 'true');
+        if (data && data.field === 'subject') KBF.showFieldError('subjectInput', (data && data.message) || fallback);
         document.getElementById('composeMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
+    const BUSY_TEXT = { previewBtn: 'Loading preview...', testBtn: 'Sending...', draftBtn: 'Saving...' };
     async function busy(btn, fn) {
-        btn.disabled = true;
-        try { await fn(); } finally { btn.disabled = false; renderSendButton(); applyReadOnly(); }
+        if (KBF.isBusy(btn)) return;
+        const restore = KBF.setBusy(btn, BUSY_TEXT[btn.id] || 'Working...');
+        try { await fn(); } finally { restore(); renderSendButton(); applyReadOnly(); }
     }
 
     // ============================================
@@ -708,7 +714,7 @@
         savedAttachment = null;
         removeSaved = false;
         document.getElementById('subjectInput').value = '';
-        document.getElementById('subjectInput').removeAttribute('aria-invalid');
+        KBF.clearFieldError('subjectInput');
         if (editor) editor.setHtml('');
         clearFile();
         chosenGrades = [];
@@ -765,7 +771,7 @@
         try {
             const data = await getJson(API + '?action=list');
             if (!data.success) {
-                document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">' + esc(data.message || 'The list could not be loaded.') + '</td></tr>';
+                showListError(data.message || 'The list could not be loaded.');
                 return null;
             }
             grades = data.grades || [];
@@ -781,9 +787,19 @@
             if (data.anySending) pollTimer = setTimeout(loadList, 10000);
             return data;
         } catch (e) {
-            document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">The list could not be loaded.</td></tr>';
+            showListError('The list could not be loaded. Please check your connection and try again.');
             return null;
         }
+    }
+
+    // Message and "Try again" in the history table
+    function showListError(text) {
+        const body = document.getElementById('historyBody');
+        body.innerHTML = '<tr><td colspan="6"></td></tr>';
+        KBF.showLoadError(body.querySelector('td'), {
+            message: text,
+            retry: () => loadList().then(data => { if (data) renderGradeButtons(); })
+        });
     }
 
     function applyReadOnly() {
@@ -812,7 +828,7 @@
             if (b.status === 'draft' || b.status === 'scheduled') {
                 progress = '<span class="text-gray-400">' + fmt(total) + ' recipient' + (total === 1 ? '' : 's') + ' now</span>';
             } else {
-                progress = '<div>' + fmt(b.sent) + ' of ' + fmt(total) + ' sent &bull; ' + fmt(b.failed) + ' failed</div>'
+                progress = '<div>' + fmt(b.sent) + ' of ' + fmt(total) + ' sent, ' + fmt(b.failed) + ' failed</div>'
                     + '<div class="progress-track mt-1" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Progress"><div class="progress-fill" style="width: ' + pct + '%;"></div></div>';
             }
             const actions = [];
@@ -868,19 +884,20 @@
     // ============================================
     let confirmAction = null;
 
+    // Focus, Tab trap, Escape and return focus come from js/kbf-dialog.js
     function openDialog(id, focusId) {
-        lastFocus = document.activeElement;
-        document.getElementById(id).classList.remove('hidden');
+        const wrap = document.getElementById(id);
+        wrap.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        const f = document.getElementById(focusId);
-        if (f) f.focus();
+        KBFDialog.open(wrap, { onClose: () => closeDialog(id), initialFocus: document.getElementById(focusId) });
     }
 
     function closeDialog(id) {
-        document.getElementById(id).classList.add('hidden');
+        const wrap = document.getElementById(id);
+        wrap.classList.add('hidden');
         document.body.style.overflow = '';
         if (id === 'previewDialog') document.getElementById('previewFrame').srcdoc = '';
-        if (lastFocus && lastFocus.focus) lastFocus.focus();
+        KBFDialog.close(wrap);
     }
 
     function openConfirm(title, text, okLabel, action) {
@@ -896,24 +913,18 @@
 
     document.getElementById('confirmCancel').addEventListener('click', () => closeDialog('confirmDialog'));
     document.getElementById('confirmOk').addEventListener('click', async function () {
-        if (!confirmAction) return;
-        this.disabled = true;
+        if (!confirmAction || KBF.isBusy(this)) return;
+        const restore = KBF.setBusy(this, 'Working...');
         try {
             const ok = await confirmAction();
             if (ok) closeDialog('confirmDialog');
         } catch (e) {
             confirmError('That did not work. Please try again.');
         } finally {
-            this.disabled = false;
+            restore();
         }
     });
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape') return;
-        ['previewDialog', 'confirmDialog'].forEach(id => {
-            if (!document.getElementById(id).classList.contains('hidden')) closeDialog(id);
-        });
-    });
     ['previewDialog', 'confirmDialog'].forEach(id => {
         document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) closeDialog(id); });
     });

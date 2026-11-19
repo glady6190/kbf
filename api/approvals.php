@@ -116,6 +116,109 @@ function apPossibleMemberSql() {
         AND (" . AP_MEMBER_EMAIL_SQL . " OR " . AP_MEMBER_NAME_SQL . "))";
 }
 
+// A deactivated (not removed) member who already has this email, or null.
+// Their registration can never be approved as a new player (the email is
+// taken); the approver reactivates them instead (BUG-10).
+function apDeactivatedMember(PDO $pdo, $email) {
+    $email = trim((string) $email);
+    if ($email === '') {
+        return null;
+    }
+    $stmt = $pdo->prepare("
+        SELECT UserId, FirstName, LastName, PlayerId, IsSuperAdmin,
+               EXISTS (SELECT 1 FROM UserPermissions up WHERE up.UserId = Users.UserId) AS HasAccess
+        FROM Users
+        WHERE Email = ? AND IsActive = 0 AND COALESCE(IsRemoved, 0) = 0
+        LIMIT 1
+    ");
+    $stmt->execute([$email]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+// "Reactivate this member": the registration's email belongs to a
+// deactivated member. They are made active again (grade, points and history
+// kept), the registration is closed as approved and its photo removed after
+// the commit. Same permissions as reactivating on the People page.
+function apReactivateMember(PDO $pdo, $registrationId) {
+    if (!hasPermission('players.edit_details') || !hasPermission('players.change_grades')) {
+        return ['success' => false, 'message' => 'Reactivating a member also needs permission to edit player details and change grades', 'code' => 403, 'emailStatus' => null];
+    }
+    $photo = null;
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("SELECT * FROM PlayerRegistrations WHERE RegistrationId = ? AND Status = 'Pending' FOR UPDATE");
+        $stmt->execute([(int) $registrationId]);
+        $registration = $stmt->fetch();
+        if (!$registration) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Registration not found or already processed', 'code' => 404, 'emailStatus' => null];
+        }
+        $member = apDeactivatedMember($pdo, $registration['Email']);
+        if ($member === null) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'No deactivated member has this email any more. Please reload.', 'code' => 409, 'emailStatus' => null];
+        }
+        if (((int) $member['IsSuperAdmin'] === 1 || (int) $member['HasAccess'] === 1) && !isSuperAdmin()) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'This member has staff access: only a Super Admin can reactivate them.', 'code' => 403, 'emailStatus' => null];
+        }
+
+        $stmt = $pdo->prepare("UPDATE Users SET IsActive = 1 WHERE UserId = ? AND IsRemoved = 0");
+        $stmt->execute([(int) $member['UserId']]);
+
+        $note = 'Existing member reactivated (' . apName($member['FirstName'], $member['LastName'])
+            . ($member['PlayerId'] ? ', ' . $member['PlayerId'] : '') . ')';
+        $stmt = $pdo->prepare("
+            UPDATE PlayerRegistrations
+            SET Status = 'Approved', ReviewedByAdminId = ?, ReviewedDate = NOW(), ReviewComments = ?
+            WHERE RegistrationId = ?
+        ");
+        $stmt->execute([(int) $_SESSION['user_id'], $note, (int) $registrationId]);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO ApprovalLogs
+            (LogType, Action, ReferenceId, ReferenceName, ReferenceDetails, ApprovedByAdminId, ApprovedByAdminName, Comments)
+            VALUES ('Registration', 'Approved', ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            (int) $registrationId,
+            apName($registration['FirstName'], $registration['LastName']),
+            'Player: ' . apName($member['FirstName'], $member['LastName']) . ', ID: ' . ($member['PlayerId'] ?: '-'),
+            (int) $_SESSION['user_id'],
+            $_SESSION['name'] ?? '',
+            $note,
+        ]);
+        $pdo->commit();
+
+        $photo = $registration['ProfilePhoto'];
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('Reactivate member error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Database error occurred', 'code' => 500, 'emailStatus' => null];
+    }
+
+    // The registration's own photo is not needed: removed after the commit
+    if ($photo && preg_match('#^/uploads/registrations/[a-zA-Z0-9_]+\.(jpg|jpeg|png|webp)$#', $photo)) {
+        require_once __DIR__ . '/image-helpers.php';
+        $file = __DIR__ . '/..' . $photo;
+        if (is_file($file)) {
+            @unlink($file);
+        }
+        kbfDeleteImageVariants($file);
+    }
+
+    auditLog('player_reactivated', 'user', (int) $member['UserId'],
+        'Player: ' . apName($member['FirstName'], $member['LastName']) . '; reactivated from registration ' . (int) $registrationId);
+
+    require_once __DIR__ . '/player-stats-calculator.php';
+    kbfRecalculatePlayerStats($pdo, [(int) $member['UserId']]);
+
+    return ['success' => true, 'message' => 'Member reactivated. Their grade, points and history are kept.', 'code' => 200, 'emailStatus' => null];
+}
+
 function apPossibleMembers(PDO $pdo, $registrationId) {
     $stmt = $pdo->prepare("
         SELECT u.UserId, u.FirstName, u.LastName, u.PlayerId, u.Location,
@@ -285,8 +388,12 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
             $message = APPROVAL_REASONS[$group][$reasonKey][1];
         }
     }
-    $comments = ($message !== null && trim((string) $message) !== '') ? sanitizeInput((string) $message) : null;
-    if ($comments && strlen(apText($comments)) > 1000) {
+    // Stored as typed (no tags); escaped when shown
+    $comments = ($message !== null && trim((string) $message) !== '') ? kbfCleanText((string) $message, true) : null;
+    if ($comments === '') {
+        $comments = null;
+    }
+    if ($comments && kbfTextLength($comments) > 1000) {
         return $fail('The message must be 1,000 characters or fewer', 400);
     }
     $logComments = $comments === null ? null : ($reasonLabel !== null ? $reasonLabel . ': ' . $comments : $comments);
@@ -295,6 +402,10 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
     $pendingNotify = null;
     // Players whose stats are recalculated after the commit (never inside it)
     $statsPlayerIds = [];
+    // Registration photo files: originals deleted only after the commit;
+    // copies made for the new member deleted again if the decision fails
+    $deleteAfterCommit = [];
+    $createdFiles = [];
 
     try {
         $pdo->beginTransaction();
@@ -316,7 +427,13 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
             $gradeChanged = false;
             $gradeShort = '';
             if ($status === 'Approved') {
-                // Check for duplicate email before approving
+                // Check for duplicate email before approving. A deactivated
+                // member with this email is reactivated instead (BUG-10).
+                $deactivated = apDeactivatedMember($pdo, $registration['Email']);
+                if ($deactivated !== null) {
+                    return $fail('This email belongs to a deactivated member (' . apName($deactivated['FirstName'], $deactivated['LastName'])
+                        . ($deactivated['PlayerId'] ? ', ' . $deactivated['PlayerId'] : '') . '). Use "Reactivate this member" instead.', 409);
+                }
                 $stmt = $pdo->prepare("SELECT UserId FROM Users WHERE Email = ?");
                 $stmt->execute([$registration['Email']]);
                 if ($stmt->fetch()) {
@@ -389,14 +506,16 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                                 mkdir($profilesDir, 0755, true);
                             }
 
+                            // Copy now; the original is deleted only after
+                            // the commit (BUG-14), the copy if it fails
                             if (copy($oldPath, $newPath)) {
+                                $createdFiles[] = $newPath;
                                 $stmt = $pdo->prepare("UPDATE Users SET ProfilePhoto = ? WHERE UserId = ?");
                                 $stmt->execute(['/uploads/profiles/' . $newFilename, $userId]);
-                                unlink($oldPath);
                                 // Display version and thumbnail follow the photo
                                 require_once __DIR__ . '/image-helpers.php';
-                                kbfDeleteImageVariants($oldPath);
                                 kbfMakeImageVariants($newPath);
+                                $deleteAfterCommit[] = $oldPath;
                             }
                         }
                     }
@@ -422,12 +541,8 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                 // Rejected - delete profile photo if exists
                 if ($registration['ProfilePhoto']) {
                     if (preg_match('#^/uploads/registrations/[a-zA-Z0-9_]+\.(jpg|jpeg|png|webp)$#', $registration['ProfilePhoto'])) {
-                        $photoPath = __DIR__ . '/..' . $registration['ProfilePhoto'];
-                        if (file_exists($photoPath)) {
-                            unlink($photoPath);
-                        }
-                        require_once __DIR__ . '/image-helpers.php';
-                        kbfDeleteImageVariants($photoPath);
+                        // Deleted only after the commit (BUG-14)
+                        $deleteAfterCommit[] = __DIR__ . '/..' . $registration['ProfilePhoto'];
                     }
                 }
 
@@ -701,6 +816,17 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
 
         $pdo->commit();
 
+        // Registration photo originals go only now that the decision is saved
+        if ($deleteAfterCommit) {
+            require_once __DIR__ . '/image-helpers.php';
+            foreach ($deleteAfterCommit as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+                kbfDeleteImageVariants($file);
+            }
+        }
+
         // Stats and eligibility for the players affected, now that the
         // decision is saved and its locks are released
         if ($statsPlayerIds) {
@@ -714,6 +840,15 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
+        }
+        // The decision was not saved: remove photo copies made for it (the
+        // registration keeps its original photo)
+        if ($createdFiles) {
+            require_once __DIR__ . '/image-helpers.php';
+            foreach ($createdFiles as $file) {
+                @unlink($file);
+                kbfDeleteImageVariants($file);
+            }
         }
         kbfNotifyDiscard();
         error_log('Approval error: ' . $e->getMessage());
@@ -1183,6 +1318,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
                     'phone' => $showContact ? apText($r['PhoneNumber']) : null,
                 ],
                 'matches' => apPossibleMembers($pdo, $id),
+                // The email belongs to a deactivated member: approving can
+                // never succeed; the page offers "Reactivate this member"
+                'deactivatedMember' => (function () use ($pdo, $r, $waiting) {
+                    $m = $waiting ? apDeactivatedMember($pdo, $r['Email']) : null;
+                    return $m === null ? null : [
+                        'userId' => (int) $m['UserId'],
+                        'name' => apName($m['FirstName'], $m['LastName']),
+                        'kbfId' => (string) $m['PlayerId'],
+                        'staff' => (int) $m['IsSuperAdmin'] === 1 || (int) $m['HasAccess'] === 1,
+                    ];
+                })(),
             ]);
         }
 
@@ -1476,7 +1622,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $approved = 0;
         $skipped = [];
         $failed = [];
-        $nameStmt = $pdo->prepare("SELECT FirstName, LastName, Status FROM PlayerRegistrations WHERE RegistrationId = ?");
+        $nameStmt = $pdo->prepare("SELECT FirstName, LastName, Status, Email FROM PlayerRegistrations WHERE RegistrationId = ?");
         foreach ($clean as $id) {
             try {
                 $nameStmt->execute([$id]);
@@ -1491,6 +1637,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = apName($reg['FirstName'], $reg['LastName']);
             if ($reg['Status'] !== 'Pending') {
                 $skipped[] = ['id' => $id, 'name' => $name, 'reason' => 'already decided'];
+                continue;
+            }
+            // A deactivated member's email: reactivate them instead
+            try {
+                $isDeactivated = apDeactivatedMember($pdo, $reg['Email']) !== null;
+            } catch (PDOException $e) {
+                $isDeactivated = false;
+            }
+            if ($isDeactivated) {
+                $skipped[] = ['id' => $id, 'name' => $name, 'reason' => 'belongs to a deactivated member (reactivate them instead)'];
                 continue;
             }
             try {
@@ -1547,6 +1703,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $neededPermission = ($type === 'registration') ? 'players.approve_registrations' : 'tournaments.approve';
     if (!hasPermission($neededPermission)) {
         sendJSON(['success' => false, 'message' => 'Insufficient permissions'], 403);
+    }
+
+    // "Reactivate this member" (registrations whose email belongs to a
+    // deactivated member)
+    if ($action === 'reactivate' && $type === 'registration') {
+        $result = apReactivateMember($pdo, (int) $id);
+        sendJSON(['success' => $result['success'], 'message' => $result['message']], $result['code']);
     }
 
     if (!in_array($action, ['approve', 'reject'], true)) {

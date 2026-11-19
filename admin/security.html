@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Settings - Admin</title>
+    <title>Security - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -26,6 +26,7 @@
         .choice-radio { width: 18px; height: 18px; accent-color: var(--theme-primary); flex-shrink: 0; }
 
         .rule-input { width: 7rem; background: #1e293b; border: 4px solid #374151; color: #fff; padding: .5rem .75rem; font-weight: 700; font-size: .875rem; }
+        @media (max-width: 639.98px) { .rule-input { font-size: 16px; } }
         .rule-input:focus { outline: none; border-color: var(--theme-primary); }
         .rule-input[aria-invalid="true"] { border-color: #ef4444; }
 
@@ -42,7 +43,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
         <div class="mb-6 sm:mb-8">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Security</span> Settings</h1>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Security</span></h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">How staff sign in to the admin area</p>
         </div>
@@ -116,7 +117,7 @@
 
                 <p id="setUpCount" class="mt-5 text-xs sm:text-sm font-bold uppercase text-gray-300"></p>
 
-                <div id="policyMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+                <div id="policyMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
 
                 <div class="mt-5 sm:mt-6 flex justify-end">
                     <button type="button" id="savePolicyBtn" onclick="savePolicy()"
@@ -169,7 +170,7 @@
                     </div>
                 </div>
 
-                <div id="rulesMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+                <div id="rulesMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
 
                 <div class="mt-5 sm:mt-6 flex justify-end">
                     <button type="button" id="saveRulesBtn" onclick="saveRules()"
@@ -183,6 +184,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -197,7 +200,7 @@
     // HELPER FUNCTIONS
     // ============================================
     function getCSRFToken() {
-        return sessionStorage.getItem('csrf_token');
+        try { return sessionStorage.getItem('csrf_token'); } catch (e) { return null; }
     }
 
     async function authenticatedFetch(url, options = {}) {
@@ -235,7 +238,7 @@
             const res = await authenticatedFetch('/api/staff.php?action=securitySettings');
             const data = await res.json();
             if (!data.success) {
-                document.getElementById('pageLoading').textContent = data.message || 'Could not load security settings';
+                KBF.showLoadError('pageLoading', { message: data.message || 'The security settings could not be loaded.', retry: loadSettings });
                 return;
             }
             render(data);
@@ -243,7 +246,7 @@
             document.getElementById('pageContent').classList.remove('hidden');
         } catch (e) {
             console.error('Load security settings error:', e);
-            document.getElementById('pageLoading').textContent = 'Could not load security settings';
+            KBF.showLoadError('pageLoading', { message: 'The security settings could not be loaded. Please check your connection and try again.', retry: loadSettings });
         }
     }
 
@@ -269,7 +272,7 @@
         RULE_FIELDS.forEach(f => {
             const input = document.getElementById('rule-' + f);
             input.value = rules[f] != null ? rules[f] : '';
-            input.removeAttribute('aria-invalid');
+            KBF.clearFieldError(input);
         });
     }
 
@@ -286,16 +289,17 @@
         const rules = {};
         RULE_FIELDS.forEach(f => {
             const input = document.getElementById('rule-' + f);
-            input.removeAttribute('aria-invalid');
+            KBF.clearFieldError(input);
             rules[f] = input.value.trim();
         });
         if (parseInt(rules.warningMinutes, 10) >= parseInt(rules.sessionMinutes, 10)) {
-            document.getElementById('rule-warningMinutes').setAttribute('aria-invalid', 'true');
-            showRulesMessage('The warning must be shorter than the session length', false);
+            KBF.showFieldError('rule-warningMinutes', 'The warning must be shorter than the session length');
+            document.getElementById('rule-warningMinutes').focus();
             return;
         }
         const btn = document.getElementById('saveRulesBtn');
-        btn.disabled = true;
+        if (KBF.isBusy(btn)) return;
+        const restoreBtn = KBF.setBusy(btn, 'Saving...');
         try {
             const res = await authenticatedFetch('/api/staff.php', {
                 method: 'POST',
@@ -306,7 +310,7 @@
             if (!data.success) {
                 if (data.field) {
                     const input = document.getElementById('rule-' + data.field);
-                    if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
+                    if (input) { KBF.showFieldError(input, data.message || 'Check this value'); input.focus(); }
                 }
                 showRulesMessage(data.message || 'Could not save the sign-in rules', false);
                 return;
@@ -317,7 +321,7 @@
             console.error('Save sign-in rules error:', e);
             showRulesMessage('Could not save the sign-in rules. Please try again.', false);
         } finally {
-            btn.disabled = false;
+            restoreBtn();
         }
     }
 
@@ -347,12 +351,17 @@
             const who = policy === 'required_all'
                 ? 'Every staff member who has not set up 2-step verification'
                 : 'Super Admins and Main Admins who have not set up 2-step verification';
-            const question = who + ' will have to set it up at their next sign-in.\n\nSave this setting?';
-            if (!confirm(question)) return;
+            const yes = await KBFDialog.confirm({
+                title: 'Save this setting?',
+                message: who + ' will have to set it up at their next sign-in.',
+                confirmText: 'Save setting'
+            });
+            if (!yes) return;
         }
 
         const btn = document.getElementById('savePolicyBtn');
-        btn.disabled = true;
+        if (KBF.isBusy(btn)) return;
+        const restoreBtn = KBF.setBusy(btn, 'Saving...');
         try {
             const res = await authenticatedFetch('/api/staff.php', {
                 method: 'POST',
@@ -371,7 +380,7 @@
             console.error('Save security settings error:', e);
             showMessage('Could not save settings. Please try again.', false);
         } finally {
-            btn.disabled = false;
+            restoreBtn();
         }
     }
     </script>

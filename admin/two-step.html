@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2-Step Verification - Admin</title>
+    <title>2-step verification - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -23,6 +23,7 @@
         .btn-danger { background: #1e293b; border: 2px solid #ef4444; color: #f87171; }
         .btn-danger:hover { background: #ef4444; color: #0F172A; }
         .btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-theme, .btn-plain, .btn-danger { min-height: 44px; }
         .btn-theme:focus-visible, .btn-plain:focus-visible, .btn-danger:focus-visible { outline: 3px solid var(--theme-primary); outline-offset: 2px; }
         .step-number { background: var(--theme-primary); color: #0F172A; }
         .key-box { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
@@ -51,19 +52,19 @@
                     <img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo" class="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0">
                     <span class="text-base sm:text-xl font-black uppercase whitespace-nowrap">KBF-UK</span>
                 </div>
-                <a href="/login" class="text-gray-400 hover:text-white font-bold uppercase text-xs py-3">Back to sign in</a>
+                <a href="/login" class="inline-flex items-center text-gray-400 hover:text-white font-bold uppercase text-xs py-3" style="min-height:44px">Back to staff sign in</a>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <div class="mb-6 sm:mb-8">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">2-Step</span> Verification</h1>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">2-step</span> verification</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p id="pageIntro" class="text-gray-400 font-bold text-sm">A code from your phone as well as your password when you sign in.</p>
         </div>
 
-        <div id="pageMessage" class="hidden mb-6 p-4 border-2 sm:border-4 font-bold text-sm" role="alert"></div>
+        <div id="pageMessage" class="hidden mb-6 p-4 border-2 sm:border-4 font-bold text-sm" role="status" aria-live="polite"></div>
 
         <div id="loading" class="bg-slate-900 border-2 sm:border-4 border-gray-700 p-6 text-gray-400 font-bold uppercase text-sm">Loading...</div>
 
@@ -211,6 +212,8 @@
     </main>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/code-input.js"></script>
     <script src="/js/vendor/qrcode-generator-1.4.4.min.js"></script>
@@ -280,6 +283,7 @@
         function pageMessage(text, ok) {
             var box = $('pageMessage');
             if (!text) { box.className = 'hidden mb-6 p-4 border-2 sm:border-4 font-bold text-sm'; box.textContent = ''; return; }
+            box.setAttribute('role', ok ? 'status' : 'alert');
             box.className = 'mb-6 p-4 border-2 sm:border-4 font-bold text-sm ' + (ok
                 ? 'border-green-500 bg-green-500/20 text-green-400'
                 : 'border-red-500 bg-red-500/20 text-red-400');
@@ -345,17 +349,25 @@
                     return;
                 }
                 if (!data.success || !data.twoStep) {
-                    show($('loading'), false);
-                    pageMessage(messageOf(data, 'Could not load your 2-step verification settings. Please try again.'), false);
+                    statusFailed(messageOf(data, 'Your 2-step verification settings could not be loaded.'));
                     return;
                 }
                 status = data.twoStep;
                 accountName = status.accountName ? String(status.accountName) : '';
                 render();
             }).catch(function () {
-                show($('loading'), false);
-                pageMessage('Could not load your 2-step verification settings. Please check your connection and try again.', false);
+                statusFailed('Your 2-step verification settings could not be loaded. Please check your connection and try again.');
             });
+        }
+
+        // Message and "Try again" in place of "Loading..."
+        function statusFailed(text) {
+            var box = $('loading');
+            show(box, true);
+            KBF.showLoadError(box, { message: text, retry: function () {
+                box.textContent = 'Loading...';
+                loadStatus();
+            } });
         }
 
         function render() {
@@ -403,8 +415,7 @@
             api('POST', { action: 'beginSetup' }).then(function (data) {
                 if (data.restart) { restart(messageOf(data), $('setupError')); return; }
                 if (!data.success || !data.otpauthUri || !data.secret) {
-                    show($('qrArea'), false);
-                    showError($('setupError'), messageOf(data, 'Could not start setting up 2-step verification. Please try again.'));
+                    setupFailed(messageOf(data, 'Could not start setting up 2-step verification.'));
                     return;
                 }
                 if (data.accountName) accountName = String(data.accountName);
@@ -417,9 +428,16 @@
                 $('confirmButton').disabled = false;
                 setupInput.setDisabled(false);
             }).catch(function () {
-                show($('qrArea'), false);
-                showError($('setupError'), 'Could not start setting up 2-step verification. Please check your connection and try again.');
+                setupFailed('Could not start setting up 2-step verification. Please check your connection and try again.');
             });
+        }
+
+        // Message with "Try again" in step 2
+        function setupFailed(text) {
+            show($('qrArea'), false);
+            var box = $('setupError');
+            show(box, true);
+            KBF.showLoadError(box, { message: text, retry: beginSetup });
         }
 
         function drawQr(uri) {
@@ -594,10 +612,18 @@
                 disableInput.focus();
                 return;
             }
-            if (!window.confirm('Turn off 2-step verification? Signing in will need only your password, and your backup codes will stop working.')) return;
-            runAction('disable', disableInput, $('disableError'), $('disableButton'), function () {
-                loadStatus();
-                pageMessage('2-step verification is off.', true);
+            KBFDialog.confirm({
+                title: 'Turn off 2-step verification?',
+                message: 'Signing in will need only your password, and your backup codes will stop working.',
+                confirmText: 'Turn off 2-step',
+                danger: true,
+                opener: $('disableButton')
+            }).then(function (yes) {
+                if (!yes) return;
+                runAction('disable', disableInput, $('disableError'), $('disableButton'), function () {
+                    loadStatus();
+                    pageMessage('2-step verification is off.', true);
+                });
             });
         });
 

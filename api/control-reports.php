@@ -99,8 +99,10 @@ function reportPlayers($pdo, $canContacts) {
 
     $location = is_string($_GET['location'] ?? null) ? trim($_GET['location']) : '';
     if ($location !== '') {
-        $where[] = 'u.Location = ?';
-        $params[] = htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); // stored escaped
+        // Stored as typed; older rows HTML-escaped (until decoded)
+        $where[] = 'u.Location IN (?, ?)';
+        $params[] = $location;
+        $params[] = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
         $filters['location'] = $location;
     }
 

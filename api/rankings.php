@@ -414,7 +414,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $userId = filter_var($data['userId'], FILTER_VALIDATE_INT);
     $newCategoryId = filter_var($data['newCategoryId'], FILTER_VALIDATE_INT);
-    $reason = sanitizeInput((string) $data['reason']);
+    // Stored as typed (no tags); escaped when shown
+    $reason = kbfCleanText((string) $data['reason'], true);
     $createAnnouncement = !empty($data['createAnnouncement']);
     // null: follow the Notifications switch; true or false: the admin's tick
     $sendEmail = array_key_exists('sendEmail', $data) && $data['sendEmail'] !== null ? (bool) $data['sendEmail'] : null;
@@ -425,8 +426,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset(gGrades($pdo)[$newCategoryId])) {
         sendJSON(['success' => false, 'message' => 'Choose one of the current grades.'], 400);
     }
-    $plainLength = mb_strlen(html_entity_decode($reason, ENT_QUOTES, 'UTF-8'), 'UTF-8');
-    if ($plainLength < 3 || strlen($reason) > 500) {
+    $plainLength = kbfTextLength($reason);
+    if ($plainLength < 3 || $plainLength > 500) {
         sendJSON(['success' => false, 'message' => 'The reason must be 3 to 500 characters.'], 400);
     }
 
@@ -467,7 +468,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newCategoryId,
             $reason,
             $_SESSION['user_id'],
-            isset($data['notes']) && $data['notes'] !== null ? sanitizeInput((string) $data['notes']) : null
+            isset($data['notes']) && $data['notes'] !== null ? mb_substr(kbfCleanText((string) $data['notes'], true), 0, 2000) : null
         ]);
 
         $stmt = $pdo->prepare("

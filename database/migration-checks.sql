@@ -27,7 +27,7 @@ FROM (
     UNION ALL SELECT 'Matches' UNION ALL SELECT 'NotificationDigest' UNION ALL SELECT 'NotificationEvents'
     UNION ALL SELECT 'NotificationRecipients' UNION ALL SELECT 'Notifications' UNION ALL SELECT 'PasswordResets'
     UNION ALL SELECT 'Permissions' UNION ALL SELECT 'PlayerPerformanceTracker' UNION ALL SELECT 'PlayerPointsHistory'
-    UNION ALL SELECT 'PlayerRankingHistory' UNION ALL SELECT 'PlayerRegistrations' UNION ALL SELECT 'RequestLimits'
+    UNION ALL SELECT 'PlayerRankingHistory' UNION ALL SELECT 'PlayerRegistrations' UNION ALL SELECT 'RequestLimits' UNION ALL SELECT 'RequestIds'
     UNION ALL SELECT 'ResultsApprovalQueue' UNION ALL SELECT 'RoundPoints' UNION ALL SELECT 'Settings'
     UNION ALL SELECT 'Sponsors' UNION ALL SELECT 'StaffRoles' UNION ALL SELECT 'SystemSettings'
     UNION ALL SELECT 'TemplateAttachments' UNION ALL SELECT 'TournamentCategories' UNION ALL SELECT 'TournamentPhotos'

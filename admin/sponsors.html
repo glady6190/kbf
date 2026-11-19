@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sponsors - Admin</title>
+    <title>Sponsors - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -30,6 +30,10 @@
         .switch[aria-checked="true"]::after { transform: translateX(20px); background: #0F172A; }
         .switch:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .switch:disabled { cursor: wait; opacity: .6; }
+        /* 44px tall tap area around the small switch */
+        .switch::before { content: ''; position: absolute; left: -2px; right: -2px; top: -12px; bottom: -12px; }
+        .row-btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .row-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
         /* Inactive sponsors stay in the list, greyed */
         .row-inactive .row-dim { opacity: .45; filter: grayscale(1); }
@@ -103,7 +107,7 @@
                     <label for="sponsorName" class="block text-xs font-black theme-primary-text uppercase mb-2">Name *</label>
                     <input type="text" id="sponsorName" maxlength="150" required
                            placeholder="e.g. Smith &amp; Sons Sports"
-                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm transition">
+                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm transition">
                 </div>
 
                 <!-- Logo -->
@@ -129,7 +133,7 @@
                     <label for="sponsorWebsite" class="block text-xs font-black theme-primary-text uppercase mb-2">Website <span class="text-gray-500">(optional)</span></label>
                     <input type="text" id="sponsorWebsite" maxlength="255" inputmode="url" autocomplete="off"
                            placeholder="e.g. www.example.co.uk"
-                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm transition">
+                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm transition">
                     <p class="text-xs text-gray-500 font-semibold mt-2">If you leave off https://, it is added for you.</p>
                 </div>
 
@@ -138,7 +142,7 @@
                     <label for="sponsorDescription" class="block text-xs font-black theme-primary-text uppercase mb-2">One-line description <span class="text-gray-500">(optional)</span></label>
                     <input type="text" id="sponsorDescription" maxlength="160" autocomplete="off"
                            placeholder="e.g. Official racquet partner of KBF-UK"
-                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-xs sm:text-sm transition">
+                           class="theme-focus w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm transition">
                     <p class="text-xs text-gray-500 font-semibold mt-2 text-right"><span id="descriptionCount">0</span> / 160</p>
                 </div>
 
@@ -173,7 +177,7 @@
                     <span class="text-xs sm:text-sm font-black uppercase text-gray-300">Active (show on the home page)</span>
                 </label>
 
-                <div id="formMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+                <div id="formMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
 
                 <div class="flex flex-col sm:flex-row justify-end gap-3">
                     <button type="button" id="cancelEditBtn"
@@ -196,7 +200,7 @@
                 <h2 class="text-lg sm:text-xl lg:text-2xl font-black theme-primary-text uppercase">Sponsor Queue</h2>
                 <p class="text-xs text-gray-400 mt-1 uppercase font-bold">Shown on the home page in this order</p>
             </div>
-            <div id="listMessage" class="hidden mx-4 sm:mx-6 mt-4 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+            <div id="listMessage" class="hidden mx-4 sm:mx-6 mt-4 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
             <ul id="sponsorList" class="divide-y-2 divide-gray-700">
                 <li class="px-6 py-10 text-center text-gray-400 font-bold uppercase text-sm">Loading...</li>
             </ul>
@@ -204,6 +208,8 @@
     </main>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // Page guard (shared shell)
@@ -247,6 +253,8 @@
             ? 'p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
             : 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm');
         box.classList.remove('hidden');
+        // Errors are announced straight away
+        box.setAttribute('role', ok ? 'status' : 'alert');
     }
 
     function hideMessage(boxId) {
@@ -440,10 +448,14 @@
         const description = descriptionInput.value.trim();
         const file = logoInput.files[0];
 
-        if (!name) { showMessage('formMessage', 'Name is required', false); return; }
-        if (name.length > 150) { showMessage('formMessage', 'Name must be 150 characters or fewer', false); return; }
-        if (description.length > 160) { showMessage('formMessage', 'Description must be 160 characters or fewer', false); return; }
-        if (!editingId && !file) { showMessage('formMessage', 'Please choose a logo for the new sponsor', false); return; }
+        // Problems are shown next to their field
+        KBF.clearFormErrors(document.getElementById('sponsorForm'));
+        hideMessage('formMessage');
+        const fieldProblem = (id, text) => { KBF.showFieldError(id, text); document.getElementById(id).focus(); };
+        if (!name) { fieldProblem('sponsorName', 'Name is required'); return; }
+        if (name.length > 150) { fieldProblem('sponsorName', 'Name must be 150 characters or fewer'); return; }
+        if (description.length > 160) { fieldProblem('sponsorDescription', 'Description must be 160 characters or fewer'); return; }
+        if (!editingId && !file) { fieldProblem('sponsorLogo', 'Please choose a logo for the new sponsor'); return; }
 
         const body = new FormData();
         body.append('action', editingId ? 'update' : 'create');
@@ -456,7 +468,7 @@
 
         const btn = document.getElementById('saveBtn');
         busy = true;
-        btn.disabled = true;
+        const restoreBtn = KBF.setBusy(btn, 'Saving...');
 
         try {
             const res = await authenticatedFetch('/api/sponsors.php', { method: 'POST', body: body });
@@ -474,7 +486,9 @@
             showMessage('formMessage', 'Error saving the sponsor. Please try again.', false);
         } finally {
             busy = false;
-            btn.disabled = false;
+            restoreBtn();
+            // resetForm() may have switched from editing to adding meanwhile
+            btn.textContent = editingId ? 'Save Changes' : 'Add Sponsor';
         }
     });
 
@@ -541,24 +555,24 @@
 
             // Actions
             const actions = el('div', 'flex flex-wrap gap-2 flex-shrink-0');
-            const up = el('button', 'icon-btn px-3 py-2 bg-slate-800 border-2 border-gray-700 text-gray-300 hover:text-white font-black uppercase text-xs transition', 'Move up');
+            const up = el('button', 'icon-btn row-btn px-3 py-2 bg-slate-800 border-2 border-gray-700 text-gray-300 hover:text-white font-black uppercase text-xs transition', 'Move up');
             up.type = 'button';
             up.disabled = index === 0;
             up.setAttribute('aria-label', 'Move ' + sponsor.name + ' up');
             up.addEventListener('click', () => moveSponsor(index, -1));
 
-            const down = el('button', 'icon-btn px-3 py-2 bg-slate-800 border-2 border-gray-700 text-gray-300 hover:text-white font-black uppercase text-xs transition', 'Move down');
+            const down = el('button', 'icon-btn row-btn px-3 py-2 bg-slate-800 border-2 border-gray-700 text-gray-300 hover:text-white font-black uppercase text-xs transition', 'Move down');
             down.type = 'button';
             down.disabled = index === sponsors.length - 1;
             down.setAttribute('aria-label', 'Move ' + sponsor.name + ' down');
             down.addEventListener('click', () => moveSponsor(index, 1));
 
-            const edit = el('button', 'px-3 py-2 bg-slate-800 border-2 theme-primary-border theme-primary-text font-black uppercase text-xs transition', 'Edit');
+            const edit = el('button', 'row-btn px-3 py-2 bg-slate-800 border-2 theme-primary-border theme-primary-text font-black uppercase text-xs transition', 'Edit');
             edit.type = 'button';
             edit.setAttribute('aria-label', 'Edit ' + sponsor.name);
             edit.addEventListener('click', () => startEdit(sponsor.id));
 
-            const del = el('button', 'px-3 py-2 bg-slate-800 border-2 border-red-500 text-red-400 hover:bg-red-500 hover:text-slate-900 font-black uppercase text-xs transition', 'Delete');
+            const del = el('button', 'row-btn px-3 py-2 bg-slate-800 border-2 border-red-500 text-red-400 hover:bg-red-500 hover:text-slate-900 font-black uppercase text-xs transition', 'Delete');
             del.type = 'button';
             del.setAttribute('aria-label', 'Delete ' + sponsor.name);
             del.addEventListener('click', () => deleteSponsor(sponsor));
@@ -581,11 +595,11 @@
                     showMessage('listMessage', 'The Sponsors table does not exist yet. Run database/sponsors.sql in phpMyAdmin first.', false);
                 }
             } else {
-                showMessage('listMessage', data.message || 'Could not load sponsors', false);
+                KBF.showLoadError('sponsorList', { tag: 'li', message: data.message || 'The sponsors could not be loaded.', retry: loadSponsors });
             }
         } catch (e) {
             console.error('Error loading sponsors:', e);
-            showMessage('listMessage', 'Error loading sponsors. Please reload the page.', false);
+            KBF.showLoadError('sponsorList', { tag: 'li', message: 'The sponsors could not be loaded. Please check your connection and try again.', retry: loadSponsors });
         }
     }
 
@@ -654,7 +668,13 @@
 
     async function deleteSponsor(sponsor) {
         if (busy) return;
-        if (!confirm('Delete the sponsor "' + sponsor.name + '"?\n\nThis also deletes its logo file and cannot be undone.')) return;
+        const ok = await KBFDialog.confirm({
+            title: 'Delete this sponsor?',
+            message: 'Delete the sponsor "' + sponsor.name + '"?\nThis also deletes its logo file and cannot be undone.',
+            confirmText: 'Delete sponsor',
+            danger: true
+        });
+        if (!ok) return;
 
         busy = true;
         try {

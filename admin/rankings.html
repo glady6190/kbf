@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grading - Admin</title>
+    <title>Player grades - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -15,18 +15,18 @@
         .theme-primary-border { border-color: var(--theme-primary); }
 
         /* Buttons */
-        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
         .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
         .btn-shadow { box-shadow: 5px 5px 0 #020617; }
         .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
-        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .6rem .9rem; white-space: nowrap; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .6rem .9rem; white-space: nowrap; }
         .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
         .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
         .btn-sm { padding: .45rem .75rem; font-size: .68rem; }
         .btn-solid:focus-visible, .btn-plain:focus-visible, .gr-tab:focus-visible, .gr-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
         /* Tabs */
-        .gr-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .gr-tab { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
         .gr-tab:hover { color: #fff; }
         .gr-tab .gr-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
         .gr-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
@@ -34,6 +34,7 @@
 
         /* Fields */
         .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .55rem .7rem; font-weight: 700; font-size: .8125rem; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
 
@@ -56,10 +57,11 @@
         .gr-tag-moved { background: #374151; border-color: #4b5563; color: #e5e7eb; }
 
         /* Messages */
-        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .75rem; }
-        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
-        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
-        .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
+        /* Same as the standard staff message: p-4 border-4 font-bold text-sm */
+        .msg { padding: 1rem; border: 4px solid; font-weight: 700; font-size: .875rem; }
+        .msg-ok { border-color: #22c55e; color: #4ade80; background: rgba(34, 197, 94, .2); }
+        .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
+        .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
 </head>
@@ -70,7 +72,7 @@
         <!-- Heading band -->
         <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Grading</h1>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Player grades</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
                 <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Promotions and grade changes</p>
             </div>
@@ -85,7 +87,7 @@
 
         <!-- Tabs -->
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-            <div class="flex gap-3 overflow-x-auto pb-2 pt-1 pl-1" role="tablist" aria-label="Grading lists" id="tabs">
+            <div class="flex flex-wrap gap-3 pb-2 pt-1 pl-1 min-w-0" role="tablist" aria-label="Grading lists" id="tabs">
                 <button type="button" class="gr-tab" role="tab" id="tab-eligible" aria-controls="panel-eligible" data-tab="eligible">Eligible for promotion <span class="gr-count" data-count="eligible">0</span></button>
                 <button type="button" class="gr-tab" role="tab" id="tab-close" aria-controls="panel-close" data-tab="close">Close to promotion <span class="gr-count" data-count="close">0</span></button>
                 <button type="button" class="gr-tab" role="tab" id="tab-history" aria-controls="panel-history" data-tab="history">Recent grade changes <span class="gr-count" data-count="history">0</span></button>
@@ -181,6 +183,8 @@
     </main>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-forms.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script src="/js/grade-change.js"></script>
     <script>
@@ -218,6 +222,7 @@
         if (!text) { box.classList.add('hidden'); return; }
         box.textContent = text;
         box.className = 'msg mb-5 ' + (kind === 'ok' ? 'msg-ok' : (kind === 'warn' ? 'msg-warn' : 'msg-error'));
+        box.setAttribute('role', kind === 'ok' || kind === 'warn' ? 'status' : 'alert');
     }
 
     function formatDate(value) {
@@ -281,11 +286,22 @@
     // ============================================
     // SUMMARY (season card, counts, Eligible and Close lists)
     // ============================================
+    // Loading failed: message and "Try again" in place of the lists
+    function summaryFailed(message) {
+        const text = message || 'The grading lists could not be loaded. Please check your connection and try again.';
+        const list = document.getElementById('eligibleList');
+        list.innerHTML = '<li></li>';
+        KBF.showLoadError(list.firstChild, { message: text, retry: loadSummary });
+        const close = document.getElementById('closeList');
+        close.innerHTML = '<li></li>';
+        KBF.showLoadError(close.firstChild, { message: text, retry: loadSummary });
+    }
+
     async function loadSummary() {
         try {
             const data = await getJson(API + '?action=summary');
             if (!data.success) {
-                showMsg(data.message || 'The grading lists could not be loaded.', 'error');
+                summaryFailed(data.message);
                 return;
             }
             summary = data;
@@ -296,7 +312,7 @@
             renderEligible();
             renderClose();
         } catch (e) {
-            showMsg('The grading lists could not be loaded.', 'error');
+            summaryFailed('');
         }
     }
 
@@ -307,7 +323,7 @@
         const parts = [];
         if (s.threshold) parts.push('Promotion at ' + s.threshold + ' points');
         parts.push('Reset on ' + s.resetLabel + days);
-        document.getElementById('seasonRules').textContent = parts.join(' • ');
+        document.getElementById('seasonRules').textContent = parts.join('. ');
     }
 
     function playerRow(p, mode) {
@@ -318,7 +334,7 @@
             ? '<span class="text-xs font-bold theme-primary-text">' + fmt(p.toGo) + ' to go</span>'
             : '';
         const button = mode === 'close'
-            ? '<a class="btn-plain btn-sm" href="/admin/people.html?person=' + encodeURIComponent(p.userId) + '" aria-label="' + esc('Open ' + p.name) + '">Open</a>'
+            ? '<a class="btn-plain btn-sm" href="/admin/people?person=' + encodeURIComponent(p.userId) + '" aria-label="' + esc('Open ' + p.name) + '">Open</a>'
             : (p.nextGradeId
                 ? '<button type="button" class="btn-solid btn-sm" data-promote="' + esc(p.userId) + '" aria-label="' + esc('Promote ' + p.name + ' to ' + p.nextGrade) + '">Promote</button>'
                 : '<span class="text-xs font-bold uppercase text-gray-500">Top grade</span>');
@@ -326,7 +342,7 @@
             + '<div class="flex items-center gap-3 min-w-0 md:flex-1">'
             + avatarHtml(p)
             + '<div class="min-w-0"><p class="text-sm font-black text-white truncate">' + esc(p.name) + '</p>'
-            + '<p class="text-xs text-gray-400 font-semibold truncate">' + esc(p.kbfId) + (p.city ? ' • ' + esc(p.city) : '') + '</p></div>'
+            + '<p class="text-xs text-gray-400 font-semibold truncate">' + esc(p.kbfId) + (p.city ? ', ' + esc(p.city) : '') + '</p></div>'
             + '</div>'
             + '<div class="flex flex-wrap items-center gap-4 md:gap-5">'
             + moveHtml(p)
@@ -409,13 +425,22 @@
         try {
             const data = await getJson(API + '?' + p.toString());
             if (!data.success) {
-                body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">' + esc(data.message || 'The grade changes could not be loaded.') + '</td></tr>';
+                historyFailed(data.message);
                 return;
             }
             renderHistory(data);
         } catch (e) {
-            body.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-red-400 font-bold text-sm">The grade changes could not be loaded.</td></tr>';
+            historyFailed('');
         }
+    }
+
+    function historyFailed(message) {
+        const body = document.getElementById('historyBody');
+        body.innerHTML = '<tr><td colspan="6"></td></tr>';
+        KBF.showLoadError(body.querySelector('td'), {
+            message: message || 'The grade changes could not be loaded. Please check your connection and try again.',
+            retry: () => loadHistory(historyPage)
+        });
     }
 
     function renderHistory(data) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Site Settings - Admin</title>
+    <title>Site settings - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -18,6 +18,7 @@
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
 
         .field { width: 100%; background: #1e293b; border: 4px solid #374151; color: #fff; padding: .625rem .875rem; font-weight: 700; font-size: .875rem; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field[aria-invalid="true"] { border-color: #ef4444; }
         .field:disabled { opacity: .6; cursor: not-allowed; }
@@ -27,6 +28,8 @@
 
         /* On/off switch */
         .switch { position: relative; display: inline-flex; width: 44px; height: 24px; background: #334155; border: 2px solid #4b5563; transition: background-color .2s ease; flex-shrink: 0; }
+        /* 44px tall tap area around the 24px switch */
+        .switch::before { content: ''; position: absolute; left: -2px; right: -2px; top: -12px; bottom: -12px; }
         .switch::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #94a3b8; transition: transform .2s ease, background-color .2s ease; }
         .switch[aria-checked="true"] { background: var(--theme-primary); border-color: var(--theme-primary); }
         .switch[aria-checked="true"]::after { transform: translateX(20px); background: #0F172A; }
@@ -192,7 +195,7 @@
                 </div>
             </section>
 
-            <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
+            <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm" role="status" aria-live="polite"></div>
             <p id="readOnlyNote" class="hidden text-xs font-bold uppercase text-amber-400">Not available while viewing as someone else</p>
 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
@@ -206,6 +209,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -303,7 +308,7 @@
             const res = await authenticatedFetch(API);
             const data = await res.json();
             if (!data.success) {
-                document.getElementById('pageLoading').textContent = data.message || 'Could not load the site settings';
+                KBF.showLoadError('pageLoading', { message: data.message || 'The site settings could not be loaded.', retry: load });
                 return;
             }
             saved = data;
@@ -338,7 +343,7 @@
             document.getElementById('settingsForm').classList.remove('hidden');
         } catch (e) {
             console.error('Load site settings error:', e);
-            document.getElementById('pageLoading').textContent = 'Could not load the site settings';
+            KBF.showLoadError('pageLoading', { message: 'The site settings could not be loaded. Please check your connection and try again.', retry: load });
         }
     }
 
@@ -392,15 +397,22 @@
     document.getElementById('settingsForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         if (!canEdit) return;
-        document.querySelectorAll('[aria-invalid="true"]').forEach(el => el.removeAttribute('aria-invalid'));
+        document.querySelectorAll('[aria-invalid="true"]').forEach(el => KBF.clearFieldError(el));
 
         const settings = collect();
         if (isSuper && settings.maintenance_mode === '1' && String(saved.settings.maintenance_mode) !== '1') {
-            if (!confirm('Switch on maintenance mode? Visitors will see the back-soon page until it is switched off. Staff can still sign in and use the whole site.')) return;
+            const yes = await KBFDialog.confirm({
+                title: 'Switch on maintenance mode?',
+                message: 'Visitors will see the back-soon page until it is switched off. Staff can still sign in and use the whole site.',
+                confirmText: 'Switch on and save',
+                danger: true
+            });
+            if (!yes) return;
         }
 
         const btn = document.getElementById('saveBtn');
-        btn.disabled = true;
+        if (KBF.isBusy(btn)) return;
+        const restoreBtn = KBF.setBusy(btn, 'Saving...');
         try {
             const res = await authenticatedFetch(API, {
                 method: 'POST',
@@ -411,7 +423,8 @@
             if (!data.success) {
                 if (data.field) {
                     const el = document.getElementById(data.field);
-                    if (el) { el.setAttribute('aria-invalid', 'true'); el.focus(); }
+                    // The problem is also shown next to the field
+                    if (el) { KBF.showFieldError(el, data.message || 'Check this value'); el.focus(); }
                 }
                 showMessage(data.message || 'Could not save the changes', false);
                 return;
@@ -424,6 +437,7 @@
             console.error('Save site settings error:', err);
             showMessage('Could not save the changes. Please try again.', false);
         } finally {
+            restoreBtn();
             btn.disabled = !canEdit;
         }
     });

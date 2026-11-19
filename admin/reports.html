@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports and Exports - Admin</title>
+    <title>Reports and exports - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -18,6 +18,7 @@
         .ring-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 9999px; border: 3px solid var(--theme-primary); color: var(--theme-primary); flex-shrink: 0; }
         .card { background: #0f172a; border: 4px solid #374151; }
         .card.is-open { border-color: var(--theme-primary); }
+        .btn-plain, .btn-theme { min-height: 44px; }
         .btn-plain { background: #1e293b; border: 2px solid #374151; color: #e5e7eb; font-weight: 900; font-size: .75rem; text-transform: uppercase; padding: .5rem .875rem; }
         .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
         .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
@@ -25,6 +26,7 @@
         .btn-theme:disabled { opacity: .4; cursor: not-allowed; }
         .btn-plain:focus-visible, .btn-theme:focus-visible, .bar-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .field { background: #1e293b; border: 2px solid #374151; color: #fff; padding: .5rem .625rem; font-weight: 700; font-size: .8125rem; width: 100%; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
 
         /* Charts: plain HTML and CSS */
@@ -97,6 +99,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -220,6 +224,8 @@
         document.querySelectorAll('.card').forEach(c => c.classList.toggle('is-open', c.id === 'card-' + key));
         current = { key: key, params: {}, offset: 0 };
         const panel = document.getElementById('reportPanel');
+        const report = REPORTS.find(r => r.key === key);
+        if (report) document.getElementById('reportTitle').textContent = report.name;
         panel.classList.remove('hidden');
         await loadPage(true);
         panel.focus();
@@ -234,7 +240,7 @@
         try {
             const res = await authenticatedFetch(query(current.key, current.params, { offset: current.offset }));
             const data = await res.json();
-            if (!data.success) { showPageMessage(data.message || 'The report could not be loaded.'); return; }
+            if (!data.success) { reportFailed(reset, data.message || 'The report could not be loaded.'); return; }
             showPageMessage('');
             if (reset) {
                 lastData = data;
@@ -254,10 +260,23 @@
             more.classList.toggle('hidden', !data.hasMore);
         } catch (e) {
             console.error('Report error:', e);
-            showPageMessage('The report could not be loaded.');
+            reportFailed(reset, 'The report could not be loaded. Please check your connection and try again.');
         } finally {
             more.disabled = false;
         }
+    }
+
+    // A fresh report that fails shows "Try again" in the table; a failed
+    // "Show more" keeps the rows and says so above
+    function reportFailed(reset, text) {
+        if (!reset) { showPageMessage(text); return; }
+        const body = document.getElementById('reportBody');
+        const cols = document.querySelectorAll('#reportHead th').length || 1;
+        body.innerHTML = '<tr><td colspan="' + cols + '"></td></tr>';
+        document.getElementById('reportEmpty').classList.add('hidden');
+        document.getElementById('reportMoreBtn').classList.add('hidden');
+        document.getElementById('reportCount').textContent = '';
+        KBF.showLoadError(body.querySelector('td'), { message: text, retry: () => loadPage(true) });
     }
 
     function renderFilters(options) {

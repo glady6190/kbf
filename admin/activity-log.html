@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activity Log - Admin</title>
+    <title>Activity log - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -15,7 +15,9 @@
         .theme-on-primary { color: #0F172A; }
 
         .field { background: #1e293b; border: 2px solid #374151; color: #fff; padding: .5rem .625rem; font-weight: 700; font-size: .8125rem; width: 100%; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
+        .btn-plain, .btn-theme { min-height: 44px; }
         .btn-plain { background: #1e293b; border: 2px solid #374151; color: #e5e7eb; font-weight: 900; font-size: .75rem; text-transform: uppercase; padding: .5rem .875rem; }
         .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
         .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
@@ -127,6 +129,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -260,7 +264,7 @@
         try {
             const res = await authenticatedFetch(API + '?' + q.toString());
             const data = await res.json();
-            if (!data.success) { showMessage(data.message || 'The activity log could not be loaded.'); return; }
+            if (!data.success) { loadFailed(reset, data.message || 'The activity log could not be loaded.'); return; }
             showMessage('');
             showAddress = data.showAddress === true;
             canDownload = data.canDownload !== false;
@@ -298,10 +302,24 @@
             more.classList.toggle('hidden', !data.hasMore);
         } catch (err) {
             console.error('Activity log error:', err);
-            showMessage('The activity log could not be loaded.');
+            loadFailed(reset, 'The activity log could not be loaded. Please check your connection and try again.');
         } finally {
             more.disabled = false;
         }
+    }
+
+    // A fresh list that fails shows "Try again" in the table; a failed
+    // "Show more" keeps the rows and says so above
+    function loadFailed(reset, text) {
+        if (!reset) { showMessage(text); return; }
+        showMessage('');
+        const body = document.getElementById('logBody');
+        const cols = document.querySelectorAll('#logHeadRow th').length || 4;
+        body.innerHTML = '<tr><td colspan="' + cols + '"></td></tr>';
+        document.getElementById('logEmpty').classList.add('hidden');
+        document.getElementById('moreBtn').classList.add('hidden');
+        document.getElementById('logCount').textContent = '';
+        KBF.showLoadError(body.querySelector('td'), { message: text, retry: () => load(true) });
     }
 
     function renderHead() {

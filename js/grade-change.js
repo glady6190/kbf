@@ -9,8 +9,10 @@
  *       newGradeId: 3,           // optional: start with this grade chosen
  *       reason: '...',           // optional: starting reason
  *       meta: {...},             // optional: grades and defaults (else fetched)
- *       onDone: function (result) { ... }   // after a successful change
+ *       onDone: function (result) { ... },  // after a successful change
+ *       opener: element          // optional: where focus returns on close
  *   });
+ * Keyboard and focus handling come from js/kbf-dialog.js when loaded.
  *
  * Season points rule (api/rankings.php and api/points-rules.php): a grade
  * change sets season points to 0, and tournaments on or before the day of the
@@ -44,6 +46,7 @@
             '.kgc{background:#0f172a;border:4px solid #374151;width:100%;max-width:36rem;margin:2rem 0;color:#e5e7eb;}' +
             '.kgc-label{display:block;font-size:.7rem;font-weight:900;text-transform:uppercase;color:var(--theme-primary);margin-bottom:.4rem;}' +
             '.kgc-field{width:100%;background:#1e293b;border:2px solid #374151;color:#fff;padding:.6rem .75rem;font-weight:700;font-size:.8125rem;}' +
+            '@media (max-width:639.98px){.kgc-field{font-size:16px;}}' +
             '.kgc-field:focus{outline:none;border-color:var(--theme-primary);}' +
             '.kgc-field[aria-invalid="true"]{border-color:#ef4444;}' +
             '.kgc-results{border:2px solid #374151;border-top:0;max-height:16rem;overflow-y:auto;background:#0f172a;}' +
@@ -52,7 +55,7 @@
             '.kgc-avatar{width:2.5rem;height:2.5rem;flex-shrink:0;border:2px solid #374151;background:#1e293b;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;color:#9ca3af;overflow:hidden;}' +
             '.kgc-avatar img{width:100%;height:100%;object-fit:cover;}' +
             '.kgc-chip{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:#1e293b;border:2px solid var(--theme-primary);}' +
-            '.kgc-grade{min-width:3rem;padding:.5rem .75rem;background:#1e293b;border:2px solid #374151;color:#d1d5db;font-weight:900;font-size:.8rem;text-transform:uppercase;}' +
+            '.kgc-grade{min-width:3rem;min-height:44px;padding:.5rem .75rem;background:#1e293b;border:2px solid #374151;color:#d1d5db;font-weight:900;font-size:.8rem;text-transform:uppercase;}' +
             '.kgc-grade:hover:not(:disabled){border-color:#6b7280;color:#fff;}' +
             '.kgc-grade[aria-pressed="true"]{background:var(--theme-primary);border-color:var(--theme-primary);color:#0F172A;}' +
             '.kgc-grade:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through;}' +
@@ -62,7 +65,7 @@
             '.kgc-effect{border:2px solid #374151;background:#1e293b;padding:.75rem;}' +
             '.kgc-tick{display:flex;align-items:flex-start;gap:.65rem;padding:.6rem .75rem;background:#1e293b;border:2px solid #374151;cursor:pointer;}' +
             '.kgc-tick input{accent-color:var(--theme-primary);width:18px;height:18px;flex-shrink:0;margin-top:.05rem;}' +
-            '.kgc-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-weight:900;text-transform:uppercase;font-size:.75rem;padding:.7rem 1.1rem;white-space:nowrap;}' +
+            '.kgc-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;min-width:44px;font-weight:900;text-transform:uppercase;font-size:.75rem;padding:.7rem 1.1rem;white-space:nowrap;}' +
             '.kgc-solid{background:var(--theme-primary);color:#0F172A;border:2px solid var(--theme-primary);box-shadow:5px 5px 0 #020617;}' +
             '.kgc-solid:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}' +
             '.kgc-plain{background:#1e293b;color:#e5e7eb;border:2px solid #374151;}' +
@@ -136,7 +139,7 @@
         if (p.city) parts.push(p.city);
         parts.push('Grade ' + (p.grade || 'none'));
         parts.push(fmt(p.points) + ' season points');
-        return parts.join(' • ');
+        return parts.join(', ');
     }
 
     function loadMeta() {
@@ -298,9 +301,10 @@
         newsBox.addEventListener('change', function () { state.newsTouched = true; });
         box.addEventListener('submit', function (e) { e.preventDefault(); save_(); });
         host.addEventListener('click', function (e) { if (e.target === host) closeDialog(); });
+        // Escape, Tab and focus are handled by js/kbf-dialog.js when it is
+        // loaded (see open()); this is only the fallback without it
         host.addEventListener('keydown', function (e) {
-            // Handled here only, so a page's own Escape and Tab handling
-            // (for example the People panel underneath) does not also run
+            if (window.KBFDialog) return;
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeDialog(); }
             if (e.key === 'Tab') { e.stopPropagation(); trapFocus(e); }
         });
@@ -477,8 +481,10 @@
         var to = state.newGradeId ? grade(state.newGradeId) : null;
         if (!state.player) { b.textContent = 'Choose a player'; b.disabled = true; return; }
         if (!k || !to) { b.textContent = 'Choose a new grade'; b.disabled = true; return; }
-        b.textContent = (k === 'promotion' ? 'Promote to ' : 'Move to ') + to.shortName;
+        b.textContent = state.saving ? 'Saving...' : (k === 'promotion' ? 'Promote to ' : 'Move to ') + to.shortName;
         b.disabled = state.saving;
+        if (state.saving) b.setAttribute('aria-busy', 'true');
+        else b.removeAttribute('aria-busy');
     }
 
     function render() {
@@ -506,11 +512,16 @@
         if (!k) { showError('Choose the new grade.'); return; }
         var reason = $('kgcReason').value.trim();
         if (reason.length < 3 || reason.length > 500) {
-            $('kgcReason').setAttribute('aria-invalid', 'true');
+            if (window.KBF && window.KBF.showFieldError) {
+                window.KBF.showFieldError($('kgcReason'), 'Give a reason of 3 to 500 characters.');
+            } else {
+                $('kgcReason').setAttribute('aria-invalid', 'true');
+                showError('Give a reason of 3 to 500 characters.');
+            }
             $('kgcReason').focus();
-            showError('Give a reason of 3 to 500 characters.');
             return;
         }
+        if (window.KBF && window.KBF.clearFieldError) window.KBF.clearFieldError($('kgcReason'));
         var emailRow = $('kgcEmailRow');
         var payload = {
             userId: state.player.userId,
@@ -568,6 +579,13 @@
         showError('');
         host.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        if (window.KBFDialog) {
+            window.KBFDialog.open(host, {
+                onClose: closeDialog,
+                opener: options.opener || state.returnFocus,
+                initialFocus: '#kgcSearch'
+            });
+        }
 
         return loadMeta().then(function (meta) {
             if (!state) return;
@@ -599,6 +617,10 @@
         document.body.style.overflow = state ? state.bodyOverflow : '';
         var back = state && state.returnFocus;
         state = null;
+        if (window.KBFDialog) {
+            window.KBFDialog.close(host);
+            return;
+        }
         if (back && back.focus) back.focus();
     }
 

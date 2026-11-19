@@ -838,6 +838,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tournament = resultsRequireEntry($pdo, $tournamentId);
         list($rows, $validPlayers) = resultsReadMatches($pdo, $data['matches']);
 
+        // A repeat of the same one-time request id (double tap, retry) gets
+        // the first answer back; the results are not saved twice
+        require_once __DIR__ . '/request-ids.php';
+        kbfRequestIdBegin($pdo, 'results', is_string($data['requestId'] ?? null) ? $data['requestId'] : null);
+        kbfRequestIdRecord($tournamentId . ':' . $categoryName);
+
         $pdo->beginTransaction();
 
         // Results submitted by someone with tournaments.approve are approved automatically

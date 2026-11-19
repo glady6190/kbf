@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Tournament - Organiser</title>
+    <title>Create Tournament - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -13,15 +13,9 @@
         .theme-primary-bg { background-color: var(--theme-primary); }
         .theme-primary-text { color: var(--theme-primary); }
         .theme-primary-border { border-color: var(--theme-primary); }
-        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
-        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
-        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
-        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         @media (max-width: 768px) {
-            .theme-switcher-btn { width: 24px; height: 24px; }
-            .theme-switcher-btn.active::after { font-size: 10px; }
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
@@ -44,13 +38,13 @@
             <div id="formMessage" class="hidden mt-5 sm:mt-6 p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm" role="status" aria-live="polite"></div>
 
             <div class="flex flex-col sm:flex-row justify-end gap-3 mt-5 sm:mt-6 pt-4 sm:pt-6 border-t-2 sm:border-t-4 border-gray-700">
-                <a href="/clubadmin/dashboard" id="cancelLink"
-                   class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-center font-black uppercase text-xs sm:text-sm hover:border-gray-600 transition">
+                <a href="/clubadmin/tournaments" id="cancelLink"
+                   class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-center font-black uppercase text-xs sm:text-sm hover:border-gray-600 transition" style="min-height:44px">
                     Cancel
                 </a>
                 <button type="submit" id="submitButton"
                         class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 theme-primary-bg font-black uppercase text-xs sm:text-sm brutal-shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                        style="color:#0F172A">
+                        style="color:#0F172A;min-height:44px">
                     <span id="submitButtonText">Submit for Approval</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -61,6 +55,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/tournament-form.js"></script>
 
     <script src="/js/admin-shell.js"></script>
@@ -116,6 +112,9 @@
 
     function showFormMessage(type, title, detail) {
         const messageDiv = document.getElementById('formMessage');
+        // Errors are announced straight away; other messages politely
+        messageDiv.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        messageDiv.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
         messageDiv.className = 'mt-5 sm:mt-6 p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (
             type === 'success' ? 'border-green-500 bg-green-500/20 text-green-400' :
             type === 'info' ? 'border-gray-600 bg-slate-800 text-gray-300' :
@@ -150,7 +149,7 @@
         document.getElementById('pageSubheading').textContent = 'Add or change the registration link, poster and contact details';
         document.getElementById('submitButtonText').textContent = 'Save Details';
         document.getElementById('cancelLink').setAttribute('href', '/clubadmin/tournaments');
-        document.title = 'Edit Tournament Details - Organiser';
+        document.title = 'Edit Tournament Details - KBF-UK Admin';
 
         const submitButton = document.getElementById('submitButton');
         submitButton.disabled = true;
@@ -179,7 +178,11 @@
             submitButton.disabled = false;
         } catch (error) {
             console.error('Error loading tournament:', error);
-            showFormMessage('error', 'Error loading tournament', 'Please refresh the page and try again.');
+            showFormMessage('error', 'Error loading tournament', '');
+            KBF.showLoadError(document.getElementById('formMessage'), {
+                message: 'The tournament could not be loaded. Please check your connection and try again.',
+                retry: function () { hideFormMessage(); setupEditMode(); }
+            });
         }
     }
 
@@ -188,6 +191,9 @@
     // ============================================
     document.getElementById('tournamentForm').addEventListener('submit', async function(e) {
         e.preventDefault();
+        const form = this;
+        const submitButton = document.getElementById('submitButton');
+        if (KBF.isBusy(submitButton)) return;
         hideFormMessage();
         if (!tournamentForm) return;
 
@@ -198,16 +204,26 @@
         }
 
         const isEdit = tournamentForm.isEdit();
-        const submitButton = document.getElementById('submitButton');
-        submitButton.disabled = true;
+        // Busy until the request finishes; stays busy after success until the redirect
+        const restoreButton = KBF.setBusy(submitButton, isEdit ? 'Saving...' : 'Creating...');
 
         try {
+            const headers = {};
+            if (!isEdit) {
+                // One-time id: a repeat of this request never creates a second tournament
+                headers[KBF.REQUEST_ID_HEADER] = KBF.requestId(form);
+            }
             const response = await authenticatedFetch('/api/tournaments.php', {
                 method: 'POST',
+                headers: headers,
                 body: tournamentForm.buildFormData()
             });
 
             const result = await response.json();
+
+            if (result.success && !isEdit) {
+                KBF.clearRequestId(form);
+            }
 
             if (result.success) {
                 if (isEdit) {
@@ -222,13 +238,13 @@
                             const orgResult = await orgResponse.json();
                             if (!orgResult.success) {
                                 showFormMessage('error', 'Details saved, but the organiser was not changed', orgResult.message || 'Please try again.');
-                                submitButton.disabled = false;
+                                restoreButton();
                                 return;
                             }
                         } catch (orgError) {
                             console.error('Error saving organiser:', orgError);
                             showFormMessage('error', 'Details saved, but the organiser was not changed', 'Please try again.');
-                            submitButton.disabled = false;
+                            restoreButton();
                             return;
                         }
                     }
@@ -241,16 +257,16 @@
                         showFormMessage('success', 'Tournament created successfully', 'Submitted for approval by KBF. It will appear publicly once approved.');
                     }
                     tournamentForm.reset();
-                    setTimeout(() => { window.location.href = '/clubadmin/dashboard'; }, 2000);
+                    setTimeout(() => { window.location.href = '/clubadmin/tournaments'; }, 2000);
                 }
             } else {
                 showFormMessage('error', isEdit ? 'Could not save details' : 'Could not create tournament', result.message || 'Please try again.');
-                submitButton.disabled = false;
+                restoreButton();
             }
         } catch (error) {
             console.error('Error:', error);
-            showFormMessage('error', isEdit ? 'Could not save details' : 'Could not create tournament', 'Please try again.');
-            submitButton.disabled = false;
+            showFormMessage('error', isEdit ? 'Could not save details' : 'Could not create tournament', 'Please check your connection and try again.');
+            restoreButton();
         }
     });
 </script>

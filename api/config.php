@@ -480,6 +480,9 @@ function sendJSON($data, $status = 200) {
             && function_exists('kbfNoStore')) {
         kbfNoStore();
     }
+    // Kept for api/request-ids.php, which stores the answer to a request
+    // that carried a one-time id when the script ends
+    $GLOBALS['kbfLastJsonResponse'] = ['status' => (int) $status, 'data' => $data];
     http_response_code($status);
     header('Content-Type: application/json');
     echo json_encode($data);
@@ -572,6 +575,37 @@ function sanitizeInput($data) {
         return array_map('sanitizeInput', $data);
     }
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
+}
+
+// Text fields (names, cities, titles, venues, reasons) are stored as typed
+// and escaped only when shown. kbfCleanText trims, removes HTML tags and
+// control characters, and folds runs of spaces (line breaks kept when
+// $multiline is true). It never HTML-encodes.
+function kbfCleanText($value, $multiline = false) {
+    $text = is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
+    $text = strip_tags($text);
+    if ($multiline) {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = preg_replace('/[\x00-\x08\x0B-\x1F\x7F]+/u', '', $text);
+        $text = preg_replace("/[ \t]+/u", ' ', (string) $text);
+    } else {
+        $text = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $text);
+        $text = preg_replace('/\s+/u', ' ', (string) $text);
+    }
+    return trim((string) $text);
+}
+
+// Names: letters in any language (accents included), spaces, apostrophes
+// (straight or curly), hyphens and full stops, starting with a letter.
+// O'Connor, Zoë, Jean-Luc, St. John. Same rule as KBF.isValidName in
+// js/kbf-forms.js.
+function kbfIsValidName($text) {
+    return is_string($text) && preg_match("/^[\\p{L}\\p{M}][\\p{L}\\p{M}\\s'\u{2019}.\\-]*$/u", $text) === 1;
+}
+
+// Length in characters (not bytes), so accented letters count once
+function kbfTextLength($text) {
+    return function_exists('mb_strlen') ? mb_strlen((string) $text, 'UTF-8') : strlen((string) $text);
 }
 
 // Generate user fingerprint for session validation. User agent only: the IP

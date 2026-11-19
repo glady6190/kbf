@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Tournaments - Organiser</title>
+    <title>My tournaments - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -13,10 +13,14 @@
         .theme-primary-bg { background-color: var(--theme-primary); }
         .theme-primary-text { color: var(--theme-primary); }
         .theme-primary-border { border-color: var(--theme-primary); }
-        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
-        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
-        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
-        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .theme-hover-border:hover { border-color: var(--theme-primary); }
+        .theme-spinner { border-top-color: var(--theme-primary); }
+        /* Touch targets at least 44 x 44 */
+        .tap { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .tap-square { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .tap:focus-visible, .tap-square:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        /* The file input is visually hidden but reachable by keyboard: show focus on the drop area */
+        label[for="photoInput"]:has(~ #photoInput:focus-visible) > div { outline: 2px solid #fff; outline-offset: 2px; border-color: var(--theme-primary); }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         .tournament-card { 
@@ -32,7 +36,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
             transition: left 0.5s;
         }
         .tournament-card:hover::before {
@@ -40,7 +44,8 @@
         }
         .tournament-card:hover { 
             transform: translateY(-5px); 
-            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3); 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 30%, transparent);
         }
         
         .action-btn {
@@ -52,8 +57,6 @@
             transform: scale(0.98);
         }
         @media (max-width: 768px) {
-            .theme-switcher-btn { width: 24px; height: 24px; }
-            .theme-switcher-btn.active::after { font-size: 10px; }
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
             .tournament-card:hover { transform: translateY(-2px); }
@@ -66,8 +69,8 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-            <div>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap justify-between items-start sm:items-center mb-8 gap-4">
+            <div class="min-w-0">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black uppercase mb-2">
                     <span class="theme-primary-text">My</span> Tournaments
                 </h1>
@@ -75,14 +78,15 @@
                 <p class="text-gray-400 font-bold uppercase text-sm">Manage the tournaments you created</p>
             </div>
             <a href="/clubadmin/create-tournament" 
-               class="w-full sm:w-auto theme-primary-bg text-slate-900 px-6 py-3 text-center font-black uppercase text-sm brutal-shadow transition-all hover:opacity-90">
-                + Create Tournament
+               class="tap gap-2 w-full sm:w-auto theme-primary-bg text-slate-900 px-6 py-3 text-center font-black uppercase text-sm brutal-shadow transition-all hover:opacity-90">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                Create tournament
             </a>
         </div>
 
         <!-- Loading State -->
-        <div id="loading" class="text-center py-20">
-            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-emerald-500 mb-4"></div>
+        <div id="loading" class="text-center py-20" role="status" aria-live="polite">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 theme-spinner mb-4" aria-hidden="true"></div>
             <p class="text-gray-400 font-bold uppercase text-sm">Loading tournaments...</p>
         </div>
 
@@ -100,12 +104,14 @@
             <p class="text-gray-400 font-bold mb-6 uppercase text-lg">Create your first tournament to get started</p>
             <a href="/clubadmin/create-tournament" 
                class="inline-block theme-primary-bg text-slate-900 px-8 py-4 font-black uppercase text-sm brutal-shadow transition-all">
-                Create First Tournament →
+                Create your first tournament
             </a>
         </div>
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -113,6 +119,8 @@
     // ============================================
     KBFShell.start({ anyOf: ['tournaments.organise_own'], active: 'my-tournaments' }).then(function (user) {
         window.kbfUser = user;
+        // Focus, Tab, Escape and the page behind (js/kbf-dialog.js)
+        KBFDialog.watch(document.getElementById('uploadPhotosModal'), { onClose: closeUploadModal });
         loadTournaments();
     });
 
@@ -139,6 +147,7 @@
         return fetch(url, options);
     }
 
+    // Dark text on every status colour (readable contrast)
     function getStatusColor(status) {
         const colors = {
             'Approved': 'bg-green-500',
@@ -146,17 +155,7 @@
             'Pending': 'bg-yellow-500',
             'Rejected': 'bg-red-500'
         };
-        return colors[status] || 'bg-gray-500';
-    }
-    
-    function getStatusIcon(status) {
-        const icons = {
-            'Approved': '✓',
-            'Completed': '★',
-            'Pending': '…',
-            'Rejected': '✗'
-        };
-        return icons[status] || '•';
+        return colors[status] || 'bg-gray-400';
     }
 
     // "Edit details" opens the create form in edit mode (poster, registration, contact)
@@ -165,7 +164,7 @@
         if (!id) return '';
         return `
         <a href="/clubadmin/create-tournament?edit=${id}"
-           class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 text-white text-center font-black uppercase text-xs border-2 border-gray-700 hover:border-gray-500 transition">
+           class="tap gap-1.5 px-3 py-2 bg-slate-800 text-white text-center font-black uppercase text-xs border-2 border-gray-700 hover:border-gray-500 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
@@ -176,24 +175,39 @@
     // ============================================
     // DATA LOADING FUNCTIONS
     // ============================================
+    const loadingHtml = document.getElementById('loading').innerHTML;
+
+    function showLoadFailed(message) {
+        const loading = document.getElementById('loading');
+        loading.classList.remove('hidden');
+        KBF.showLoadError(loading, {
+            message: message || 'Your tournaments could not be loaded. Please check your connection and try again.',
+            retry: loadTournaments
+        });
+    }
+
     async function loadTournaments() {
+        const loading = document.getElementById('loading');
+        loading.innerHTML = loadingHtml;
+        loading.classList.remove('hidden');
         try {
             const response = await authenticatedFetch('/api/tournaments.php?mine=1');
             const data = await response.json();
 
-            document.getElementById('loading').classList.add('hidden');
-
-            if (data.success) {
+            if (data.success && Array.isArray(data.tournaments)) {
+                loading.classList.add('hidden');
                 if (data.tournaments.length === 0) {
                     document.getElementById('noTournaments').classList.remove('hidden');
                 } else {
                     document.getElementById('tournamentsList').classList.remove('hidden');
                     displayTournaments(data.tournaments);
                 }
+            } else {
+                showLoadFailed(data && data.message ? String(data.message) : '');
             }
         } catch (error) {
             console.error('Error loading tournaments:', error);
-            document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Tournaments</p>';
+            showLoadFailed('');
         }
     }
 
@@ -208,7 +222,7 @@
             if (!canPhotos) return '';
             return `
         <button type="button" data-id="${parseInt(t.TournamentId, 10)}" data-name="${escapeHtml(t.Name)}" onclick="showUploadModal(parseInt(this.dataset.id, 10), this.dataset.name)"
-                class="px-3 py-2 bg-cyan-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+                class="tap px-3 py-2 bg-cyan-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
             Photos
         </button>`;
         }
@@ -217,8 +231,8 @@
             if (!canPosts) return '';
             return `
         <a href="/clubadmin/posts"
-           class="px-3 py-2 bg-purple-500 text-white text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-            Posts
+           class="tap px-3 py-2 bg-purple-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+            My posts
         </a>`;
         }
 
@@ -233,8 +247,7 @@
                         <h3 class="text-2xl font-black text-white uppercase mb-2 line-clamp-2">
                             ${escapeHtml(tournament.Name)}
                         </h3>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 ${getStatusColor(tournament.Status)} text-white font-black uppercase text-xs">
-                            <span>${getStatusIcon(tournament.Status)}</span>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 ${getStatusColor(tournament.Status)} text-slate-900 font-black uppercase text-xs">
                             <span>${escapeHtml(tournament.Status)}</span>
                         </div>
                     </div>
@@ -281,33 +294,33 @@
                 <!-- Action Buttons -->
 <div class="flex flex-wrap gap-2">
     ${tournament.Status === 'Pending' ? `
-        <span class="px-3 py-2 bg-gray-700 text-gray-400 text-center font-black uppercase text-xs border-2 border-gray-600">
-            Awaiting Approval
+        <span class="tap px-3 py-2 bg-gray-700 text-gray-300 text-center font-black uppercase text-xs border-2 border-gray-600">
+            Awaiting approval
         </span>
         ${editDetailsLink(tournament.TournamentId)}
     ` : tournament.Status === 'Approved' && !hasMatches ? `
         <a href="/clubadmin/submit-results?id=${parseInt(tournament.TournamentId, 10)}"
-           class="px-3 py-2 theme-primary-bg text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-            Submit Results
+           class="tap px-3 py-2 theme-primary-bg text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+            Submit results
         </a>
         ${editDetailsLink(tournament.TournamentId)}
         ${postsLink()}
     ` : tournament.Status === 'Approved' && hasMatches ? `
         <a href="/tournament-details?id=${parseInt(tournament.TournamentId, 10)}"
-           class="px-3 py-2 bg-blue-500 text-white text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-            View Results
+           class="tap px-3 py-2 bg-blue-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+            View results
         </a>
         ${editDetailsLink(tournament.TournamentId)}
         <a href="/clubadmin/submit-results?id=${parseInt(tournament.TournamentId, 10)}"
-           class="px-3 py-2 bg-green-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-            Submit More Results
+           class="tap px-3 py-2 bg-green-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+            Submit more results
         </a>
         ${photosButton(tournament)}
         ${postsLink()}
     ` : tournament.Status === 'Completed' ? `
         <a href="/tournament-details?id=${parseInt(tournament.TournamentId, 10)}"
-           class="px-3 py-2 bg-blue-500 text-white text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-            View Details
+           class="tap px-3 py-2 bg-blue-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+            View details
         </a>
         ${photosButton(tournament)}
         ${postsLink()}
@@ -396,8 +409,9 @@
                 preview.className = 'relative border-2 border-gray-700 bg-slate-800 overflow-hidden';
                 preview.innerHTML = `
                     <img src="${escapeHtml(e.target.result)}" alt="Preview ${Number(index) + 1}" class="w-full h-24 object-cover">
-                    <button type="button" onclick="removePhoto(${Number(index)})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                    <button type="button" onclick="removePhoto(${Number(index)})" aria-label="Remove photo ${Number(index) + 1} (${escapeHtml(file.name)})"
+                            class="tap-square absolute top-0 right-0 bg-red-600 text-white rounded-full hover:bg-red-700 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
@@ -426,6 +440,9 @@
 
     function showUploadMessage(message, type) {
         const messageDiv = document.getElementById('uploadMessage');
+        // Errors are announced straight away; progress messages politely
+        messageDiv.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        messageDiv.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
         messageDiv.className = `p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm ${
             type === 'success' ? 'border-green-500 bg-green-500/20 text-green-400' : 
             type === 'info' ? 'border-blue-500 bg-blue-500/20 text-blue-400' :
@@ -445,6 +462,9 @@
             }
             
             
+            // An upload still running: keep that form and its listener
+            if (KBF.isBusy(document.getElementById('uploadButton'))) return;
+
             // Remove any existing listeners (clone and replace)
             const newForm = uploadForm.cloneNode(true);
             uploadForm.parentNode.replaceChild(newForm, uploadForm);
@@ -466,94 +486,99 @@
                     formData.append('photos[]', file);
                 });
                 
-                // Show progress
-                document.getElementById('uploadProgress').classList.remove('hidden');
-                document.getElementById('uploadButton').disabled = true;
-                showUploadMessage('Uploading photos...', 'info');
-                
+                const uploadButton = document.getElementById('uploadButton');
+                if (KBF.isBusy(uploadButton)) return;
+                const count = selectedPhotos.length;
+                const restoreButton = KBF.setBusy(uploadButton, 'Uploading...');
+
+                // Real progress: the bar follows the bytes sent
+                const bar = document.getElementById('uploadProgressBar');
+                const barTrack = document.getElementById('uploadProgress');
+                function setProgress(percent) {
+                    const p = Math.max(0, Math.min(100, Math.round(percent)));
+                    bar.style.width = p + '%';
+                    bar.textContent = p + '%';
+                    barTrack.setAttribute('aria-valuenow', String(p));
+                }
+                setProgress(0);
+                barTrack.classList.remove('hidden');
+                showUploadMessage('Uploading ' + count + ' photo' + (count === 1 ? '' : 's') + '...', 'info');
+
                 try {
-                    const response = await fetch('/api/gallery.php', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'X-CSRF-Token': getCSRFToken()
-                        },
-                        body: formData
+                    const result = await new Promise(function (resolve, reject) {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '/api/gallery.php');
+                        xhr.withCredentials = true;
+                        const token = getCSRFToken();
+                        if (token) xhr.setRequestHeader('X-CSRF-Token', token);
+                        xhr.upload.onprogress = function (ev) {
+                            if (ev.lengthComputable && ev.total > 0) {
+                                // Keep the last step for the server's work on the photos
+                                setProgress((ev.loaded / ev.total) * 95);
+                            }
+                        };
+                        xhr.upload.onload = function () {
+                            setProgress(95);
+                            showUploadMessage('Photos sent. Saving them...', 'info');
+                        };
+                        xhr.onload = function () {
+                            let data = null;
+                            try { data = JSON.parse(xhr.responseText); } catch (err) { data = null; }
+                            if (xhr.status === 401) {
+                                resolve({ success: false, message: (data && data.message) || 'Your session has expired. Please log in again.' });
+                                return;
+                            }
+                            if (!data) {
+                                resolve({ success: false, message: xhr.status === 413
+                                    ? 'The photos are too large to upload together. Please try fewer photos at once.'
+                                    : 'Upload failed. Please try again.' });
+                                return;
+                            }
+                            resolve(data);
+                        };
+                        xhr.onerror = function () { reject(new Error('Network error')); };
+                        xhr.onabort = function () { reject(new Error('Upload stopped')); };
+                        xhr.send(formData);
                     });
-                    
-                    
-                    // Simulate progress
-                    let progress = 0;
-                    const progressInterval = setInterval(() => {
-                        progress += 10;
-                        if (progress <= 90) {
-                            document.getElementById('uploadProgressBar').style.width = progress + '%';
-                            document.getElementById('uploadProgressBar').textContent = progress + '%';
-                        }
-                    }, 200);
-                    
-                    const result = await response.json();
-                    
-                    clearInterval(progressInterval);
-                    document.getElementById('uploadProgressBar').style.width = '100%';
-                    document.getElementById('uploadProgressBar').textContent = '100%';
-                    
+
                     if (result.success) {
-                        showUploadMessage(result.message, 'success');
-                        
+                        setProgress(100);
+                        showUploadMessage(result.message || 'Photos uploaded.', 'success');
+
                         setTimeout(() => {
                             closeUploadModal();
+                            restoreButton();
                         }, 2000);
                     } else {
+                        barTrack.classList.add('hidden');
                         showUploadMessage(result.message || 'Upload failed', 'error');
-                        document.getElementById('uploadButton').disabled = false;
+                        restoreButton();
                     }
-                    
+
                 } catch (error) {
                     console.error('Upload error:', error);
-                    showUploadMessage('Upload failed. Please try again.', 'error');
-                    document.getElementById('uploadButton').disabled = false;
+                    barTrack.classList.add('hidden');
+                    showUploadMessage('Upload failed. Please check your connection and try again.', 'error');
+                    restoreButton();
                 }
             });
             
         }, 100);
     }
-    async function deletePost(postId, tournamentName) {
-    if (!confirm(`Are you sure you want to delete the post for "${tournamentName}"?\n\nThis action cannot be undone.`)) {
-        return;
-    }
-    
-    try {
-        const response = await authenticatedFetch(`/api/announcements.php?id=${postId}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('Post deleted successfully!');
-            loadTournaments(); // Reload the list
-        } else {
-            alert('Error: ' + (result.message || 'Failed to delete post'));
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error deleting post. Please try again.');
-    }
-}
     </script>
     <script src="/js/session-manager.js"></script>
 
     <!-- Upload Photos Modal -->
-    <div id="uploadPhotosModal" class="hidden fixed inset-0 bg-black bg-opacity-90 overflow-y-auto h-full w-full z-50 p-4">
+    <div id="uploadPhotosModal" class="hidden fixed inset-0 bg-black bg-opacity-90 overflow-y-auto h-full w-full z-50 p-4"
+         role="dialog" aria-modal="true" aria-labelledby="uploadPhotosTitle" aria-describedby="modalTournamentName">
         <div class="relative top-4 sm:top-20 mx-auto p-6 border-4 border-gray-700 w-full max-w-3xl bg-slate-900">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h3 class="text-2xl font-black uppercase theme-primary-text">Upload Photos</h3>
+            <div class="flex justify-between items-center gap-4 mb-6">
+                <div class="min-w-0">
+                    <h2 id="uploadPhotosTitle" class="text-2xl font-black uppercase theme-primary-text">Upload photos</h2>
                     <p class="text-gray-400 font-bold uppercase text-sm mt-1" id="modalTournamentName">Tournament Name</p>
                 </div>
-                <button onclick="closeUploadModal()" class="text-gray-400 hover:text-white">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <button type="button" onclick="closeUploadModal()" class="tap-square flex-shrink-0 text-gray-400 hover:text-white" aria-label="Close">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
@@ -564,12 +589,12 @@
                 
                 <!-- File Upload -->
                 <div>
-                    <label class="block text-xs font-black theme-primary-text uppercase mb-2">
+                    <p id="photoInputTitle" class="block text-xs font-black theme-primary-text uppercase mb-2">
                         Select Photos (Max 10 photos, 15MB each)
-                    </label>
+                    </p>
                     <div class="flex flex-col gap-3">
                         <label for="photoInput" class="block w-full cursor-pointer">
-                            <div class="w-full px-4 py-8 bg-slate-800 border-4 border-dashed border-gray-600 hover:border-emerald-500 text-center transition">
+                            <div class="w-full px-4 py-8 bg-slate-800 border-4 border-dashed border-gray-600 theme-hover-border text-center transition">
                                 <svg class="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
@@ -578,23 +603,23 @@
                             </div>
                         </label>
                         <input type="file" id="photoInput" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple 
-                               onchange="previewPhotos(event)" class="hidden">
+                               onchange="previewPhotos(event)" class="sr-only">
                     </div>
                 </div>
 
                 <!-- Photo Previews -->
                 <div id="photoPreviewContainer" class="hidden">
-                    <label class="block text-xs font-black theme-primary-text uppercase mb-2">
+                    <p class="block text-xs font-black theme-primary-text uppercase mb-2">
                         Selected Photos (<span id="photoCount">0</span>/10)
-                    </label>
+                    </p>
                     <div id="photoPreviewGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
                 </div>
 
                 <!-- Upload Message -->
-                <div id="uploadMessage" class="hidden p-4 border-4 font-bold uppercase text-sm"></div>
+                <div id="uploadMessage" role="status" aria-live="polite" class="hidden p-4 border-4 font-bold uppercase text-sm"></div>
 
-                <!-- Progress Bar -->
-                <div id="uploadProgress" class="hidden">
+                <!-- Progress Bar (real upload progress) -->
+                <div id="uploadProgress" class="hidden" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div class="w-full bg-gray-700 border-2 border-gray-600 h-10">
                         <div id="uploadProgressBar" class="theme-primary-bg h-full flex items-center justify-center text-slate-900 font-black text-sm transition-all duration-300" style="width: 0%">
                             0%
@@ -608,7 +633,7 @@
                         Cancel
                     </button>
                     <button type="submit" id="uploadButton" class="w-full sm:w-auto px-6 py-3 theme-primary-bg text-slate-900 font-black uppercase text-sm brutal-shadow transition-all">
-                        Upload Photos →
+                        Upload photos
                     </button>
                 </div>
             </form>

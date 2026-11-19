@@ -24,8 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
         $query .= " ORDER BY Location ASC";
         
         $stmt = $pdo->query($query);
-        $locations = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+        // Plain text (older rows were stored HTML-escaped); one entry per city
+        $locations = array_values(array_unique(array_map('exPlain', $stmt->fetchAll(PDO::FETCH_COLUMN))));
+
         sendJSON([
             'success' => true,
             'locations' => $locations
@@ -49,12 +50,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         sendJSON(['success' => false, 'message' => 'Invalid export format'], 400);
     }
     
-    $locations = array_map('sanitizeInput', $input['locations']);
+    // Cities as plain text; matched as typed and in the HTML-escaped form older
+    // rows were stored in
+    $locations = [];
+    foreach ($input['locations'] as $loc) {
+        if (!is_string($loc)) {
+            sendJSON(['success' => false, 'message' => 'Invalid location'], 400);
+        }
+        $locations[] = exPlain($loc);
+    }
+    $locations = array_values(array_unique($locations));
+    $locationParams = [];
+    foreach ($locations as $loc) {
+        $locationParams[] = $loc;
+        $locationParams[] = htmlspecialchars($loc, ENT_QUOTES, 'UTF-8');
+    }
     $format = $input['format'];
-    
+
     try {
         // Build query with location filter
-        $placeholders = str_repeat('?,', count($locations) - 1) . '?';
+        $placeholders = str_repeat('?,', count($locationParams) - 1) . '?';
         
         $query = "
             SELECT u.PlayerId, u.FirstName, u.LastName, u.Location, c.ShortName as Category
@@ -66,8 +81,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $query .= " ORDER BY u.Location ASC, c.DisplayOrder ASC, u.TotalPoints DESC";
         
         $stmt = $pdo->prepare($query);
-        $stmt->execute($locations);
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute($locationParams);
+        // Plain text for the CSV; the PDF escapes every value when it builds the HTML
+        $users = array_map(function ($u) {
+            foreach (['PlayerId', 'FirstName', 'LastName', 'Location', 'Category'] as $col) {
+                if ($u[$col] !== null) {
+                    $u[$col] = exPlain($u[$col]);
+                }
+            }
+            return $u;
+        }, $stmt->fetchAll(PDO::FETCH_ASSOC));
         
         if (empty($users)) {
             sendJSON(['success' => false, 'message' => 'No users found for selected location(s)'], 404);
@@ -92,6 +115,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+// Stored text as plain text (older rows were HTML-escaped; plain text is unchanged)
+function exPlain($value) {
+    return trim(html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+}
+
+// Escape plain text for the PDF's HTML
+function exHtml($value) {
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
 
 function generateSummary($users, $locations) {
     $summary = [

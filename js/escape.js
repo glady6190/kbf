@@ -8,6 +8,9 @@
  * and the globals escapeHtml, escapeAttr, esc, safeUrl so older call sites
  * keep working. Do not copy these helpers into pages; use this file.
  *
+ * Also KBF.storage (localStorage / sessionStorage that never throws) and
+ * KBF.showLoadError (load-failed message with a "Try again" button).
+ *
  * Image helpers (also globals): imageVariant, imgVariantAttrs,
  * setImageVariant. Images using a resized copy carry data-fallback with the
  * original url; a document 'error' listener swaps to it once.
@@ -177,7 +180,104 @@
         return img;
     }
 
+    // Browser storage that never throws. Some privacy settings, embedded
+    // browsers and private modes block site data, and then even reading
+    // window.localStorage throws. Use these instead of localStorage and
+    // sessionStorage directly:
+    //   KBF.storage.get(key, fallback)   KBF.storage.set(key, value)
+    //   KBF.storage.remove(key)          KBF.storage.session.get(...) etc.
+    // set() and remove() return true when the browser accepted the change.
+    function makeStorage(name) {
+        function store() {
+            try { return window[name] || null; } catch (e) { return null; }
+        }
+        return {
+            get: function (key, fallback) {
+                var fb = fallback === undefined ? null : fallback;
+                try {
+                    var s = store();
+                    if (!s) return fb;
+                    var value = s.getItem(key);
+                    return value === null ? fb : value;
+                } catch (e) { return fb; }
+            },
+            set: function (key, value) {
+                try {
+                    var s = store();
+                    if (!s) return false;
+                    s.setItem(key, String(value));
+                    return true;
+                } catch (e) { return false; }
+            },
+            remove: function (key) {
+                try {
+                    var s = store();
+                    if (!s) return false;
+                    s.removeItem(key);
+                    return true;
+                } catch (e) { return false; }
+            },
+            clear: function () {
+                try {
+                    var s = store();
+                    if (!s) return false;
+                    s.clear();
+                    return true;
+                } catch (e) { return false; }
+            }
+        };
+    }
+    var storage = makeStorage('localStorage');
+    storage.session = makeStorage('sessionStorage');
+
+    // Replace the contents of target (an element or its id) with a short
+    // "could not be loaded" message and a "Try again" button that calls
+    // retry. Text is set with textContent. Returns the message element.
+    // Pressing "Try again" first puts back what target held before the
+    // first error (such as a loading spinner), then calls retry.
+    //   KBF.showLoadError('news-grid', { message: '...', retry: loadNews });
+    function showLoadError(target, opts) {
+        var options = opts || {};
+        var el = typeof target === 'string' ? document.getElementById(target) : target;
+        if (!el) return null;
+        if (el._kbfBeforeError === undefined && !options.append) {
+            // Page markup written by the site itself, not data
+            el._kbfBeforeError = el.innerHTML;
+        }
+        var box = document.createElement(options.tag || 'div');
+        box.className = 'kbf-load-error' + (options.className ? ' ' + options.className : '');
+        box.setAttribute('role', 'alert');
+        var text = document.createElement('p');
+        text.className = 'kbf-load-error-text';
+        text.textContent = options.message || 'This could not be loaded. Please check your connection and try again.';
+        box.appendChild(text);
+        if (typeof options.retry === 'function') {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'kbf-load-error-btn';
+            btn.textContent = options.retryLabel || 'Try again';
+            btn.addEventListener('click', function () {
+                btn.disabled = true;
+                btn.textContent = 'Loading...';
+                if (!options.append && typeof el._kbfBeforeError === 'string' && el.contains(box)) {
+                    el.innerHTML = el._kbfBeforeError;
+                }
+                options.retry();
+            });
+            box.appendChild(btn);
+        }
+        if (options.append) {
+            el.appendChild(box);
+        } else {
+            el.innerHTML = '';
+            el.appendChild(box);
+        }
+        return box;
+    }
+
     var KBF = window.KBF = window.KBF || {};
+    KBF.storage = storage;
+    KBF.showLoadError = showLoadError;
     KBF.escapeHtml = escapeHtml;
     KBF.escapeAttr = escapeAttr;
     KBF.safeUrl = safeUrl;

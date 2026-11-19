@@ -47,7 +47,7 @@
         'content.sponsors': 'Sponsors',
         'content.broadcasts': 'Email broadcasts',
         'control.email': 'Email and limits',
-        'control.grading': 'Grading and seasons',
+        'control.grading': 'Grading rules and seasons',
         'control.notifications': 'Notifications and emails',
         'control.reports': 'Reports and exports',
         'control.site_settings': 'Site settings',
@@ -63,7 +63,7 @@
         'control.reports', 'control.site_settings', 'control.activity_log'];
     var CONTROL_SECTIONS = [
         { key: 'overview', label: 'Overview', href: '/admin/overview', anyOf: CONTROL_KEYS, icon: 'grid' },
-        { key: 'grading', label: 'Grading and seasons', href: '/admin/grading-settings', anyOf: ['control.grading'], icon: 'chart' },
+        { key: 'grading', label: 'Grading rules and seasons', href: '/admin/grading-settings', anyOf: ['control.grading'], icon: 'chart' },
         { key: 'notifications', label: 'Notifications', href: '/admin/notifications', anyOf: ['control.notifications'], icon: 'bell' },
         { key: 'email', label: 'Email and limits', href: '/admin/email-limits', anyOf: ['control.email'], icon: 'mail' },
         { key: 'reports', label: 'Reports and exports', href: '/admin/reports', anyOf: ['control.reports'], icon: 'download' },
@@ -82,7 +82,7 @@
         { key: 'approvals', label: 'Approvals', href: '/admin/approvals', anyOf: ['players.approve_registrations', 'tournaments.approve'] },
         { key: 'tournaments', label: 'Tournaments', href: '/admin/tournaments', anyOf: ['tournaments.approve', 'tournaments.manage_all'] },
         { key: 'my-tournaments', label: 'My tournaments', href: '/clubadmin/tournaments', anyOf: ['tournaments.organise_own'] },
-        { key: 'grading', label: 'Grading', href: '/admin/rankings', anyOf: ['players.change_grades'] },
+        { key: 'grading', label: 'Player grades', href: '/admin/rankings', anyOf: ['players.change_grades'] },
         { key: 'news', label: 'News', href: '/admin/announcements', anyOf: ['content.all_news_gallery'] },
         { key: 'my-posts', label: 'My posts', href: '/clubadmin/posts', anyOf: ['content.own_news_gallery'] },
         { key: 'broadcasts', label: 'Broadcasts', href: '/admin/broadcasts', anyOf: ['content.broadcasts'] },
@@ -91,13 +91,17 @@
         // Opens the first control centre section the person can use
         { key: 'settings', label: 'Settings', href: '/admin/security', controlCentre: true }
     ];
+    // Menu items in the header bar: fewer on small laptops (lg) so the row
+    // fits; the rest go under "More"
     var MAX_BAR_ITEMS = 7;
+    var MAX_BAR_ITEMS_LG = 4;
 
+    // Same colours as --theme-primary in each page's theme styles
     var THEMES = [
-        { key: 'emerald', cls: 'bg-emerald-500' },
-        { key: 'cyan', cls: 'bg-cyan-500' },
-        { key: 'yellow', cls: 'bg-yellow-400' },
-        { key: 'orange', cls: 'bg-orange-500' }
+        { key: 'emerald', label: 'Emerald', colour: '#10b981' },
+        { key: 'cyan', label: 'Cyan', colour: '#06b6d4' },
+        { key: 'yellow', label: 'Yellow', colour: '#f4f916' },
+        { key: 'orange', label: 'Orange', colour: '#f97316' }
     ];
 
     var ICONS = {
@@ -144,22 +148,50 @@
         var style = document.createElement('style');
         style.id = 'kbf-shell-styles';
         style.textContent =
-            '.kbf-nav-link{display:inline-block;padding:.5rem .75rem;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;white-space:nowrap;transition:color .2s ease;}' +
+            '.kbf-nav-link{display:inline-flex;align-items:center;min-height:44px;padding:.5rem .75rem;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;white-space:nowrap;transition:color .2s ease;}' +
             '.kbf-nav-link:hover{color:#fff;}' +
             '.kbf-nav-link.kbf-active{background:var(--theme-primary);color:#0F172A;font-weight:900;}' +
             '.kbf-drop{position:absolute;right:0;top:100%;margin-top:.5rem;min-width:13rem;background:#0f172a;border:2px solid #374151;z-index:60;box-shadow:6px 6px 0 var(--theme-primary);}' +
-            '.kbf-drop a,.kbf-drop button{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;padding:.625rem .875rem;color:#d1d5db;font-weight:700;text-transform:uppercase;font-size:.75rem;}' +
+            '.kbf-drop a,.kbf-drop button{display:flex;align-items:center;gap:.5rem;width:100%;min-height:44px;text-align:left;padding:.625rem .875rem;color:#d1d5db;font-weight:700;text-transform:uppercase;font-size:.75rem;}' +
             '.kbf-drop a:hover,.kbf-drop button:hover{background:#1e293b;color:#fff;}' +
             '.kbf-drop a.kbf-active{background:var(--theme-primary);color:#0F172A;}' +
-            '.kbf-theme-btn{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .2s ease;}' +
-            '.kbf-theme-btn:hover{transform:scale(1.1);border-color:#fff;}' +
-            '.kbf-theme-btn.kbf-active{border-color:#fff;box-shadow:0 0 8px currentColor;}' +
-            '.kbf-mobile-link{display:block;padding:.625rem 1rem;background:#1e293b;color:#d1d5db;font-weight:700;text-transform:uppercase;font-size:.875rem;}' +
+            // Theme dots: 24px to look at, 44px to tap
+            '.kbf-theme-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;background:transparent;border:0;padding:0;cursor:pointer;}' +
+            '.kbf-theme-dot{display:block;width:24px;height:24px;border-radius:50%;border:2px solid transparent;transition:transform .2s ease;}' +
+            '.kbf-theme-btn:hover .kbf-theme-dot{transform:scale(1.1);border-color:#fff;}' +
+            '.kbf-theme-btn.kbf-active .kbf-theme-dot{border-color:#fff;box-shadow:0 0 0 2px #0F172A,0 0 8px rgba(255,255,255,.6);}' +
+            '.kbf-theme-btn:focus-visible{outline:2px solid #fff;outline-offset:-4px;}' +
+            // Header bar on small laptops (1024-1279px): fewer links, rest under More
+            '.kbf-xl-only{display:none !important;}' +
+            '@media (min-width:1280px){.kbf-xl-only{display:inline-flex !important;}.kbf-below-xl{display:none !important;}' +
+                '.kbf-nav-link.kbf-active-lg{background:transparent;color:#9ca3af;font-weight:700;}}' +
+            '@media (max-width:1279.98px){.kbf-nav-link.kbf-active-lg{background:var(--theme-primary);color:#0F172A;font-weight:900;}}' +
+            '.kbf-drop-themes{display:flex;align-items:center;gap:.25rem;padding:.25rem .5rem .25rem .875rem;border-bottom:2px solid #374151;}' +
+            '.kbf-drop-themes-label{flex:1;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;}' +
+            '.kbf-drop .kbf-theme-btn{width:44px;padding:0;justify-content:center;}' +
+            '.kbf-drop .kbf-theme-btn:hover{background:transparent;}' +
+            '.kbf-icon-btn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;}' +
+            // Visible keyboard focus on shell links and buttons
+            '.kbf-nav-link:focus-visible,.kbf-drop a:focus-visible,.kbf-drop button:focus-visible,.kbf-mobile-link:focus-visible,.kbf-cc-link:focus-visible,.kbf-cc-toggle:focus-visible,.kbf-icon-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}' +
+            // "Could not be loaded" message with Try again (KBF.showLoadError)
+            '.kbf-load-error{padding:2rem 1rem;text-align:center;}' +
+            '.kbf-load-error-text{color:#f87171;font-weight:700;font-size:.875rem;margin-bottom:1rem;}' +
+            '.kbf-load-error-btn{min-height:44px;padding:.5rem 1.25rem;background:var(--theme-primary);color:#0F172A;border:2px solid var(--theme-primary);font-weight:900;text-transform:uppercase;font-size:.75rem;}' +
+            '.kbf-load-error-btn:disabled{opacity:.6;cursor:wait;}' +
+            '.kbf-load-error-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}' +
+            // Footer
+            '.kbf-footer{border-top:4px solid #1f2937;margin-top:3rem;}' +
+            '.kbf-footer a{color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;display:inline-flex;align-items:center;min-height:44px;}' +
+            '.kbf-footer a:hover{color:#fff;}' +
+            '.kbf-mobile-link{display:block;min-height:44px;padding:.75rem 1rem;background:#1e293b;color:#d1d5db;font-weight:700;text-transform:uppercase;font-size:.875rem;}' +
             '.kbf-mobile-link:hover{color:#fff;}' +
             '.kbf-mobile-link.kbf-active{background:var(--theme-primary);color:#0F172A;font-weight:900;}' +
             '.kbf-input{width:100%;background:#1e293b;border:2px solid #374151;color:#fff;padding:.625rem .875rem;font-weight:700;font-size:.875rem;}' +
             '.kbf-input:focus{outline:none;border-color:var(--theme-primary);}' +
+            // Phones: 16px so iOS does not zoom in on the field
+            '@media (max-width:639.98px){.kbf-input{font-size:16px;}}' +
             '.kbf-btn-theme{background:var(--theme-primary);color:#0F172A;}' +
+            '#kbf-impersonate-dialog button,#kbf-password-dialog button,.kbf-imp-btn{min-height:44px;}' +
             // Impersonation banner: fixed amber colours on every theme
             '.kbf-imp-banner{background:repeating-linear-gradient(135deg,#F59E0B 0,#F59E0B 18px,#FBBF24 18px,#FBBF24 36px);color:#0F172A;}' +
             '.kbf-imp-icon{background:#0F172A;color:#FBBF24;}' +
@@ -167,10 +199,10 @@
             '.kbf-imp-btn:hover{background:#1e293b;}' +
             '.kbf-imp-btn:disabled{opacity:.6;cursor:wait;}' +
             // Control centre sidebar
-            '.kbf-cc-link{display:flex;align-items:center;gap:.625rem;padding:.625rem .75rem;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;transition:color .2s ease,background-color .2s ease;}' +
+            '.kbf-cc-link{display:flex;align-items:center;gap:.625rem;min-height:44px;padding:.625rem .75rem;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;transition:color .2s ease,background-color .2s ease;}' +
             '.kbf-cc-link:hover{color:#fff;background:#1e293b;}' +
             '.kbf-cc-link.kbf-active{background:var(--theme-primary);color:#0F172A;font-weight:900;}' +
-            '.kbf-cc-toggle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;width:100%;padding:.75rem 1rem;background:#0f172a;border:2px solid #374151;color:#fff;font-weight:900;text-transform:uppercase;font-size:.75rem;}' +
+            '.kbf-cc-toggle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;width:100%;min-height:44px;padding:.75rem 1rem;background:#0f172a;border:2px solid #374151;color:#fff;font-weight:900;text-transform:uppercase;font-size:.75rem;}' +
             '.kbf-cc-toggle:hover{border-color:#6b7280;}';
         document.head.appendChild(style);
     }
@@ -282,12 +314,14 @@
             var on = btn.getAttribute('data-theme') === theme;
             btn.classList.toggle('kbf-active', on && btn.classList.contains('kbf-theme-btn'));
             btn.classList.toggle('active', on && btn.classList.contains('theme-switcher-btn'));
+            if (btn.classList.contains('kbf-theme-btn')) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
     }
 
     function themeButtons() {
         return THEMES.map(function (t) {
-            return '<button type="button" class="kbf-theme-btn ' + t.cls + '" data-theme="' + t.key + '" aria-label="' + t.key + ' theme"></button>';
+            return '<button type="button" class="kbf-theme-btn" data-theme="' + t.key + '" aria-label="' + t.label + ' theme" aria-pressed="false">' +
+                '<span class="kbf-theme-dot" style="background:' + t.colour + '" aria-hidden="true"></span></button>';
         }).join('');
     }
 
@@ -295,26 +329,33 @@
     function renderHeader(user, active) {
         var items = visibleMenu(user);
         var barItems = items.slice(0, MAX_BAR_ITEMS);
-        var moreItems = items.slice(MAX_BAR_ITEMS);
-        var moreActive = moreItems.some(function (i) { return i.key === active; });
+        // Small laptops (lg, below xl) show MAX_BAR_ITEMS_LG items in the bar
+        // and move the next ones under "More"
+        var moreItems = items.slice(MAX_BAR_ITEMS_LG);
+        var moreActive = moreItems.some(function (i, n) {
+            return i.key === active && n + MAX_BAR_ITEMS_LG >= MAX_BAR_ITEMS;
+        });
+        var moreActiveLg = moreItems.some(function (i) { return i.key === active; });
 
-        var bar = barItems.map(function (i) {
-            return '<a href="' + i.href + '" class="kbf-nav-link' + (i.key === active ? ' kbf-active' : '') + '">' + escapeHtml(i.label) + '</a>';
+        var bar = barItems.map(function (i, n) {
+            var cls = 'kbf-nav-link' + (i.key === active ? ' kbf-active' : '') + (n >= MAX_BAR_ITEMS_LG ? ' kbf-xl-only' : '');
+            return '<a href="' + i.href + '" class="' + cls + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
         }).join('');
 
         var more = moreItems.length ?
-            '<div class="relative" data-kbf-dropdown>' +
-                '<button type="button" class="kbf-nav-link flex items-center gap-1' + (moreActive ? ' kbf-active' : '') + '" data-kbf-toggle aria-haspopup="true" aria-expanded="false">More ' + icon('chevron', 'w-3 h-3') + '</button>' +
+            '<div class="relative' + (items.length <= MAX_BAR_ITEMS ? ' kbf-below-xl' : '') + '" data-kbf-dropdown>' +
+                '<button type="button" class="kbf-nav-link flex items-center gap-1' + (moreActive ? ' kbf-active' : (moreActiveLg ? ' kbf-active-lg' : '')) + '" data-kbf-toggle aria-haspopup="true" aria-expanded="false">More ' + icon('chevron', 'w-3 h-3') + '</button>' +
                 '<div class="kbf-drop hidden" data-kbf-menu>' +
-                    moreItems.map(function (i) {
-                        return '<a href="' + i.href + '"' + (i.key === active ? ' class="kbf-active"' : '') + '>' + escapeHtml(i.label) + '</a>';
+                    moreItems.map(function (i, n) {
+                        var cls = (i.key === active ? 'kbf-active' : '') + (n + MAX_BAR_ITEMS_LG < MAX_BAR_ITEMS ? ' kbf-below-xl' : '');
+                        return '<a href="' + i.href + '"' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
                     }).join('') +
                 '</div>' +
             '</div>' : '';
 
         var account =
             '<div class="relative" data-kbf-dropdown>' +
-                '<button type="button" class="flex items-center gap-2 px-3 py-2 bg-slate-800 border-2 border-gray-700 hover:border-gray-500 transition" data-kbf-toggle aria-haspopup="true" aria-expanded="false">' +
+                '<button type="button" class="kbf-account-btn flex items-center gap-2 px-3 py-2 bg-slate-800 border-2 border-gray-700 hover:border-gray-500 transition" style="min-height:44px" data-kbf-toggle aria-haspopup="true" aria-expanded="false">' +
                     '<span class="theme-primary-text" style="color:var(--theme-primary)">' + icon('user', 'w-4 h-4') + '</span>' +
                     '<span class="text-left leading-tight">' +
                         '<span class="block font-bold uppercase text-xs text-white max-w-[10rem] truncate" data-kbf-name></span>' +
@@ -323,6 +364,9 @@
                     icon('chevron', 'w-3 h-3') +
                 '</button>' +
                 '<div class="kbf-drop hidden" data-kbf-menu>' +
+                    '<div class="kbf-drop-themes" role="group" aria-label="Colour theme">' +
+                        '<span class="kbf-drop-themes-label">Theme</span>' + themeButtons() +
+                    '</div>' +
                     '<button type="button" data-kbf-action="password">' + icon('key') + 'Change password</button>' +
                     '<a href="/admin/two-step">' + icon('shield') + '2-step verification</a>' +
                     '<button type="button" data-kbf-action="signout-everywhere">' + icon('signout') + 'Sign out everywhere</button>' +
@@ -331,7 +375,7 @@
             '</div>';
 
         var mobileLinks = items.map(function (i) {
-            return '<a href="' + i.href + '" class="kbf-mobile-link' + (i.key === active ? ' kbf-active' : '') + '">' + escapeHtml(i.label) + '</a>';
+            return '<a href="' + i.href + '" class="kbf-mobile-link' + (i.key === active ? ' kbf-active' : '') + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
         }).join('');
 
         var html =
@@ -342,31 +386,30 @@
                             '<img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo" class="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0">' +
                             '<span class="text-base sm:text-xl font-black uppercase whitespace-nowrap">KBF-UK Admin</span>' +
                         '</a>' +
-                        '<div class="hidden lg:flex items-center gap-1 flex-1 justify-center">' + bar + more + '</div>' +
-                        '<div class="hidden lg:flex items-center gap-3">' +
-                            '<div class="flex items-center gap-2">' + themeButtons() + '</div>' +
+                        '<div class="hidden lg:flex items-center gap-1 flex-1 justify-center min-w-0">' + bar + more + '</div>' +
+                        '<div class="hidden lg:flex items-center gap-3 flex-shrink-0">' +
                             account +
                         '</div>' +
-                        '<button type="button" class="lg:hidden p-2 text-gray-400 hover:text-white" data-kbf-mobile-toggle aria-label="Open menu" aria-expanded="false">' +
+                        '<button type="button" class="lg:hidden kbf-icon-btn text-gray-400 hover:text-white" data-kbf-mobile-toggle aria-label="Open menu" aria-expanded="false" aria-controls="kbf-mobile-menu">' +
                             '<span data-kbf-icon-open>' + icon('menu', 'w-6 h-6') + '</span>' +
                             '<span data-kbf-icon-close class="hidden">' + icon('close', 'w-6 h-6') + '</span>' +
                         '</button>' +
                     '</div>' +
                 '</div>' +
-                '<div class="lg:hidden hidden border-t-2 border-gray-700" data-kbf-mobile-menu>' +
+                '<div id="kbf-mobile-menu" class="lg:hidden hidden border-t-2 border-gray-700" data-kbf-mobile-menu>' +
                     '<div class="px-4 py-4 space-y-2">' +
                         '<div class="flex items-center justify-between mb-3 gap-3">' +
                             '<div class="min-w-0">' +
                                 '<span class="block font-bold uppercase text-sm truncate" style="color:var(--theme-primary)" data-kbf-name></span>' +
                                 '<span class="block font-bold uppercase text-xs text-gray-400" data-kbf-label></span>' +
                             '</div>' +
-                            '<div class="flex items-center gap-2">' + themeButtons() + '</div>' +
+                            '<div class="flex items-center" role="group" aria-label="Colour theme">' + themeButtons() + '</div>' +
                         '</div>' +
                         mobileLinks +
                         '<button type="button" class="kbf-mobile-link w-full text-left flex items-center gap-2" data-kbf-action="password">' + icon('key') + 'Change password</button>' +
                         '<a href="/admin/two-step" class="kbf-mobile-link flex items-center gap-2">' + icon('shield') + '2-step verification</a>' +
                         '<button type="button" class="kbf-mobile-link w-full text-left flex items-center gap-2" data-kbf-action="signout-everywhere">' + icon('signout') + 'Sign out everywhere</button>' +
-                        '<button type="button" class="w-full px-4 py-2 bg-slate-800 border-2 border-red-500 text-red-400 font-bold uppercase text-sm hover:bg-red-500 hover:text-slate-900 transition flex items-center gap-2" data-kbf-action="signout">' + icon('signout') + 'Sign out</button>' +
+                        '<button type="button" class="w-full px-4 py-2 bg-slate-800 border-2 border-red-500 text-red-400 font-bold uppercase text-sm hover:bg-red-500 hover:text-slate-900 transition flex items-center gap-2" style="min-height:44px" data-kbf-action="signout">' + icon('signout') + 'Sign out</button>' +
                     '</div>' +
                 '</div>' +
             '</nav>';
@@ -408,32 +451,96 @@
             });
         });
         document.addEventListener('click', function () { closeAllDropdowns(null); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAllDropdowns(null); });
 
         var mobileToggle = host.querySelector('[data-kbf-mobile-toggle]');
         var mobileMenu = host.querySelector('[data-kbf-mobile-menu]');
-        mobileToggle.addEventListener('click', function () {
-            var open = mobileMenu.classList.contains('hidden');
+        function setMobileMenu(open) {
             mobileMenu.classList.toggle('hidden', !open);
             mobileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
             mobileToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
             host.querySelector('[data-kbf-icon-open]').classList.toggle('hidden', open);
             host.querySelector('[data-kbf-icon-close]').classList.toggle('hidden', !open);
+        }
+        mobileToggle.addEventListener('click', function () {
+            setMobileMenu(mobileMenu.classList.contains('hidden'));
+        });
+
+        // Escape closes an open drop-down or the phone menu and puts focus
+        // back on the button that opened it
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || e.defaultPrevented) return;
+            var openToggle = null;
+            host.querySelectorAll('[data-kbf-dropdown]').forEach(function (dd) {
+                var menu = dd.querySelector('[data-kbf-menu]');
+                if (menu && !menu.classList.contains('hidden')) openToggle = dd.querySelector('[data-kbf-toggle]');
+            });
+            if (openToggle) {
+                closeAllDropdowns(null);
+                openToggle.focus();
+                return;
+            }
+            if (!mobileMenu.classList.contains('hidden')) {
+                setMobileMenu(false);
+                mobileToggle.focus();
+            }
         });
 
         host.querySelectorAll('.kbf-theme-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () { applyTheme(btn.getAttribute('data-theme')); });
+            btn.addEventListener('click', function (e) {
+                // Keep the account menu open while trying themes
+                e.stopPropagation();
+                applyTheme(btn.getAttribute('data-theme'));
+            });
         });
 
+        // The account button: where focus returns after a dialog opened from
+        // its menu (the menu item itself is hidden by then)
+        function accountToggleFor(btn) {
+            var dd = btn.closest('[data-kbf-dropdown]');
+            if (dd) return dd.querySelector('[data-kbf-toggle]');
+            if (btn.closest('[data-kbf-mobile-menu]')) return mobileToggle;
+            return btn;
+        }
         host.querySelectorAll('[data-kbf-action="password"]').forEach(function (btn) {
-            btn.addEventListener('click', function () { closeAllDropdowns(null); openPasswordDialog(); });
+            btn.addEventListener('click', function () {
+                closeAllDropdowns(null);
+                openPasswordDialog(accountToggleFor(btn));
+            });
         });
         host.querySelectorAll('[data-kbf-action="signout"]').forEach(function (btn) {
             btn.addEventListener('click', signOut);
         });
         host.querySelectorAll('[data-kbf-action="signout-everywhere"]').forEach(function (btn) {
-            btn.addEventListener('click', function () { closeAllDropdowns(null); signOutEverywhere(); });
+            btn.addEventListener('click', function () {
+                closeAllDropdowns(null);
+                signOutEverywhere(accountToggleFor(btn));
+            });
         });
+    }
+
+    // ---------- footer ----------
+    // The same small footer on every staff page
+    function renderFooter() {
+        if (document.getElementById('kbf-admin-footer')) return;
+        var footer = document.createElement('footer');
+        footer.id = 'kbf-admin-footer';
+        footer.className = 'kbf-footer';
+        footer.innerHTML =
+            '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">' +
+                '<p class="text-xs font-bold uppercase text-gray-500">KBF-UK staff area</p>' +
+                '<nav aria-label="Footer" class="flex flex-wrap gap-x-6">' +
+                    '<a href="/">View the public site</a>' +
+                    '<a href="/terms">Terms and privacy</a>' +
+                '</nav>' +
+            '</div>';
+        // After the page's own content, before its scripts
+        var firstScript = null;
+        for (var i = 0; i < document.body.children.length; i++) {
+            var child = document.body.children[i];
+            if (child.tagName === 'SCRIPT' && i > 0) { firstScript = child; break; }
+        }
+        if (firstScript) document.body.insertBefore(footer, firstScript);
+        else document.body.appendChild(footer);
     }
 
     // ---------- impersonation banner ----------
@@ -470,7 +577,7 @@
             stopButton.disabled = true;
             stopImpersonation().catch(function (message) {
                 stopButton.disabled = false;
-                window.alert(message);
+                failNotice(message);
             });
         });
     }
@@ -514,7 +621,26 @@
     }
 
     // ---------- start impersonation (Staff pages) ----------
-    function openImpersonateDialog(person) {
+    // Focus in, Tab kept inside, Escape closes, focus back to the opener
+    // (js/kbf-dialog.js). Falls back to Escape and focus only.
+    function openDialog(wrap, close, first, opener) {
+        if (window.KBFDialog) {
+            window.KBFDialog.open(wrap, { onClose: close, initialFocus: first, opener: opener || null });
+            return;
+        }
+        var back = opener || document.activeElement;
+        wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        var observer = window.MutationObserver ? new MutationObserver(function () {
+            if (!wrap.isConnected) {
+                observer.disconnect();
+                if (back && back.isConnected) back.focus();
+            }
+        }) : null;
+        if (observer) observer.observe(document.body, { childList: true });
+        if (first) first.focus();
+    }
+
+    function openImpersonateDialog(person, opener) {
         if (!person || !person.userId) return;
         var existing = document.getElementById('kbf-impersonate-dialog');
         if (existing) existing.remove();
@@ -535,7 +661,7 @@
                         '<span class="kbf-imp-icon flex items-center justify-center w-9 h-9 flex-shrink-0">' + icon('eye', 'w-5 h-5') + '</span>' +
                         '<h2 id="kbf-imp-title" class="text-lg font-black uppercase text-white"></h2>' +
                     '</div>' +
-                    '<button type="button" class="p-1 text-gray-400 hover:text-white" data-kbf-close aria-label="Close">' + icon('close', 'w-5 h-5') + '</button>' +
+                    '<button type="button" class="kbf-icon-btn -mt-2 -mr-2 text-gray-400 hover:text-white" data-kbf-close aria-label="Close">' + icon('close', 'w-5 h-5') + '</button>' +
                 '</div>' +
                 '<p class="text-sm text-gray-300 font-semibold">You will see the site exactly as they do. Everything you do is recorded as you acting as them. Ends after ' + impersonationMinutes() + ' minutes or when you return to your account.</p>' +
                 '<div>' +
@@ -569,7 +695,7 @@
 
         wrap.querySelectorAll('[data-kbf-close]').forEach(function (b) { b.addEventListener('click', close); });
         wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
-        wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        openDialog(wrap, close, password, opener);
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -599,12 +725,21 @@
                 submit.disabled = false;
             });
         });
-
-        password.focus();
     }
 
     // ---------- sign out ----------
+    // Tell the other open staff tabs (js/session-manager.js) to follow
+    function tellOtherTabs() {
+        try {
+            if (typeof sessionManager !== 'undefined' && sessionManager && typeof sessionManager.post === 'function') {
+                sessionManager.loggingOut = true;
+                sessionManager.post({ type: 'logout', reason: 'signout' });
+            }
+        } catch (e) { /* ignore */ }
+    }
+
     function signOut() {
+        tellOtherTabs();
         fetch('/api/auth/logout.php', {
             method: 'GET',
             credentials: 'include',
@@ -616,8 +751,28 @@
     }
 
     // ---------- sign out everywhere (own account, every device) ----------
-    function signOutEverywhere() {
-        if (!window.confirm('Sign out on every device, including this one? You will need to sign in again.')) return;
+    function signOutEverywhere(opener) {
+        var question = {
+            title: 'Sign out everywhere?',
+            message: 'Sign out on every device, including this one? You will need to sign in again.',
+            confirmText: 'Sign out everywhere',
+            cancelText: 'Cancel',
+            danger: true,
+            // Focus goes back to the account button, not the hidden menu item
+            opener: opener || null
+        };
+        var ask = window.KBFDialog
+            ? window.KBFDialog.confirm(question)
+            : Promise.resolve(window.confirm(question.message));
+        ask.then(function (yes) { if (yes) doSignOutEverywhere(); });
+    }
+
+    function failNotice(text) {
+        if (window.KBFDialog) window.KBFDialog.notice({ title: 'Something went wrong', message: text });
+        else window.alert(text);
+    }
+
+    function doSignOutEverywhere() {
         fetch('/api/auth/sign-out-everywhere.php', {
             method: 'POST',
             credentials: 'include',
@@ -627,13 +782,14 @@
             return res.json().catch(function () { return { success: false }; });
         }).then(function (data) {
             if (data && data.success) {
+                tellOtherTabs();
                 try { sessionStorage.removeItem('csrf_token'); } catch (e) { /* ignore */ }
                 go('/login');
                 return;
             }
-            window.alert((data && data.message) ? String(data.message) : 'Could not sign out everywhere. Please try again.');
+            failNotice((data && data.message) ? String(data.message) : 'Could not sign out everywhere. Please try again.');
         }).catch(function () {
-            window.alert('Could not sign out everywhere. Please try again.');
+            failNotice('Could not sign out everywhere. Please try again.');
         });
     }
 
@@ -646,7 +802,7 @@
         return null;
     }
 
-    function openPasswordDialog() {
+    function openPasswordDialog(opener) {
         var existing = document.getElementById('kbf-password-dialog');
         if (existing) existing.remove();
 
@@ -660,7 +816,7 @@
             '<form class="w-full max-w-md bg-slate-900 border-4 border-gray-700 p-5 sm:p-6 space-y-4" novalidate>' +
                 '<div class="flex items-start justify-between gap-4">' +
                     '<h2 id="kbf-password-title" class="text-lg font-black uppercase text-white">Change password</h2>' +
-                    '<button type="button" class="p-1 text-gray-400 hover:text-white" data-kbf-close aria-label="Close">' + icon('close', 'w-5 h-5') + '</button>' +
+                    '<button type="button" class="kbf-icon-btn -mt-2 -mr-2 text-gray-400 hover:text-white" data-kbf-close aria-label="Close">' + icon('close', 'w-5 h-5') + '</button>' +
                 '</div>' +
                 '<p class="text-xs text-gray-400 font-semibold">At least 8 characters, with an uppercase letter, a lowercase letter and a number.</p>' +
                 '<div>' +
@@ -697,7 +853,7 @@
 
         wrap.querySelectorAll('[data-kbf-close]').forEach(function (b) { b.addEventListener('click', close); });
         wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
-        wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        openDialog(wrap, close, wrap.querySelector('#kbf-pw-current'), opener);
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -733,8 +889,6 @@
                 submit.disabled = false;
             });
         });
-
-        wrap.querySelector('#kbf-pw-current').focus();
     }
 
     // ---------- guard ----------
@@ -776,6 +930,7 @@
                     injectStyles();
                     renderHeader(user, opts.active || '');
                     renderImpersonationBanner(user);
+                    renderFooter();
                     if (opts.controlSection) renderControlNav(user, opts.controlSection);
                     var saved = 'emerald';
                     try { saved = localStorage.getItem('badminton-theme') || 'emerald'; } catch (e) { /* ignore */ }

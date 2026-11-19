@@ -28,7 +28,7 @@
         .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
         .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 15px currentColor; }
         .theme-switcher-btn.active::after {
-            content: '✓'; position: absolute; top: 50%; left: 50%;
+            content: ''; position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%); color: white;
             font-weight: bold; font-size: 20px;
         }
@@ -43,7 +43,7 @@
         }
         .photo-item:hover { 
             transform: translateY(-5px); 
-            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3); 
+            box-shadow: 0 15px 30px -10px var(--theme-primary);
         }
         .photo-item img { 
             transition: transform 0.5s ease; 
@@ -127,7 +127,7 @@
         }
 
         .dropdown-toggle::after {
-            content: '▼';
+            content: '';
             font-size: 0.6rem;
             margin-left: 5px;
             transition: transform 0.3s;
@@ -170,6 +170,8 @@
         }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
+    <link rel="stylesheet" href="/assets/css/public-ui.css">
+    <script src="/js/public-ui.js" defer></script>
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -188,11 +190,11 @@
                     </div>
                     <div>
                         <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
-                        <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                        <p class="kbf-nav-tagline text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
                     </div>
                 </a>
                 
-                <div class="hidden md:flex items-center space-x-2">
+                <div class="kbf-desktop-nav hidden lg:flex items-center space-x-2">
                     <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
                     <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
                     <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
@@ -200,10 +202,8 @@
                     
                     <!-- Dropdown More Menu -->
                     <div class="dropdown">
-                        <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
-                            More
-                        </a>
-                        <div class="dropdown-menu">
+                        <button type="button" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" aria-expanded="false" aria-controls="more-menu">More</button>
+                        <div class="dropdown-menu" id="more-menu">
                             <a href="/news">News</a>
                             <a href="/register">Register</a>
                         </div>
@@ -218,16 +218,16 @@
                     </div>
                     
                     <div class="ml-4">
-                        <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
-                            Login
+                        <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all whitespace-nowrap">
+                            Staff<span class="sr-only"> sign in</span>
                         </a>
                     </div>
                 </div>
-                
+
                 <!-- Mobile menu button -->
-                <div class="md:hidden flex items-center">
-                    <button id="mobile-menu-btn" class="theme-primary-text p-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <div class="lg:hidden flex items-center">
+                    <button type="button" id="mobile-menu-btn" class="theme-primary-text p-2" aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
+                        <svg class="w-6 h-6" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
@@ -236,7 +236,7 @@
         </div>
         
         <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+        <div id="mobile-menu" class="hidden lg:hidden bg-slate-800 border-t-2 theme-primary-border">
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
                 <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
@@ -245,9 +245,9 @@
                 
                 <!-- Mobile Dropdown More -->
                 <div>
-                    <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                    <button type="button" id="mobile-more-btn" onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center" aria-expanded="false" aria-controls="mobile-dropdown-content">
                         More
-                        <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                        <span id="mobile-dropdown-arrow" class="kbf-chevron" aria-hidden="true"></span>
                     </button>
                     <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
                         <a href="/news">News</a>
@@ -266,7 +266,7 @@
                     </div>
                 </div>
                 
-                <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+                <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Staff sign in</a>
             </div>
         </div>
     </nav>
@@ -293,10 +293,12 @@
     <!-- Photo Grid -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div id="loading" class="text-center py-12 sm:py-16">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-gray-700 border-t-emerald-500 mb-4"></div>
+            <div class="inline-block animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-gray-700 mb-4" style="border-top-color: var(--theme-primary);"></div>
             <p class="text-gray-400 font-bold uppercase text-sm sm:text-lg">Loading Photos...</p>
         </div>
         
+        <div id="photosError" class="hidden"></div>
+
         <div id="photosGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"></div>
         
         <div id="noPhotos" class="hidden text-center py-16 sm:py-20">
@@ -311,15 +313,15 @@
     </div>
 
     <!-- Lightbox -->
-    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
-        <button onclick="closeLightbox()" class="absolute top-8 right-8 text-white text-5xl font-bold hover:theme-primary-text transition z-10">
-            ×
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()" role="dialog" aria-modal="true" aria-label="Photo viewer" aria-hidden="true">
+        <button type="button" id="lightboxClose" onclick="closeLightbox()" aria-label="Close photo" class="absolute top-6 right-6 sm:top-8 sm:right-8 w-12 h-12 inline-flex items-center justify-center text-white hover:opacity-80 transition z-10">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        <button onclick="prevPhoto(event)" class="absolute left-4 sm:left-8 text-white text-5xl font-bold hover:theme-primary-text transition z-10">
-            ‹
+        <button type="button" onclick="prevPhoto(event)" aria-label="Previous photo" class="absolute left-2 sm:left-8 w-12 h-12 inline-flex items-center justify-center text-white hover:opacity-80 transition z-10">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         </button>
-        <button onclick="nextPhoto(event)" class="absolute right-4 sm:right-8 text-white text-5xl font-bold hover:theme-primary-text transition z-10">
-            ›
+        <button type="button" onclick="nextPhoto(event)" aria-label="Next photo" class="absolute right-2 sm:right-8 w-12 h-12 inline-flex items-center justify-center text-white hover:opacity-80 transition z-10">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
         </button>
         <img id="lightboxImage" src="" alt="Full size photo" onclick="event.stopPropagation()">
     </div>
@@ -377,7 +379,7 @@
                 <nav aria-label="Organisers">
                     <h3 class="kf-heading">Organisers</h3>
                     <ul class="kf-links">
-                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Staff sign in</a></li>
                         <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
                     </ul>
                 </nav>
@@ -443,7 +445,7 @@
     // ============================================
     function changeTheme(theme) {
         document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('badminton-theme', theme);
+        KBF.storage.set('badminton-theme', theme);
         document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
             btn.classList.remove('active');
             if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
@@ -456,9 +458,9 @@
 
     function toggleMobileDropdown() {
         const dropdown = document.getElementById('mobile-dropdown-content');
-        const arrow = document.getElementById('mobile-dropdown-arrow');
-        dropdown.classList.toggle('active');
-        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+        const open = dropdown.classList.toggle('active');
+        const btn = document.getElementById('mobile-more-btn');
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     function getTournamentIdFromURL() {
@@ -470,7 +472,7 @@
     // INITIALIZATION
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        const savedTheme = KBF.storage.get('badminton-theme', 'emerald');
         changeTheme(savedTheme);
         
         const tournamentId = getTournamentIdFromURL();
@@ -490,39 +492,59 @@
     // DATA LOADING
     // ============================================
     async function loadTournamentPhotos(tournamentId) {
+        const loading = document.getElementById('loading');
+        const errorBox = document.getElementById('photosError');
+        loading.classList.remove('hidden');
+        errorBox.classList.add('hidden');
+        let response;
+        let data;
         try {
-            const response = await fetch(`/api/gallery.php?tournamentId=${tournamentId}`, {
+            response = await fetch(`/api/gallery.php?tournamentId=${tournamentId}`, {
                 credentials: 'include'
             });
-            const data = await response.json();
-
-            document.getElementById('loading').classList.add('hidden');
-
-            if (data.success) {
-                // Display tournament info
-                document.getElementById('tournamentName').innerHTML = escapeHtml(data.tournament.Name);
-                document.getElementById('tournamentInfo').innerHTML = `
-                    <p>📅 ${new Date(data.tournament.TournamentDate).toLocaleDateString('en-GB', { 
-                        weekday: 'long',
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
-                    })}</p>
-                    <p>📍 ${escapeHtml(data.tournament.Venue)}, ${escapeHtml(data.tournament.Location)}</p>
-                    <p>🏢 ${escapeHtml(data.tournament.ClubName)}</p>
-                `;
-                
-                if (data.photos && data.photos.length > 0) {
-                    displayPhotos(data.photos);
-                } else {
-                    document.getElementById('noPhotos').classList.remove('hidden');
-                }
-            } else {
-                window.location.href = '/gallery';
-            }
+            data = await response.json();
         } catch (error) {
             console.error('Error loading photos:', error);
-            document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Photos</p>';
+            data = null;
+        }
+
+        loading.classList.add('hidden');
+
+        if (data && data.success && data.tournament) {
+            // Display tournament info
+            const iconCls = 'w-4 h-4 mr-2 theme-primary-text flex-shrink-0';
+            document.getElementById('tournamentName').innerHTML = escapeHtml(data.tournament.Name);
+            document.getElementById('tournamentInfo').innerHTML = `
+                <p class="flex items-center"><svg class="${iconCls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span class="sr-only">Date: </span>${escapeHtml(new Date(data.tournament.TournamentDate).toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                }))}</p>
+                <p class="flex items-center"><svg class="${iconCls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="sr-only">Venue: </span>${escapeHtml(data.tournament.Venue)}, ${escapeHtml(data.tournament.Location)}</p>
+                <p class="flex items-center"><svg class="${iconCls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg><span class="sr-only">Organiser: </span>${escapeHtml(data.tournament.ClubName)}</p>
+            `;
+
+            if (data.photos && data.photos.length > 0) {
+                displayPhotos(data.photos);
+            } else {
+                document.getElementById('noPhotos').classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Failed: say so instead of silently leaving the page
+        document.getElementById('tournamentName').textContent = 'Gallery';
+        errorBox.classList.remove('hidden');
+        if (data && response && response.status === 404) {
+            KBF.showLoadError(errorBox, {
+                message: 'This gallery could not be found. It may have been removed. Use "Back to Gallery" to see the other galleries.'
+            });
+        } else {
+            KBF.showLoadError(errorBox, {
+                message: 'The photos could not be loaded. Please check your connection and try again.',
+                retry: function () { loadTournamentPhotos(tournamentId); }
+            });
         }
     }
 
@@ -532,51 +554,73 @@
         grid.classList.remove('hidden');
         
         grid.innerHTML = photos.map((photo, index) => `
-            <div class="photo-item border-4 border-gray-700 overflow-hidden" onclick="openLightbox(${index})">
+            <button type="button" class="photo-item block w-full text-left p-0 border-4 border-gray-700 overflow-hidden" onclick="openLightbox(${index}, this)" aria-label="Open photo ${index + 1} of ${photos.length}">
                 <div class="h-64 sm:h-72 overflow-hidden bg-slate-800">
                     <img${imgVariantAttrs(photo.FilePath, 'thumb')}
-                         alt="Tournament photo ${index + 1}"
+                         alt=""
                          width="300" height="288" loading="lazy" decoding="async"
                          class="w-full h-full object-cover">
                 </div>
-            </div>
+            </button>
         `).join('');
     }
 
     // ============================================
     // LIGHTBOX FUNCTIONALITY
     // ============================================
-    function openLightbox(index) {
+    let lightboxOpener = null;
+
+    function showPhoto(index) {
         currentPhotoIndex = index;
-        setImageVariant(document.getElementById('lightboxImage'), safeUrl(allPhotos[index].FilePath), 'display');
-        document.getElementById('lightbox').classList.add('active');
+        const img = document.getElementById('lightboxImage');
+        setImageVariant(img, safeUrl(allPhotos[index].FilePath), 'display');
+        img.alt = 'Photo ' + (index + 1) + ' of ' + allPhotos.length;
+    }
+
+    function openLightbox(index, opener) {
+        lightboxOpener = opener || null;
+        showPhoto(index);
+        const box = document.getElementById('lightbox');
+        box.classList.add('active');
+        box.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+        document.getElementById('lightboxClose').focus();
     }
 
     function closeLightbox() {
-        document.getElementById('lightbox').classList.remove('active');
+        const box = document.getElementById('lightbox');
+        box.classList.remove('active');
+        box.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = 'auto';
+        if (lightboxOpener && document.body.contains(lightboxOpener)) lightboxOpener.focus();
+        lightboxOpener = null;
     }
 
     function prevPhoto(event) {
         event.stopPropagation();
-        currentPhotoIndex = (currentPhotoIndex - 1 + allPhotos.length) % allPhotos.length;
-        setImageVariant(document.getElementById('lightboxImage'), safeUrl(allPhotos[currentPhotoIndex].FilePath), 'display');
+        showPhoto((currentPhotoIndex - 1 + allPhotos.length) % allPhotos.length);
     }
 
     function nextPhoto(event) {
         event.stopPropagation();
-        currentPhotoIndex = (currentPhotoIndex + 1) % allPhotos.length;
-        setImageVariant(document.getElementById('lightboxImage'), safeUrl(allPhotos[currentPhotoIndex].FilePath), 'display');
+        showPhoto((currentPhotoIndex + 1) % allPhotos.length);
     }
 
-    // Keyboard navigation
+    // Keyboard navigation; Tab stays inside the photo viewer
     document.addEventListener('keydown', function(e) {
-        if (!document.getElementById('lightbox').classList.contains('active')) return;
-        
+        const box = document.getElementById('lightbox');
+        if (!box.classList.contains('active')) return;
+
         if (e.key === 'Escape') closeLightbox();
         if (e.key === 'ArrowLeft') prevPhoto(e);
         if (e.key === 'ArrowRight') nextPhoto(e);
+        if (e.key === 'Tab') {
+            const buttons = Array.prototype.slice.call(box.querySelectorAll('button'));
+            const i = buttons.indexOf(document.activeElement);
+            e.preventDefault();
+            const next = e.shiftKey ? (i <= 0 ? buttons.length - 1 : i - 1) : (i + 1) % buttons.length;
+            buttons[next].focus();
+        }
     });
     </script>
     <!-- Footer contact and social links from Site settings -->

@@ -176,7 +176,8 @@ function kbfBroadcastValues($pdo, array $person) {
 }
 
 // Subject (plain) and body with one recipient's placeholders filled in.
-// Stored subjects are HTML-escaped (sanitizeInput), so they are decoded first.
+// Subjects are stored as typed; older ones were HTML-escaped, so they are
+// decoded first (no change for plain text).
 function kbfBroadcastRender($pdo, $subject, $bodyHtml, array $person) {
     $plainSubject = html_entity_decode((string) $subject, ENT_QUOTES, 'UTF-8');
     return kbfRenderTemplate($plainSubject, (string) $bodyHtml, kbfBroadcastValues($pdo, $person));

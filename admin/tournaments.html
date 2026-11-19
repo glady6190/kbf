@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tournaments - Admin</title>
+    <title>Tournaments - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -26,6 +26,10 @@
         .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
         .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
         .btn-sm { padding: .45rem .7rem; font-size: .68rem; }
+        /* Touch targets at least 44px */
+        .btn-solid, .btn-outline, .btn-plain, .tt-tab, .tt-ptab, .tt-menu-item { min-height: 44px; }
+        .tt-icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+        .tt-icon-btn:focus-visible, .tt-open:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .btn-solid:focus-visible, .btn-outline:focus-visible, .btn-plain:focus-visible, .tt-tab:focus-visible, .tt-ptab:focus-visible,
         .tt-row:focus-visible, .tt-menu-btn:focus-visible, .tt-menu-item:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
@@ -33,12 +37,13 @@
         .tt-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
         .tt-tab:hover { color: #fff; }
         .tt-tab .tt-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
-        .tt-tab .tt-count.is-alert { background: #EF4444; color: #fff; }
+        .tt-tab .tt-count.is-alert { background: #EF4444; color: #0F172A; }
         .tt-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
         .tt-tab.is-active .tt-count { background: #0F172A; color: var(--theme-primary); }
 
         /* Fields */
         .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
         .choice { accent-color: var(--theme-primary); width: 18px; height: 18px; flex-shrink: 0; }
@@ -53,7 +58,7 @@
         .tt-thumb img { width: 100%; height: 100%; object-fit: contain; }
         .tt-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
         .tt-tag.is-approved { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
-        .tt-tag.is-due { background: #EF4444; border-color: #EF4444; color: #fff; }
+        .tt-tag.is-due { background: #EF4444; border-color: #EF4444; color: #0F172A; }
         .tt-tag.is-amber { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
         .tt-tag.is-grey { background: #374151; border-color: #4b5563; color: #e5e7eb; }
         .tt-tag.is-cancelled { background: #374151; border-color: #4b5563; color: #9ca3af; text-decoration: line-through; }
@@ -64,7 +69,7 @@
         .tt-row { cursor: pointer; transition: background-color .15s; }
         .tt-row:hover { background: #1e293b; }
         .tt-row.is-open { background: #1e293b; box-shadow: inset 4px 0 0 var(--theme-primary); }
-        .tt-menu-btn { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #374151; background: #1e293b; color: #e5e7eb; flex-shrink: 0; }
+        .tt-menu-btn { width: 2.75rem; height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #374151; background: #1e293b; color: #e5e7eb; flex-shrink: 0; }
         .tt-menu-btn:hover, .tt-menu-btn[aria-expanded="true"] { border-color: var(--theme-primary); color: #fff; }
 
         /* Row menu */
@@ -101,12 +106,12 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
         <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div>
+            <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Tournaments</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
                 <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Every tournament, from approval to results</p>
             </div>
-            <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                 <a href="/admin/publish-results" id="quickResultsBtn" class="btn-outline hidden">Add results for a past tournament</a>
                 <button type="button" id="createBtn" class="btn-solid btn-shadow hidden">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
@@ -118,7 +123,7 @@
         <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
 
         <!-- Tabs -->
-        <div class="flex gap-3 overflow-x-auto pb-2 pt-1 pl-1 mb-3" role="tablist" aria-label="Which tournaments to show" id="listTabs">
+        <div class="flex flex-wrap gap-3 pb-2 pt-1 pl-1 mb-3" role="tablist" aria-label="Which tournaments to show" id="listTabs">
             <button type="button" class="tt-tab" role="tab" data-tab="upcoming">Upcoming <span class="tt-count" data-count="upcoming">0</span></button>
             <button type="button" class="tt-tab" role="tab" data-tab="due">Results due <span class="tt-count" data-count="due">0</span></button>
             <button type="button" class="tt-tab" role="tab" data-tab="waiting">Waiting approval <span class="tt-count" data-count="waiting">0</span></button>
@@ -181,7 +186,7 @@
     <!-- ============================ -->
     <!-- TOURNAMENT PANEL -->
     <!-- ============================ -->
-    <div id="tBackdrop" class="tt-backdrop hidden"></div>
+    <div id="tBackdrop" class="tt-backdrop hidden" data-kbf-backdrop></div>
     <aside id="tPanel" class="tt-panel hidden" role="dialog" aria-modal="true" aria-labelledby="tpName">
         <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 pt-4">
             <div class="flex items-start gap-4">
@@ -193,7 +198,7 @@
                     </div>
                     <p id="tpCreated" class="text-xs font-bold text-gray-400 mt-1.5"></p>
                 </div>
-                <button type="button" id="tpClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+                <button type="button" id="tpClose" class="tt-icon-btn -mt-2 -mr-2 text-gray-400 hover:text-white" aria-label="Close">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -240,11 +245,11 @@
     <!-- ============================ -->
     <!-- CREATE TOURNAMENT PANEL -->
     <!-- ============================ -->
-    <div id="createBackdrop" class="tt-backdrop hidden"></div>
+    <div id="createBackdrop" class="tt-backdrop hidden" data-kbf-backdrop></div>
     <aside id="createPanel" class="tt-panel hidden" role="dialog" aria-modal="true" aria-labelledby="createTitle">
         <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 py-4 flex items-start justify-between gap-4">
             <h2 id="createTitle" class="text-lg sm:text-xl font-black uppercase theme-primary-text">Create tournament</h2>
-            <button type="button" id="createClose" class="p-1 text-gray-400 hover:text-white" aria-label="Close">
+            <button type="button" id="createClose" class="tt-icon-btn -mt-2 -mr-2 text-gray-400 hover:text-white" aria-label="Close">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -316,6 +321,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/tournament-form.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
@@ -523,7 +530,9 @@
     }
 
     // ============================================
-    // LAYERS: focus, Escape and the Tab key (as on the People page)
+    // LAYERS: open panels and dialogs. The shared helper (js/kbf-dialog.js)
+    // keeps Tab inside the top one, closes it on Escape and makes the page
+    // behind inert; this page decides where focus goes back to.
     // ============================================
     function focusables(root) {
         return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
@@ -533,6 +542,7 @@
     function pushLayer(node, close, returnFocus) {
         layers.push({ node: node, close: close, returnFocus: returnFocus || document.activeElement });
         document.body.style.overflow = 'hidden';
+        if (window.KBFDialog) KBFDialog.open(node, { onClose: close, opener: returnFocus || null });
     }
 
     function popLayer(node) {
@@ -540,32 +550,9 @@
         if (i === -1) return null;
         const layer = layers.splice(i, 1)[0];
         if (!layers.length) document.body.style.overflow = '';
+        if (window.KBFDialog) KBFDialog.close(node, { returnFocus: false });
         return layer;
     }
-
-    document.addEventListener('keydown', function (e) {
-        if (menu.open) return; // the row menu handles its own keys
-        const top = layers[layers.length - 1];
-        if (!top) return;
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            top.close();
-            return;
-        }
-        if (e.key === 'Tab') {
-            const items = focusables(top.node);
-            if (!items.length) return;
-            const first = items[0];
-            const last = items[items.length - 1];
-            if (e.shiftKey && (document.activeElement === first || !top.node.contains(document.activeElement))) {
-                e.preventDefault();
-                last.focus();
-            } else if (!e.shiftKey && (document.activeElement === last || !top.node.contains(document.activeElement))) {
-                e.preventDefault();
-                first.focus();
-            }
-        }
-    });
 
     function openDialog(id, focusId) {
         const wrap = document.getElementById(id);
@@ -766,10 +753,10 @@
             const data = await getJson(API + '?' + p.toString());
             if (seq !== list.seq) return; // a newer request has started
             if (!data.success) {
-                showMsg('pageMessage', data.message || 'The list could not be loaded.', 'error');
-                document.getElementById('listCount').textContent = '';
+                listFailed(data.message || 'The list could not be loaded.', reset);
                 return;
             }
+            if (document.querySelector('#pageMessage [data-list-error]')) showMsg('pageMessage', '');
             if (!list.filtersReady) fillFilters(data);
             Object.keys(data.counts || {}).forEach(key => {
                 const badge = document.querySelector(`[data-count="${key}"]`);
@@ -783,10 +770,25 @@
             more.classList.toggle('hidden', list.rows.length >= list.total);
         } catch (e) {
             console.error('Tournaments list error:', e);
-            if (seq === list.seq) showMsg('pageMessage', 'The list could not be loaded.', 'error');
+            if (seq === list.seq) listFailed('The list could not be loaded. Please check your connection and try again.', reset);
         } finally {
             more.disabled = false;
         }
+    }
+
+    // List failed: message with a Try again button instead of "Loading..."
+    function listFailed(text, reset) {
+        showMsg('pageMessage', text, 'error');
+        document.getElementById('listCount').textContent = '';
+        const box = KBF.showLoadError('pageMessage', {
+            message: text,
+            retry: () => {
+                showMsg('pageMessage', '');
+                document.getElementById('listCount').textContent = 'Loading...';
+                loadList(reset);
+            }
+        });
+        if (box) box.setAttribute('data-list-error', '');
     }
 
     // Results due count on a red square while above 0 and not the open tab
@@ -861,7 +863,7 @@
         return wrap;
     }
 
-    // Completed and Results due tabs, e.g. "2 categories (bullet) 8 matches"
+    // Completed and Results due tabs, e.g. "2 categories, 8 matches"
     function resultsSummary(t) {
         return (list.tab === 'completed' || list.tab === 'due') ? countsText(t) : '';
     }
@@ -870,7 +872,7 @@
         const matches = Number(t.matchCount) || 0;
         if (!matches) return 'No results yet';
         const categories = Number(t.categoryCount) || 0;
-        return categories.toLocaleString('en-GB') + (categories === 1 ? ' category' : ' categories') + ' • ' +
+        return categories.toLocaleString('en-GB') + (categories === 1 ? ' category' : ' categories') + ', ' +
             matches.toLocaleString('en-GB') + (matches === 1 ? ' match' : ' matches');
     }
 
@@ -1163,7 +1165,7 @@
             ]);
             if (openId !== id) return;
             if (!fullData.success || !detailData.success) {
-                document.getElementById('tpLoading').textContent = (detailData && detailData.message) || (fullData && fullData.message) || 'This tournament could not be loaded.';
+                panelLoadFailed(id, (detailData && detailData.message) || (fullData && fullData.message) || 'This tournament could not be loaded.');
                 return;
             }
             full = fullData;
@@ -1174,8 +1176,20 @@
             showPane(paneName, true);
         } catch (e) {
             console.error('Tournament load error:', e);
-            if (openId === id) document.getElementById('tpLoading').textContent = 'This tournament could not be loaded.';
+            if (openId === id) panelLoadFailed(id, 'This tournament could not be loaded. Please check your connection and try again.');
         }
+    }
+
+    function panelLoadFailed(id, text) {
+        const loading = document.getElementById('tpLoading');
+        KBF.showLoadError(loading, {
+            message: text,
+            retry: () => {
+                if (openId !== id) return;
+                loading.textContent = 'Loading...';
+                loadPanel(id);
+            }
+        });
     }
 
     function resetPanelView() {
@@ -1340,7 +1354,8 @@
         if (error) { showMsg('detailsMessage', error, 'error'); return; }
 
         const save = document.getElementById('detailsSave');
-        save.disabled = true;
+        if (KBF.isBusy(save)) return;
+        const restoreSave = KBF.setBusy(save, 'Saving...');
         try {
             // Name, date, venue, categories and organiser first (PUT), so the
             // registration closing date is checked against the new date
@@ -1369,7 +1384,7 @@
             console.error('Save details error:', err);
             showMsg('detailsMessage', 'The details could not be saved. Please try again.', 'error');
         } finally {
-            save.disabled = false;
+            restoreSave();
         }
     });
 
@@ -1527,16 +1542,14 @@
                 const data = await getJson(API + '?action=history&id=' + idParam(id));
                 if (openId !== id) return;
                 if (!data.success) {
-                    pane.textContent = '';
-                    pane.appendChild(el('p', 'text-sm font-bold text-gray-400', data.message || 'The history could not be loaded.'));
+                    KBF.showLoadError(pane, { message: data.message || 'The history could not be loaded.', retry: renderHistory });
                     return;
                 }
                 historyRows = data.history || [];
             } catch (e) {
                 console.error('History error:', e);
                 if (openId === id) {
-                    pane.textContent = '';
-                    pane.appendChild(el('p', 'text-sm font-bold text-gray-400', 'The history could not be loaded.'));
+                    KBF.showLoadError(pane, { message: 'The history could not be loaded. Please check your connection and try again.', retry: renderHistory });
                 }
                 return;
             }
@@ -1615,6 +1628,9 @@
             afterChange(result.message || 'Tournament rejected.', 'ok');
         } catch (e) {
             console.error('Reject error:', e);
+            const box = document.getElementById('rejectMessage');
+            box.textContent = 'The tournament could not be rejected. Please check your connection and try again.';
+            box.classList.remove('hidden');
         } finally {
             this.disabled = false;
         }
@@ -1692,7 +1708,7 @@
             afterChange(result.message || 'Status changed.', 'ok');
         } catch (e) {
             console.error('Change status error:', e);
-            box.textContent = 'The status could not be changed.';
+            box.textContent = 'The status could not be changed. Please check your connection and try again.';
             box.classList.remove('hidden');
         } finally {
             this.disabled = false;
@@ -1773,7 +1789,7 @@
         similar.forEach(t => {
             const li = el('li', 'px-3 py-2');
             li.appendChild(el('p', 'text-sm font-black text-white break-words', t.name));
-            li.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [formatDate(t.date), t.organiser].filter(Boolean).join(' • ')));
+            li.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [formatDate(t.date), t.organiser].filter(Boolean).join(' | ')));
             const line = el('div', 'flex flex-wrap items-center gap-2 mt-1');
             line.appendChild(statusTag(t.status));
             line.appendChild(el('span', 'text-xs font-semibold text-gray-400', countsText(t)));
@@ -1802,7 +1818,9 @@
         const error = tf.validate();
         if (error) { showMsg('createMessage', error, 'error'); return; }
         const submit = document.getElementById('createSubmit');
-        submit.disabled = true;
+        if (KBF.isBusy(submit)) return;
+        const restoreSubmit = KBF.setBusy(submit, 'Creating...');
+        const createForm = this;
         try {
             const formData = tf.buildFormData();
             // Duplicate check, as a warning only: shown once for a name and date
@@ -1812,18 +1830,25 @@
                 if (similar.length) {
                     createWarnedKey = checkKey;
                     showCreateDuplicates(similar);
-                    submit.disabled = false;
+                    restoreSubmit();
                     return;
                 }
             }
             document.getElementById('createDuplicates').classList.add('hidden');
-            const res = await authenticatedFetch(API, { method: 'POST', body: formData });
+            // One-time id: a repeat of this request never creates a second tournament
+            const res = await authenticatedFetch(API, {
+                method: 'POST',
+                headers: { [KBF.REQUEST_ID_HEADER]: KBF.requestId(createForm) },
+                body: formData
+            });
             const result = await res.json().catch(() => ({ success: false }));
             if (!result.success) {
                 showMsg('createMessage', result.message || 'The tournament could not be created.', 'error');
-                submit.disabled = false;
+                restoreSubmit();
                 return;
             }
+            KBF.clearRequestId(createForm);
+            restoreSubmit();
             closeCreate();
             showMsg('pageMessage', result.status === 'Approved'
                 ? 'Tournament created and approved.'
@@ -1832,7 +1857,7 @@
         } catch (err) {
             console.error('Create tournament error:', err);
             showMsg('createMessage', 'The tournament could not be created. Please try again.', 'error');
-            submit.disabled = false;
+            restoreSubmit();
         }
     });
     </script>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Results for a Past Tournament - Admin</title>
+    <title>Add Results for a Past Tournament - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -16,6 +16,7 @@
 
         /* Fields: the same style as the tournament form (js/tournament-form.js) */
         .tf-input { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .625rem .875rem; font-weight: 700; font-size: .875rem; transition: border-color .2s ease; border-radius: 0; }
+        @media (max-width: 639.98px) { .tf-input { font-size: 16px; } }
         .tf-input::placeholder { color: #6b7280; }
         .tf-input:focus { outline: none; border-color: var(--theme-primary); }
         .tf-input:disabled { opacity: .55; cursor: not-allowed; }
@@ -35,10 +36,11 @@
         .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
         .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
         .btn-sm { padding: .45rem .7rem; font-size: .68rem; }
+        .btn-solid, .btn-outline, .btn-plain { min-height: 44px; }
         .btn-solid:focus-visible, .btn-outline:focus-visible, .btn-plain:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .tt-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
         .tt-tag.is-approved { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
-        .tt-tag.is-due { background: #EF4444; border-color: #EF4444; color: #fff; }
+        .tt-tag.is-due { background: #EF4444; border-color: #EF4444; color: #0F172A; }
         .tt-tag.is-amber { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
         .tt-tag.is-grey { background: #374151; border-color: #4b5563; color: #e5e7eb; }
         .tt-tag.is-cancelled { background: #374151; border-color: #4b5563; color: #9ca3af; text-decoration: line-through; }
@@ -54,7 +56,7 @@
     <div id="kbf-admin-header"></div>
 
     <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-        <a href="/admin/tournaments?tab=completed" class="inline-flex items-center gap-1 text-xs font-black uppercase text-gray-400 hover:text-white mb-4">
+        <a href="/admin/tournaments?tab=completed" class="inline-flex items-center gap-1 text-xs font-black uppercase text-gray-400 hover:text-white mb-4" style="min-height:44px">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             Tournaments
         </a>
@@ -123,6 +125,8 @@
     </main>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -275,30 +279,43 @@
         };
     }
 
-    function setBusy(on) {
+    let busyRestores = [];
+    function setBusy(on, createAnyway) {
         busy = on;
-        document.getElementById('submitBtn').disabled = on;
-        document.getElementById('createAnyway').disabled = on;
+        busyRestores.forEach(restore => restore());
+        busyRestores = [];
+        if (on) {
+            const main = document.getElementById(createAnyway ? 'createAnyway' : 'submitBtn');
+            const other = document.getElementById(createAnyway ? 'submitBtn' : 'createAnyway');
+            busyRestores.push(KBF.setBusy(main, 'Creating...'));
+            busyRestores.push(KBF.setBusy(other));
+        }
     }
 
     async function create(createAnyway) {
         if (busy) return;
         showMsg('');
+        KBF.clearFormErrors(document.getElementById('quickForm'));
         const error = validate();
         if (error) {
-            showMsg(error[0], 'error');
+            KBF.showFieldError(error[1], error[0]);
             error[1].focus();
             return;
         }
-        setBusy(true);
+        setBusy(true, createAnyway);
+        const form = document.getElementById('quickForm');
         try {
+            // One-time id (kept for "create anyway" after a duplicate warning):
+            // a repeat of this request never creates a second tournament
             const res = await authenticatedFetch('/api/admin-quick-tournament.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', [KBF.REQUEST_ID_HEADER]: KBF.requestId(form) },
                 body: JSON.stringify(payload(createAnyway))
             });
             const result = await res.json().catch(() => ({ success: false, message: 'Unexpected response from the server.' }));
             if (result.success) {
+                // Buttons stay busy until the results form opens
+                KBF.clearRequestId(form);
                 hideDuplicates();
                 showMsg('Tournament created. Opening the results form...', 'ok');
                 const url = typeof result.redirectUrl === 'string' && /^\/admin\/[A-Za-z0-9\-.]+\?id=\d+$/.test(result.redirectUrl)
@@ -332,7 +349,7 @@
     function resultsText(t) {
         const matches = parseInt(t.matchCount, 10) || 0;
         if (!matches) return 'No results yet';
-        return plural(parseInt(t.categoryCount, 10) || 0, 'category', 'categories') + ' • ' + plural(matches, 'match', 'matches');
+        return plural(parseInt(t.categoryCount, 10) || 0, 'category', 'categories') + ', ' + plural(matches, 'match', 'matches');
     }
 
     function showDuplicates(list, message) {
@@ -346,7 +363,7 @@
             const text = el('div', 'min-w-0 flex-1');
             text.appendChild(el('p', 'text-sm font-black text-white break-words', t.name));
             const meta = el('p', 'text-xs font-bold text-gray-400 break-words');
-            meta.textContent = [formatDate(t.date), t.organiser, [t.venue, t.town].filter(Boolean).join(', ')].filter(Boolean).join(' • ');
+            meta.textContent = [formatDate(t.date), t.organiser, [t.venue, t.town].filter(Boolean).join(', ')].filter(Boolean).join(' | ');
             text.appendChild(meta);
             const line = el('div', 'flex flex-wrap items-center gap-2 mt-1.5');
             line.appendChild(el('span', 'tt-tag ' + (TAGS[t.status] || 'is-grey'), t.statusLabel || t.status || ''));

@@ -31,6 +31,7 @@
 -- 7. Email sending (audit batch 4): EmailLog.NextAttemptDate (an email
 --    with repeated temporary failures is skipped until then) and the
 --    email_reserve_normal setting (10)
+-- 8. Notification event registration_duplicate (audit batch 5)
 -- ============================================
 
 
@@ -823,3 +824,19 @@ ALTER TABLE EmailLog
 -- broadcasts so everyday emails always have room
 INSERT IGNORE INTO Settings (SettingKey, SettingValue, Description) VALUES
     ('email_reserve_normal', '10', 'Part of the daily limit kept back from broadcasts for everyday emails');
+
+
+-- --------------------------------------------
+-- 8. NOTIFICATION EVENT: registration_duplicate (audit batch 5, SEC-13)
+-- The registration page gives the same reply whether or not the email or
+-- person is already a member or waiting; the reason goes by email to the
+-- address given. Person email, important, switched on. The event key MUST
+-- match api/email-templates.php.
+-- --------------------------------------------
+INSERT IGNORE INTO NotificationEvents
+    (EventKey, GroupName, Label, SortOrder, Priority,
+     EmailPersonApplies, EmailPersonEnabled, EmailOrganiserApplies, EmailOrganiserEnabled,
+     EmailAdminsApplies, EmailAdminsEnabled, NewsPostApplies, NewsPostEnabled,
+     AdminPermission, AdminDelivery, Locked)
+VALUES
+    ('registration_duplicate', 'Players', 'Already registered or waiting', 15, 'important', 1, 1, 0, 0, 0, 0, 0, 0, NULL, 'immediate', 0);

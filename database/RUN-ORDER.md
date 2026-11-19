@@ -44,6 +44,7 @@ is the record of where the migrations start from.
 | 16 | `grading-broadcasts.sql` | Script 8 has finished. | `EmailBroadcasts` has TargetGrades, ScheduledFor, UpdatedDate and CancelledDate. TargetType and Status are text on live, so the script reports that no change is needed. Setting close_to_promotion_points exists. |
 | 17 | `security-hardening.sql` | Nothing special. | `Users` has SessionVersion, 0 for everybody. A `RequestLimits` table exists. |
 | 18 | `schema-fixes.sql` | All of 1 to 17 have finished (it uses their columns). The backup is done: this script rebuilds eight tables to change their collation. On a very large table this can take a minute. | See below. |
+| 19 | `request-ids.sql` | Script 18 has finished. | A `RequestIds` table exists (empty). Pages that create news posts, tournaments, players or results can no longer create a duplicate by sending the same form twice. |
 
 ### After `schema-fixes.sql`
 
@@ -77,7 +78,15 @@ is the record of where the migrations start from.
 4. Sign in as the Super Admin and as one other staff member.
 5. Switch the cron jobs back on (see the time zone notes below), then switch
    maintenance mode off.
-6. One-off, after the move: make the display versions and thumbnails of the
+6. One-off, after the move: turn text that was stored HTML-encoded (for
+   example `O&#039;Connor` instead of O'Connor) back into plain text. On the
+   server, run `php jobs/decode-stored-text.php --dry-run` first to see the
+   counts and examples, then `php jobs/decode-stored-text.php`. It is safe
+   to run twice: each finished column is recorded and skipped next time,
+   and only values that look exactly like encoded text are changed. Until it
+   has run, a few staff searches may not find older names with accents or
+   apostrophes.
+7. One-off, after the move: make the display versions and thumbnails of the
    images uploaded before this change. On the server, run
    `php jobs/make-thumbnails.php` (Hostinger: SSH, or a one-off cron job)
    until it reports "0 still to do". Each run handles up to 200 images in

@@ -119,11 +119,14 @@ function kbfNotifyPerson($pdo, $who) {
     if (!$row) {
         return null;
     }
+    // Plain text (older rows were stored HTML-escaped); templates escape values
+    $first = html_entity_decode((string) $row['FirstName'], ENT_QUOTES, 'UTF-8');
+    $last = html_entity_decode((string) $row['LastName'], ENT_QUOTES, 'UTF-8');
     return [
         'userId' => (int) $row['UserId'],
         'email' => trim((string) $row['Email']),
-        'firstName' => trim((string) $row['FirstName']),
-        'fullName' => trim($row['FirstName'] . ' ' . $row['LastName']),
+        'firstName' => trim($first),
+        'fullName' => trim($first . ' ' . $last),
     ];
 }
 
@@ -171,11 +174,13 @@ function kbfNotifyAdminRecipients($pdo, $eventKey, $permission) {
         $rows = $stmt->fetchAll();
     }
     return array_map(function ($r) {
+        $first = html_entity_decode((string) $r['FirstName'], ENT_QUOTES, 'UTF-8');
+        $last = html_entity_decode((string) $r['LastName'], ENT_QUOTES, 'UTF-8');
         return [
             'userId' => (int) $r['UserId'],
             'email' => trim((string) $r['Email']),
-            'firstName' => trim((string) $r['FirstName']),
-            'fullName' => trim($r['FirstName'] . ' ' . $r['LastName']),
+            'firstName' => trim($first),
+            'fullName' => trim($first . ' ' . $last),
         ];
     }, $rows);
 }

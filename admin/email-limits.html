@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email and Limits - Admin</title>
+    <title>Email and limits - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -18,6 +18,7 @@
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
 
         .field-input { width: 100%; background: #1e293b; border: 4px solid #374151; color: #fff; padding: .625rem .875rem; font-weight: 700; font-size: .875rem; }
+        @media (max-width: 639.98px) { .field-input { font-size: 16px; } }
         .field-input:focus { outline: none; border-color: var(--theme-primary); }
         .field-input[aria-invalid="true"] { border-color: #ef4444; }
 
@@ -31,6 +32,9 @@
         .result-sent { background: #22c55e; }
         .result-waiting { background: #f59e0b; }
         .result-failed { background: #ef4444; }
+
+        /* Touch targets: at least 44px */
+        main button { min-height: 44px; }
 
         @media (max-width: 768px) {
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
@@ -108,7 +112,7 @@
                         </div>
                     </div>
 
-                    <div id="settingsMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm"></div>
+                    <div id="settingsMessage" class="hidden mt-5 p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm" role="status" aria-live="polite"></div>
                     <p id="readOnlyNote" class="hidden mt-5 text-xs font-bold uppercase text-amber-400">Not available while viewing as someone else</p>
 
                     <div class="mt-5 sm:mt-6 flex justify-end">
@@ -150,7 +154,7 @@
                     </div>
                 </div>
 
-                <div id="logMessage" class="hidden mb-4 p-3 border-2 font-bold uppercase text-xs"></div>
+                <div id="logMessage" class="hidden mb-4 p-3 border-2 font-bold uppercase text-xs" role="status" aria-live="polite"></div>
 
                 <div class="overflow-x-auto border-2 border-gray-700">
                     <table class="w-full text-left text-xs sm:text-sm">
@@ -179,6 +183,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -254,11 +260,21 @@
         document.getElementById('moreBtn').addEventListener('click', () => loadLog(false));
         document.getElementById('csvBtn').addEventListener('click', downloadCsv);
 
+        await firstLoad();
+    }
+
+    // Also what "Try again" runs when the first load fails
+    async function firstLoad() {
         const ok = await loadSummary(true);
         if (!ok) return;
         document.getElementById('pageLoading').classList.add('hidden');
         document.getElementById('pageContent').classList.remove('hidden');
         loadLog(true);
+    }
+
+    function summaryFailed(first, text) {
+        if (first) KBF.showLoadError('pageLoading', { message: text, retry: firstLoad });
+        else showSettingsMessage(text + ' The figures shown may be out of date.', false);
     }
 
     // ============================================
@@ -269,7 +285,7 @@
             const res = await authenticatedFetch(API + '?action=summary');
             const data = await res.json();
             if (!data.success) {
-                document.getElementById('pageLoading').textContent = data.message || 'Could not load email settings';
+                summaryFailed(first, data.message || 'The email settings could not be loaded.');
                 return false;
             }
             saved = data.settings;
@@ -301,7 +317,7 @@
             return true;
         } catch (e) {
             console.error('Load email settings error:', e);
-            document.getElementById('pageLoading').textContent = 'Could not load email settings';
+            summaryFailed(first, 'The email settings could not be loaded. Please check your connection and try again.');
             return false;
         }
     }
@@ -457,7 +473,7 @@
             const res = await authenticatedFetch(API + '?' + params.toString());
             const data = await res.json();
             if (!data.success) {
-                showLogMessage(data.message || 'Could not load the email log', false);
+                logFailed(reset, data.message || 'The email log could not be loaded.');
                 return;
             }
             document.getElementById('logMessage').classList.add('hidden');
@@ -469,10 +485,24 @@
             document.getElementById('logEmpty').classList.toggle('hidden', body.children.length > 0);
         } catch (e) {
             console.error('Load email log error:', e);
-            showLogMessage('Could not load the email log', false);
+            logFailed(reset, 'The email log could not be loaded. Please check your connection and try again.');
         } finally {
             moreBtn.disabled = false;
         }
+    }
+
+    // A fresh list that fails shows "Try again" in the table; a failed
+    // "Show more" keeps the rows and the button (which tries again)
+    function logFailed(reset, text) {
+        if (!reset) {
+            showLogMessage(text, false);
+            return;
+        }
+        const body = document.getElementById('logBody');
+        body.innerHTML = '<tr><td colspan="5"></td></tr>';
+        document.getElementById('logEmpty').classList.add('hidden');
+        document.getElementById('moreBtn').classList.add('hidden');
+        KBF.showLoadError(body.querySelector('td'), { message: text, retry: () => loadLog(true) });
     }
 
     const RESULT_LABELS = { sent: 'Sent', waiting: 'Waiting', failed: 'Failed' };

@@ -165,34 +165,35 @@ function pDeletePhotoFile($path) {
 }
 
 // Validation of the fields shared by Add and Edit. Returns [value, error].
+// Text is stored as typed (never HTML-encoded) and escaped when shown.
 function pCleanName($value, $what) {
-    $text = trim((string) $value);
+    $text = kbfCleanText($value);
     if (mb_strlen($text) < 2 || mb_strlen($text) > 50) {
         return [null, $what . ' must be 2 to 50 characters'];
     }
-    if (!preg_match("/^[A-Za-z\s\-']+$/", $text)) {
-        return [null, $what . ' can only contain letters, spaces, hyphens and apostrophes'];
+    if (!kbfIsValidName($text)) {
+        return [null, $what . ' can only contain letters (accents are fine), spaces, hyphens and apostrophes'];
     }
-    return [sanitizeInput($text), null];
+    return [$text, null];
 }
 
 function pCleanCity($value) {
-    $text = trim((string) $value);
+    $text = kbfCleanText($value);
     if (mb_strlen($text) < 2 || mb_strlen($text) > 100) {
         return [null, 'City must be 2 to 100 characters'];
     }
-    return [sanitizeInput($text), null];
+    return [$text, null];
 }
 
 function pCleanPostCode($value) {
-    $text = trim((string) $value);
+    $text = kbfCleanText($value);
     if ($text === '') {
         return [null, null];
     }
     if (mb_strlen($text) > 12) {
         return [null, 'Post code is too long'];
     }
-    return [sanitizeInput(strtoupper($text)), null];
+    return [mb_strtoupper($text, 'UTF-8'), null];
 }
 
 function pCleanYear($value) {
@@ -290,7 +291,9 @@ if ($method === 'GET') {
             }
 
             // Search: name, KBF ID and city; email for people who may see emails.
-            // Names and cities are stored HTML-escaped, so the term is escaped too.
+            // Names and cities are stored as typed; older rows may still be
+            // HTML-escaped (until jobs/decode-stored-text.php has run), so the
+            // escaped form of the term is matched too.
             $q = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
             if ($q !== '') {
                 $q = mb_substr($q, 0, 100);
@@ -298,7 +301,12 @@ if ($method === 'GET') {
                 $raw = '%' . kbfLikeEscape($q) . '%';
                 $parts = ['u.FirstName LIKE ?', 'u.LastName LIKE ?', "CONCAT(u.FirstName, ' ', u.LastName) LIKE ?",
                           'u.PlayerId LIKE ?', 'u.Location LIKE ?'];
-                array_push($params, $stored, $stored, $stored, $raw, $stored);
+                array_push($params, $raw, $raw, $raw, $raw, $raw);
+                if ($stored !== $raw) {
+                    array_push($parts, 'u.FirstName LIKE ?', 'u.LastName LIKE ?', "CONCAT(u.FirstName, ' ', u.LastName) LIKE ?",
+                               'u.Location LIKE ?');
+                    array_push($params, $stored, $stored, $stored, $stored);
+                }
                 if ($canContacts) {
                     $parts[] = 'u.Email LIKE ?';
                     $params[] = $raw;
@@ -717,9 +725,13 @@ if ($action === 'add') {
                    (CASE WHEN u.Email = ? THEN 1 ELSE 0 END) AS SameEmail
             FROM Users u
             WHERE u.IsRemoved = 0
-              AND (u.Email = ? OR (u.FirstName = ? AND u.LastName = ? AND u.Location = ?))
+              AND (u.Email = ? OR (u.FirstName IN (?, ?) AND u.LastName IN (?, ?) AND u.Location IN (?, ?)))
             ORDER BY u.UserId
-            LIMIT 10", [$email, $email, $firstName, $lastName, $city]);
+            LIMIT 10", [$email, $email,
+                // as typed, or HTML-escaped as older rows were stored
+                $firstName, htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8'),
+                $lastName, htmlspecialchars($lastName, ENT_QUOTES, 'UTF-8'),
+                $city, htmlspecialchars($city, ENT_QUOTES, 'UTF-8')]);
         if ($dupes && empty($input['confirmDuplicates'])) {
             sendJSON([
                 'success' => false,
@@ -737,6 +749,11 @@ if ($action === 'add') {
                 }, $dupes),
             ], 409);
         }
+
+        // A repeat of the same one-time request id (double tap, retry) gets
+        // the first answer back; no second player is created
+        require_once __DIR__ . '/request-ids.php';
+        kbfRequestIdBegin($pdo, 'player', is_string($input['requestId'] ?? null) ? $input['requestId'] : null);
 
         $pdo->beginTransaction();
 
@@ -861,6 +878,12 @@ if ($action === 'edit') {
             }
             $sets[] = "$column = ?";
             $params[] = $value;
+            if (in_array($key, ['firstName', 'lastName', 'city', 'postCode'], true)
+                    && $value !== null && pText($old) === (string) $value) {
+                // Same text, only stored HTML-encoded before: saved as typed,
+                // not a change
+                continue;
+            }
             if ($private) {
                 // Contact details are never written to the log
                 $changes[] = $label . ' changed';
@@ -880,6 +903,10 @@ if ($action === 'edit') {
         $params[] = $id;
         $stmt = $pdo->prepare("UPDATE Users SET " . implode(', ', $sets) . " WHERE UserId = ? AND IsRemoved = 0");
         $stmt->execute($params);
+
+        if (!$changes) {
+            sendJSON(['success' => true, 'message' => 'Nothing was changed.', 'changed' => false]);
+        }
 
         auditLog('player_details_edited', 'user', $id, pName($p['FirstName'], $p['LastName']) . ': ' . implode('; ', $changes));
 

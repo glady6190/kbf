@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grading and Seasons - Admin</title>
+    <title>Grading rules and seasons - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -18,23 +18,28 @@
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
 
         .field { background: #1e293b; border: 2px solid #374151; color: #fff; padding: .5rem .625rem; font-weight: 700; font-size: .875rem; width: 100%; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field[aria-invalid="true"] { border-color: #ef4444; }
         .field-inline { display: inline-block; width: 5.5rem; padding: .25rem .5rem; text-align: center; }
 
-        .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; background: #1e293b; border: 2px solid #374151; color: #d1d5db; }
+        .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: #1e293b; border: 2px solid #374151; color: #d1d5db; }
         .icon-btn:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
         .icon-btn:disabled { opacity: .35; cursor: not-allowed; }
         .icon-btn:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
 
-        .month-btn { padding: .5rem .25rem; font-weight: 900; font-size: .75rem; text-transform: uppercase; background: #1e293b; border: 2px solid #374151; color: #d1d5db; }
+        .month-btn { min-height: 44px; padding: .5rem .25rem; font-weight: 900; font-size: .75rem; text-transform: uppercase; background: #1e293b; border: 2px solid #374151; color: #d1d5db; }
         .month-btn:hover { border-color: #6b7280; color: #fff; }
         .month-btn[aria-pressed="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
         .month-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
         .row-menu { position: absolute; right: 0; top: 100%; margin-top: .25rem; min-width: 11rem; background: #0f172a; border: 2px solid #374151; z-index: 30; box-shadow: 4px 4px 0 var(--theme-primary); }
-        .row-menu button { display: block; width: 100%; text-align: left; padding: .5rem .75rem; font-weight: 700; font-size: .75rem; text-transform: uppercase; color: #d1d5db; }
+        .row-menu button { display: block; width: 100%; min-height: 44px; text-align: left; padding: .5rem .75rem; font-weight: 700; font-size: .75rem; text-transform: uppercase; color: #d1d5db; }
         .row-menu button:hover, .row-menu button:focus-visible { background: #1e293b; color: #fff; outline: none; }
+
+        /* Touch targets: at least 44px */
+        main button, #dialog button { min-height: 44px; }
+        #dialog [data-dialog-close][aria-label] { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; margin: -.5rem -.5rem 0 0; }
 
         @media (max-width: 768px) {
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
@@ -49,7 +54,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <!-- Heading band -->
         <div class="mb-6 sm:mb-8">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Grading</span> and seasons</h1>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Grading</span> rules and seasons</h1>
             <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
             <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Grades, points per placing and the season reset</p>
         </div>
@@ -139,6 +144,7 @@
                         <li class="p-2 bg-slate-900 border-2 border-gray-700"><span id="countZero" class="block text-lg font-black text-white">0</span>restart on 0</li>
                         <li class="p-2 bg-slate-900 border-2 border-gray-700"><span id="countSkipped" class="block text-lg font-black text-white">0</span>skipped, eligible for promotion</li>
                     </ul>
+                    <p id="previewError" class="hidden text-xs font-bold text-red-400" role="alert"></p>
                     <button type="button" id="seeListBtn" class="px-4 py-2 bg-slate-900 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition">See the full list</button>
                 </div>
                 <p class="text-xs text-gray-400 font-semibold">Changes take effect from the next start month. Saving never resets anyone.</p>
@@ -152,11 +158,11 @@
                 <div>
                     <label for="closeInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Show players within this many points under Close to promotion</label>
                     <input type="number" id="closeInput" class="field field-inline" min="10" max="1000" step="1" inputmode="numeric" aria-describedby="closeHint">
-                    <p id="closeHint" class="text-xs text-gray-400 font-semibold mt-2">From 10 to 1,000. The Grading page lists players whose season points are this close to their grade's threshold.</p>
+                    <p id="closeHint" class="text-xs text-gray-400 font-semibold mt-2">From 10 to 1,000. The Player grades page lists players whose season points are this close to their grade's threshold.</p>
                 </div>
             </section>
 
-            <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
+            <div id="saveMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm" role="status" aria-live="polite"></div>
             <p id="readOnlyNote" class="hidden text-xs font-bold uppercase text-amber-400">Not available while viewing as someone else</p>
 
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
@@ -190,6 +196,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-forms.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -297,7 +305,7 @@
             const res = await authenticatedFetch(API + '?action=summary');
             const data = await res.json();
             if (!data.success) {
-                document.getElementById('pageLoading').textContent = data.message || 'Could not load grading settings';
+                loadFailed(data.message || 'The grading settings could not be loaded.');
                 return;
             }
             saved = data;
@@ -318,8 +326,18 @@
             document.getElementById('pageContent').classList.remove('hidden');
         } catch (e) {
             console.error('Load grading settings error:', e);
-            document.getElementById('pageLoading').textContent = 'Could not load grading settings';
+            loadFailed('The grading settings could not be loaded. Please check your connection and try again.');
         }
+    }
+
+    // First load: message and "Try again" in place of "Loading...".
+    // A failed reload after a change keeps the page and says so.
+    function loadFailed(text) {
+        if (document.getElementById('pageContent').classList.contains('hidden')) {
+            KBF.showLoadError('pageLoading', { message: text, retry: load });
+            return;
+        }
+        showSave(text + ' Please refresh the page to see the latest settings.', false);
     }
 
     // ============================================
@@ -586,12 +604,21 @@
     function schedulePreview() {
         clearTimeout(previewTimer);
         previewTimer = setTimeout(async () => {
+            const problem = document.getElementById('previewError');
             try {
                 const res = await authenticatedFetch(API + '?' + previewQuery(0));
                 const data = await res.json();
-                if (data.success) renderPreview(data);
+                if (data.success) {
+                    renderPreview(data);
+                    problem.classList.add('hidden');
+                } else {
+                    problem.textContent = (data.message || 'The preview could not be updated.') + ' The figures above may be out of date.';
+                    problem.classList.remove('hidden');
+                }
             } catch (e) {
                 console.error('Preview error:', e);
+                problem.textContent = 'The preview could not be updated. Please check your connection; the figures above may be out of date.';
+                problem.classList.remove('hidden');
             }
         }, 350);
     }
@@ -620,7 +647,14 @@
             try {
                 const res = await authenticatedFetch(API + '?' + previewQuery(offset));
                 const data = await res.json();
-                if (!data.success) return;
+                if (!data.success) {
+                    dialogError(data.message || 'The list could not be loaded. Please try again.');
+                    more.textContent = tbody.children.length ? 'Show more' : 'Try again';
+                    more.classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('dialogMessage').classList.add('hidden');
+                more.textContent = 'Show more';
                 data.players.forEach(p => {
                     const tr = el('tr');
                     tr.appendChild(el('td', 'px-2 py-1.5 text-white font-bold', p.name));
@@ -634,6 +668,11 @@
                 offset = data.nextOffset;
                 more.classList.toggle('hidden', !data.hasMore);
                 if (!tbody.children.length) intro.textContent = 'There are no active players with a grade.';
+            } catch (e) {
+                console.error('Reset list error:', e);
+                dialogError('The list could not be loaded. Please check your connection and try again.');
+                more.textContent = tbody.children.length ? 'Show more' : 'Try again';
+                more.classList.remove('hidden');
             } finally {
                 more.disabled = false;
             }
@@ -649,7 +688,11 @@
     let dialogAction = null;
 
     function openDialog(title, bodyNode, confirmLabel, onConfirm) {
-        lastFocus = document.activeElement;
+        // Focus returns here on close; for a row menu item (hidden by now)
+        // that is the row's "More actions" button
+        const active = document.activeElement;
+        const menuWrap = active && active.closest ? active.closest('.row-menu') : null;
+        lastFocus = menuWrap ? menuWrap.parentNode.querySelector('[aria-haspopup]') : active;
         document.getElementById('dialogTitle').textContent = title;
         const body = document.getElementById('dialogBody');
         body.innerHTML = '';
@@ -660,14 +703,21 @@
         confirmBtn.textContent = confirmLabel || '';
         confirmBtn.disabled = false;
         dialogAction = onConfirm;
-        document.getElementById('dialog').classList.remove('hidden');
-        (body.querySelector('input, select') || confirmBtn.classList.contains('hidden') && document.querySelector('[data-dialog-close]') || confirmBtn).focus();
+        const dialog = document.getElementById('dialog');
+        dialog.classList.remove('hidden');
+        // Focus in, Tab kept inside, Escape closes, focus back (js/kbf-dialog.js)
+        KBFDialog.open(dialog, {
+            onClose: closeDialog,
+            opener: lastFocus,
+            initialFocus: body.querySelector('input, select') || (confirmBtn.classList.contains('hidden') ? dialog.querySelector('[data-dialog-close]') : confirmBtn)
+        });
     }
 
     function closeDialog() {
-        document.getElementById('dialog').classList.add('hidden');
+        const dialog = document.getElementById('dialog');
+        dialog.classList.add('hidden');
         dialogAction = null;
-        if (lastFocus && lastFocus.focus) lastFocus.focus();
+        KBFDialog.close(dialog);
     }
 
     function dialogError(text) {
@@ -678,14 +728,14 @@
 
     document.querySelectorAll('[data-dialog-close]').forEach(b => b.addEventListener('click', closeDialog));
     document.getElementById('dialog').addEventListener('click', e => { if (e.target.id === 'dialog') closeDialog(); });
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && !document.getElementById('dialog').classList.contains('hidden')) closeDialog();
-    });
     document.getElementById('dialogConfirm').addEventListener('click', async function () {
         if (!dialogAction) return;
         this.disabled = true;
         try {
             await dialogAction();
+        } catch (e) {
+            console.error('Dialog action error:', e);
+            dialogError('That did not work. Please check your connection and try again.');
         } finally {
             this.disabled = false;
         }
@@ -780,7 +830,13 @@
             effects.innerHTML = '';
             checkedCount = null;
             if (!select.value) return;
-            const data = await post({ action: 'moveCheck', fromId: g.id, toId: parseInt(select.value, 10) });
+            let data;
+            try {
+                data = await post({ action: 'moveCheck', fromId: g.id, toId: parseInt(select.value, 10) });
+            } catch (e) {
+                dialogError('Could not check the move. Please check your connection and try again.');
+                return;
+            }
             if (!data.success) { dialogError(data.message || 'Could not check the move.'); return; }
             document.getElementById('dialogMessage').classList.add('hidden');
             checkedCount = data.count;
@@ -893,8 +949,13 @@
 
     document.getElementById('discardBtn').addEventListener('click', function () {
         if (!isDirty()) { hideSave(); return; }
-        if (!confirm('Discard your unsaved changes?')) return;
-        load();
+        KBFDialog.confirm({
+            title: 'Discard changes?',
+            message: 'Your unsaved changes on this page will be lost.',
+            confirmText: 'Discard changes',
+            cancelText: 'Keep editing',
+            danger: true
+        }).then(yes => { if (yes) load(); });
     });
     </script>
     <script src="/js/session-manager.js"></script>

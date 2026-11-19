@@ -63,6 +63,7 @@
         </div>
     </main>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/password-toggle.js"></script>
     <script>
     var THEMES = ['emerald', 'cyan', 'yellow', 'orange'];
@@ -70,7 +71,7 @@
     function changeTheme(theme) {
         if (THEMES.indexOf(theme) === -1) theme = 'emerald';
         document.body.setAttribute('data-theme', theme);
-        try { localStorage.setItem('badminton-theme', theme); } catch (e) { /* ignore */ }
+        KBF.storage.set('badminton-theme', theme);
         document.querySelectorAll('.theme-switcher-btn').forEach(function (btn) {
             var on = btn.getAttribute('data-theme') === theme;
             btn.classList.toggle('active', on);
@@ -124,9 +125,7 @@
         function go(url) { window.location.href = url; }
 
         // Saved colour theme
-        var saved = 'emerald';
-        try { saved = localStorage.getItem('badminton-theme') || 'emerald'; } catch (e) { /* ignore */ }
-        changeTheme(saved);
+        changeTheme(KBF.storage.get('badminton-theme', 'emerald'));
 
         // Arriving from a session timeout
         if (new URLSearchParams(window.location.search).get('reason') === 'timeout') {
@@ -152,7 +151,15 @@
 
             if (!email || !password) {
                 showMessage('error', 'Enter your email and password.');
-                (email ? document.getElementById('password') : document.getElementById('email')).focus();
+                // Mark the empty field and link it to the message (role="alert")
+                var missing = email ? document.getElementById('password') : document.getElementById('email');
+                missing.setAttribute('aria-invalid', 'true');
+                missing.setAttribute('aria-describedby', 'message');
+                missing.addEventListener('input', function () {
+                    missing.removeAttribute('aria-invalid');
+                    missing.removeAttribute('aria-describedby');
+                }, { once: true });
+                missing.focus();
                 return;
             }
 
@@ -173,7 +180,7 @@
 
                 if (data.success) {
                     if (data.csrf_token) {
-                        try { sessionStorage.setItem('csrf_token', data.csrf_token); } catch (e) { /* ignore */ }
+                        KBF.storage.session.set('csrf_token', data.csrf_token);
                     }
                     KBFPasswordToggle.hideAll();
 

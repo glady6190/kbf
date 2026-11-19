@@ -358,7 +358,11 @@ function kbfStaffCookie($on) {
     }
     $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
     if ($on) {
-        if (($_COOKIE['kbf_staff'] ?? '') === '1') {
+        // Renewed with a fresh expiry while the staff session is active (at
+        // most every 5 minutes), so it never runs out while the person is
+        // still signed in and working
+        $renewedAt = (int) ($_SESSION['STAFF_COOKIE_AT'] ?? 0);
+        if (($_COOKIE['kbf_staff'] ?? '') === '1' && time() - $renewedAt < 300) {
             return;
         }
         setcookie('kbf_staff', '1', [
@@ -368,6 +372,9 @@ function kbfStaffCookie($on) {
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $_SESSION['STAFF_COOKIE_AT'] = time();
+        }
     } elseif (isset($_COOKIE['kbf_staff'])) {
         setcookie('kbf_staff', '', [
             'expires' => time() - 3600,

@@ -65,15 +65,15 @@
         <p id="maintenanceMessage">We are making some improvements. Please check back shortly.</p>
         <p class="small">Staff can still <a href="/login">sign in</a>.</p>
     </main>
+    <script src="/js/escape.js"></script>
     <script>
     (function () {
         // Remembered colour theme, as on the rest of the site
-        try {
-            var theme = localStorage.getItem('badminton-theme');
-            if (['emerald', 'cyan', 'yellow', 'orange'].indexOf(theme) !== -1) {
-                document.body.setAttribute('data-theme', theme);
-            }
-        } catch (e) { /* ignore */ }
+        // (KBF.storage never throws; the page still works without the helper)
+        var theme = window.KBF && KBF.storage ? KBF.storage.get('badminton-theme', null) : null;
+        if (['emerald', 'cyan', 'yellow', 'orange'].indexOf(theme) !== -1) {
+            document.body.setAttribute('data-theme', theme);
+        }
 
         // The message set in Site settings (the text above is the fallback)
         fetch('/api/public-settings.php', { credentials: 'include' })

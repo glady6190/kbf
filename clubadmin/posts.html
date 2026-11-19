@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Posts - Organiser</title>
+    <title>My posts - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -13,18 +13,17 @@
         .theme-primary-bg { background-color: var(--theme-primary); }
         .theme-primary-text { color: var(--theme-primary); }
         .theme-primary-border { border-color: var(--theme-primary); }
-        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
-        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
-        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
-        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .theme-focus:focus { border-color: var(--theme-primary); }
+        .theme-spinner { border-top-color: var(--theme-primary); }
+        /* Touch targets at least 44 x 44 */
+        .tap { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .tap:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         .post-card { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); transition: all 0.3s ease; }
-        .post-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3); }
-        
+        .post-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 30%, transparent); }
+
         @media (max-width: 768px) {
-            .theme-switcher-btn { width: 24px; height: 24px; }
-            .theme-switcher-btn.active::after { font-size: 10px; }
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
@@ -35,28 +34,33 @@
     <div id="kbf-admin-header"></div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-    <div>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap justify-between items-start sm:items-center mb-8 gap-4">
+    <div class="min-w-0">
         <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black uppercase mb-2">
             <span class="theme-primary-text">My</span> Posts
         </h1>
         <div class="h-2 w-32 theme-primary-bg mb-3"></div>
-        <p class="text-gray-400 font-bold uppercase text-sm">Manage tournament announcements</p>
+        <p class="text-gray-400 font-bold uppercase text-sm">Manage the news posts for your tournaments</p>
     </div>
     <div id="createPostButton" class="hidden w-full sm:w-auto">
-        <select id="completedTournaments" 
-                class="w-full sm:w-auto px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white font-bold uppercase text-sm focus:outline-none focus:border-emerald-500 transition mb-2 sm:mb-0 sm:mr-2">
-            <option value="">Select Tournament...</option>
-        </select>
-        <button onclick="goToCreatePost()" 
-                class="w-full sm:w-auto theme-primary-bg text-slate-900 px-6 py-3 font-black uppercase text-sm brutal-shadow transition-all hover:opacity-90">
-            + Create Post
-        </button>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+            <label for="completedTournaments" class="sr-only">Tournament for the new post</label>
+            <select id="completedTournaments" aria-describedby="pickerMessage"
+                    class="w-full sm:w-auto min-w-0 px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition">
+                <option value="">Select Tournament...</option>
+            </select>
+            <button type="button" onclick="goToCreatePost()"
+                    class="tap gap-2 w-full sm:w-auto theme-primary-bg text-slate-900 px-6 py-3 font-black uppercase text-sm brutal-shadow transition-all hover:opacity-90">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                Create news post
+            </button>
+        </div>
+        <p id="pickerMessage" class="hidden mt-2 p-4 border-4 border-red-500 bg-red-500/20 text-red-400 font-bold text-sm" role="alert"></p>
     </div>
 </div>
 
-        <div id="loading" class="text-center py-20">
-            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-emerald-500 mb-4"></div>
+        <div id="loading" class="text-center py-20" role="status" aria-live="polite">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-700 theme-spinner mb-4" aria-hidden="true"></div>
             <p class="text-gray-400 font-bold uppercase text-sm">Loading posts...</p>
         </div>
 
@@ -72,12 +76,14 @@
             <p class="text-gray-400 font-bold mb-6 uppercase text-lg">Complete a tournament and create your first post</p>
             <a href="/clubadmin/tournaments" 
                class="inline-block theme-primary-bg text-slate-900 px-8 py-4 font-black uppercase text-sm brutal-shadow transition-all">
-                View Tournaments →
+                View my tournaments
             </a>
         </div>
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -110,7 +116,21 @@
 
     // Every post this user created (GET /api/announcements.php?mine=1).
     // Deleted posts are hidden (IsVisible = 0) and are left out, as before.
+    const loadingHtml = document.getElementById('loading').innerHTML;
+
+    function showLoadFailed(message) {
+        const loading = document.getElementById('loading');
+        loading.classList.remove('hidden');
+        KBF.showLoadError(loading, {
+            message: message || 'Your posts could not be loaded. Please check your connection and try again.',
+            retry: loadPosts
+        });
+    }
+
     async function loadPosts() {
+        const loadingBox = document.getElementById('loading');
+        loadingBox.innerHTML = loadingHtml;
+        loadingBox.classList.remove('hidden');
         try {
             const tournamentResponse = await authenticatedFetch('/api/tournaments.php?mine=1');
             const tournamentData = await tournamentResponse.json();
@@ -130,13 +150,7 @@
             document.getElementById('noPosts').classList.add('hidden');
 
             if (!data.success) {
-                const loading = document.getElementById('loading');
-                loading.textContent = '';
-                const p = document.createElement('p');
-                p.className = 'text-red-400 font-bold uppercase text-lg';
-                p.textContent = data.message || 'Error Loading Posts';
-                loading.appendChild(p);
-                loading.classList.remove('hidden');
+                showLoadFailed(data.message ? String(data.message) : '');
                 return;
             }
 
@@ -148,7 +162,9 @@
             }
         } catch (error) {
             console.error('Error loading posts:', error);
-            document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Posts</p>';
+            document.getElementById('postsList').classList.add('hidden');
+            document.getElementById('noPosts').classList.add('hidden');
+            showLoadFailed('');
         }
     }
 
@@ -178,12 +194,16 @@
 function goToCreatePost() {
     const select = document.getElementById('completedTournaments');
     const tournamentId = select.value;
-    
+    const message = document.getElementById('pickerMessage');
+
     if (!tournamentId) {
-        alert('Please select a tournament first');
+        message.textContent = 'Please choose a tournament first.';
+        message.classList.remove('hidden');
+        select.focus();
         return;
     }
-    
+    message.classList.add('hidden');
+
     window.location.href = `/clubadmin/create-post?id=${tournamentId}`;
 }
 
@@ -220,27 +240,34 @@ function goToCreatePost() {
 
                 <div class="flex flex-wrap gap-2">
                    <a href="/post?id=${parseInt(post.AnnouncementId, 10)}"
-                       class="px-3 py-2 bg-cyan-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-                        View Post
+                       class="tap px-3 py-2 bg-cyan-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+                        View post
                     </a>
                     <a href="/clubadmin/edit-post?id=${parseInt(post.AnnouncementId, 10)}"
-                       class="px-3 py-2 bg-yellow-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+                       class="tap px-3 py-2 bg-yellow-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
                         Edit
                     </a>
-                    <button type="button" data-id="${parseInt(post.AnnouncementId, 10)}" data-title="${escapeHtml(post.Title)}" onclick="deletePost(parseInt(this.dataset.id, 10), this.dataset.title)"
-                            class="px-3 py-2 bg-red-500 text-white text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
-                        Delete
+                    <button type="button" data-id="${parseInt(post.AnnouncementId, 10)}" data-title="${escapeHtml(post.Title)}" onclick="deletePost(parseInt(this.dataset.id, 10), this.dataset.title, this)"
+                            class="tap px-3 py-2 bg-red-500 text-slate-900 text-center font-black uppercase text-xs border-2 border-gray-700 hover:opacity-80 transition">
+                        Remove
                     </button>
                 </div>
             </div>
         `).join('');
     }
 
-    async function deletePost(postId, title) {
-        if (!confirm(`Are you sure you want to delete "${title}"?\n\nThis action cannot be undone.`)) {
-            return;
-        }
-        
+    async function deletePost(postId, title, button) {
+        if (button && KBF.isBusy(button)) return;
+        const yes = await KBFDialog.confirm({
+            title: 'Remove this news post?',
+            message: `"${title}" will be taken off the public site.`,
+            confirmText: 'Remove post',
+            danger: true
+        });
+        if (!yes) return;
+        // Busy until the request finishes (the list reloads on success)
+        const restore = KBF.setBusy(button, 'Deleting...');
+
         try {
             const response = await authenticatedFetch(`/api/announcements.php?id=${postId}`, {
                 method: 'DELETE'
@@ -249,14 +276,16 @@ function goToCreatePost() {
             const result = await response.json();
             
             if (result.success) {
-                alert('Post deleted successfully!');
+                KBFDialog.toast('The news post has been removed.', 'success');
                 loadPosts();
             } else {
-                alert('Error: ' + (result.message || 'Failed to delete post'));
+                KBFDialog.toast(result.message || 'The news post could not be removed. Please try again.', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error deleting post. Please try again.');
+            KBFDialog.toast('The news post could not be removed. Please check your connection and try again.', 'error');
+        } finally {
+            restore();
         }
     }
     </script>

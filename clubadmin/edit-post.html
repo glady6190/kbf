@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Post - Organiser</title>
+    <title>Edit news post - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -13,15 +13,16 @@
         .theme-primary-bg { background-color: var(--theme-primary); }
         .theme-primary-text { color: var(--theme-primary); }
         .theme-primary-border { border-color: var(--theme-primary); }
-        .theme-switcher-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
-        .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
-        .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 10px currentColor; }
-        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 12px; }
+        .theme-focus:focus { border-color: var(--theme-primary); }
+        .theme-spinner { border-top-color: var(--theme-primary); }
+        #featuredImage::file-selector-button { background: var(--theme-primary); color: #0F172A; }
+        #featuredImage:hover::file-selector-button { opacity: .9; }
+        /* Touch targets at least 44 px high */
+        .tap { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .tap:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         @media (max-width: 768px) {
-            .theme-switcher-btn { width: 24px; height: 24px; }
-            .theme-switcher-btn.active::after { font-size: 10px; }
             .brutal-shadow { box-shadow: 3px 3px 0px var(--theme-primary); }
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
@@ -32,14 +33,14 @@
     <div id="kbf-admin-header"></div>
 
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div id="loading" class="text-center py-12 sm:py-20">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-gray-700 border-t-emerald-500 mb-4"></div>
+        <div id="loading" class="text-center py-12 sm:py-20" role="status" aria-live="polite">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-gray-700 theme-spinner mb-4" aria-hidden="true"></div>
             <p class="text-gray-400 font-bold uppercase text-sm">Loading...</p>
         </div>
 
         <div id="postForm" class="hidden">
             <div class="mb-6 sm:mb-8">
-                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Edit</span> Tournament Post</h1>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Edit</span> News Post</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
                 <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Tournament: <span id="tournamentName" class="theme-primary-text break-words">--</span></p>
             </div>
@@ -52,52 +53,53 @@
                     <div class="mb-4 sm:mb-6">
                         <label for="tournamentSelect" class="block text-xs font-black theme-primary-text uppercase mb-2">Tournament *</label>
                         <select id="tournamentSelect" required disabled
-                                class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition disabled:opacity-60 disabled:cursor-not-allowed">
+                                aria-describedby="tournamentSelectHint"
+                                class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition disabled:opacity-60 disabled:cursor-not-allowed">
                             <option value="">Select Tournament...</option>
                         </select>
-                        <p class="text-xs text-gray-500 mt-2 uppercase font-bold">A post's tournament cannot be changed after it is published</p>
+                        <p id="tournamentSelectHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">A post's tournament cannot be changed after it is published</p>
                     </div>
 
                     <div class="mb-4 sm:mb-6">
-                        <label class="block text-xs font-black theme-primary-text uppercase mb-2">Post Title *</label>
-                        <input type="text" name="title" required 
-                               class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+                        <label for="postTitle" class="block text-xs font-black theme-primary-text uppercase mb-2">Post Title *</label>
+                        <input type="text" name="title" id="postTitle" required minlength="3" maxlength="200"
+                               class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition"
                                placeholder="AMAZING TOURNAMENT SUCCESS">
                     </div>
 
                     <div class="mb-4 sm:mb-6">
-                        <label class="block text-xs font-black theme-primary-text uppercase mb-2">Content *</label>
-                        <textarea name="content" required rows="8" 
-                                  class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-semibold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition"
+                        <label for="postContent" class="block text-xs font-black theme-primary-text uppercase mb-2">Content *</label>
+                        <textarea name="content" id="postContent" required rows="8" minlength="10" maxlength="10000" aria-describedby="postContentHint"
+                                  class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-semibold text-base sm:text-sm focus:outline-none theme-focus transition"
                                   placeholder="Write your post content here..."></textarea>
-                        <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Share highlights, results, and memorable moments</p>
+                        <p id="postContentHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Share highlights, results, and memorable moments</p>
                     </div>
 
                     <div class="mb-4 sm:mb-6">
-                        <label class="block text-xs font-black theme-primary-text uppercase mb-2">Featured Image</label>
-                        <input type="file" name="featuredImage" id="featuredImage" accept="image/*"
-                               class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:font-bold file:bg-emerald-500 file:text-slate-900 hover:file:bg-emerald-400 file:cursor-pointer">
-                        <p class="text-xs text-gray-500 mt-2 uppercase font-bold">Recommended: 1200x630px (JPG, PNG, max 5MB)</p>
+                        <label for="featuredImage" class="block text-xs font-black theme-primary-text uppercase mb-2">Featured Image</label>
+                        <input type="file" name="featuredImage" id="featuredImage" accept="image/*" aria-describedby="featuredImageHint"
+                               class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white font-bold text-xs sm:text-sm focus:outline-none theme-focus transition file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:font-bold file:cursor-pointer">
+                        <p id="featuredImageHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Recommended: 1200x630px (JPG, PNG, max 5MB)</p>
                         
                         <div id="imagePreview" class="hidden mt-3 sm:mt-4">
                             <p class="text-xs font-black theme-primary-text uppercase mb-2">Preview:</p>
                             <div class="border-2 sm:border-4 border-gray-700 p-2 bg-slate-800">
                                 <img id="previewImg" src="" alt="Preview" class="w-full h-auto max-h-64 object-contain bg-slate-950">
                             </div>
-                            <button type="button" onclick="removeImage()" class="mt-2 sm:mt-3 px-3 sm:px-4 py-2 bg-red-500 text-white font-black uppercase text-xs hover:bg-red-600 transition">Remove Image</button>
+                            <button type="button" onclick="removeImage()" class="tap mt-2 sm:mt-3 px-3 sm:px-4 py-2 bg-red-500 text-slate-900 font-black uppercase text-xs hover:bg-red-400 transition">Remove image</button>
                         </div>
                     </div>
 
-                    <div id="formMessage" class="hidden p-3 sm:p-4 border-2 sm:border-4 mb-4 sm:mb-6 font-bold uppercase text-xs sm:text-sm"></div>
+                    <div id="formMessage" role="alert" class="hidden p-3 sm:p-4 border-2 sm:border-4 mb-4 sm:mb-6 font-bold uppercase text-xs sm:text-sm"></div>
 
                     <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 sm:pt-6 border-t-2 sm:border-t-4 border-gray-700">
                         <a href="/clubadmin/posts" id="cancelLink"
-                           class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-center font-black uppercase text-xs sm:text-sm hover:border-gray-600 transition">
+                           class="tap w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-center font-black uppercase text-xs sm:text-sm hover:border-gray-600 transition">
                             Cancel
                         </a>
-                        <button type="submit" 
-        class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 theme-primary-bg text-slate-900 font-black uppercase text-xs sm:text-sm brutal-shadow transition-all">
-    Update Post →
+                        <button type="submit" id="saveBtn"
+        class="tap w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 theme-primary-bg text-slate-900 font-black uppercase text-xs sm:text-sm brutal-shadow transition-all">
+    Save changes
 </button>
                     </div>
                 </form>
@@ -106,6 +108,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -120,8 +124,7 @@
         window.postId = raw && /^\d+$/.test(raw) ? raw : null;
 
         if (!window.postId) {
-            alert('Invalid post ID');
-            window.location.href = backUrl();
+            showLoadProblem('This link does not point to a news post.', false);
             return;
         }
 
@@ -162,7 +165,31 @@
     // ============================================
     // DATA LOADING FUNCTIONS
     // ============================================
+    const loadingHtml = document.getElementById('loading').innerHTML;
+
+    // Loading failed: a message instead of the spinner, with Try again when
+    // trying again could help, and a way back to the list
+    function showLoadProblem(message, canRetry) {
+        const loading = document.getElementById('loading');
+        loading.classList.remove('hidden');
+        document.getElementById('postForm').classList.add('hidden');
+        const box = KBF.showLoadError(loading, {
+            message: message,
+            retry: canRetry ? loadPost : null
+        });
+        if (box) {
+            const back = document.createElement('a');
+            back.href = backUrl();
+            back.className = 'tap ml-2 px-4 py-2 font-bold uppercase text-xs text-gray-300 hover:text-white';
+            back.textContent = 'Back to the posts';
+            box.appendChild(back);
+        }
+    }
+
     async function loadPost() {
+    const loadingBox = document.getElementById('loading');
+    loadingBox.innerHTML = loadingHtml;
+    loadingBox.classList.remove('hidden');
     try {
         const response = await authenticatedFetch(`/api/announcements.php?id=${window.postId}`);
         const data = await response.json();
@@ -187,12 +214,11 @@
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('postForm').classList.remove('hidden');
         } else {
-            alert(data.message || 'Post not found');
-            window.location.href = backUrl();
+            showLoadProblem(data.message ? String(data.message) : 'This news post could not be found.', false);
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error loading post');
+        showLoadProblem('The news post could not be loaded. Please check your connection and try again.', true);
     }
 }
 
@@ -201,6 +227,7 @@
     async function loadTournamentPicker(post) {
         const select = document.getElementById('tournamentSelect');
         const currentId = post.TournamentId ? String(parseInt(post.TournamentId, 10)) : '';
+        while (select.options.length > 1) select.remove(1);
         let eligible = [];
         try {
             const canAll = window.kbfUser && window.kbfUser.has('content.all_news_gallery');
@@ -245,7 +272,10 @@
         const file = e.target.files[0];
         if (file) {
             if (file.size > KBFShell.uploadLimitMb('news', 5) * 1024 * 1024) {
-                alert('Image size must be less than ' + KBFShell.uploadLimitMb('news', 5) + 'MB');
+                const messageDiv = document.getElementById('formMessage');
+                messageDiv.setAttribute('role', 'alert');
+                messageDiv.className = 'p-3 sm:p-4 border-2 sm:border-4 mb-4 sm:mb-6 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
+                messageDiv.textContent = 'The image must be smaller than ' + KBFShell.uploadLimitMb('news', 5) + 'MB.';
                 e.target.value = '';
                 return;
             }
@@ -284,6 +314,8 @@ function fileToBase64(file) {
     // ============================================
     document.getElementById('createPostForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    if (KBF.isBusy(saveBtn)) return;
 
     if (!document.getElementById('tournamentId').value) {
         const messageDiv = document.getElementById('formMessage');
@@ -294,6 +326,9 @@ function fileToBase64(file) {
     }
 
     const formData = new FormData(e.target);
+    // Busy until the request finishes; kept busy after success until the redirect
+    const restore = KBF.setBusy(saveBtn, 'Saving...');
+    let keepBusy = false;
 
     try {
         const response = await fetch(`/api/announcements.php?id=${window.postId}`, {
@@ -318,25 +353,31 @@ function fileToBase64(file) {
             if (result.success) {
                 messageDiv.className = 'p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm';
                 messageDiv.innerHTML = `
-    <p class="font-black">Post Updated Successfully!</p>
+    <p class="font-black">News post saved</p>
     <p class="text-xs mt-1">Your changes have been saved.</p>
 `;
+                messageDiv.setAttribute('role', 'status');
                 messageDiv.classList.remove('hidden');
+                keepBusy = true;
 
                 setTimeout(() => {
                     window.location.href = backUrl();
                 }, 2000);
             } else {
+                messageDiv.setAttribute('role', 'alert');
                 messageDiv.className = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-                messageDiv.textContent = result.message || 'Error publishing post';
+                messageDiv.textContent = result.message || 'Error saving the post';
                 messageDiv.classList.remove('hidden');
             }
         } catch (error) {
             console.error('Error:', error);
             const messageDiv = document.getElementById('formMessage');
+            messageDiv.setAttribute('role', 'alert');
             messageDiv.className = 'p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-            messageDiv.textContent = 'Error publishing post. Please try again.';
+            messageDiv.textContent = 'The changes could not be saved. Please check your connection and try again.';
             messageDiv.classList.remove('hidden');
+        } finally {
+            if (!keepBusy) restore();
         }
     });
 </script>

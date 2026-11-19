@@ -53,6 +53,7 @@
         </div>
     </main>
 
+    <script src="/js/escape.js"></script>
     <script src="/js/code-input.js"></script>
     <script>
     (function () {
@@ -84,17 +85,16 @@
         function go(url) { window.location.href = url; }
 
         function csrfToken() {
-            try { return sessionStorage.getItem('csrf_token') || ''; } catch (e) { return ''; }
+            return KBF.storage.session.get('csrf_token', '');
         }
 
         function saveCsrf(token) {
             if (!token) return;
-            try { sessionStorage.setItem('csrf_token', token); } catch (e) { /* ignore */ }
+            KBF.storage.session.set('csrf_token', token);
         }
 
         function applySavedTheme() {
-            var theme = 'emerald';
-            try { theme = localStorage.getItem('badminton-theme') || 'emerald'; } catch (e) { /* ignore */ }
+            var theme = KBF.storage.get('badminton-theme', 'emerald');
             if (['emerald', 'cyan', 'yellow', 'orange'].indexOf(theme) === -1) theme = 'emerald';
             document.body.setAttribute('data-theme', theme);
         }

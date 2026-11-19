@@ -1409,7 +1409,8 @@ $venue = trim($data['venue']);
 $location = trim($data['location']);
 $postCode = isset($data['postCode']) ? trim($data['postCode']) : null;
 
-    if (strlen($name) < 3 || strlen($name) > 200) {
+    // Characters, not bytes (accented letters count once)
+    if (kbfTextLength($name) < 3 || kbfTextLength($name) > 200) {
         sendJSON(['success' => false, 'message' => 'Tournament name must be between 3 and 200 characters'], 400);
     }
 
@@ -1442,6 +1443,11 @@ if (strlen($categoriesOffered) > 100) {
     if ($extrasError !== null) {
         sendJSON(['success' => false, 'message' => $extrasError], 400);
     }
+
+    // A repeat of the same one-time request id (double tap, retry) gets the
+    // first answer back; no second tournament is created
+    require_once __DIR__ . '/request-ids.php';
+    kbfRequestIdBegin($pdo, 'tournament', is_string($data['requestId'] ?? null) ? $data['requestId'] : null);
 
     $posterPath = null;
     try {
@@ -1588,7 +1594,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             if (isset($data['name'])) {
     // Tournament names never hold < or >
     $name = trim(str_replace(['<', '>'], '', (string) $data['name']));
-    if (strlen($name) < 3 || strlen($name) > 200) {
+    if (kbfTextLength($name) < 3 || kbfTextLength($name) > 200) {
         sendJSON(['success' => false, 'message' => 'Tournament name must be between 3 and 200 characters'], 400);
     }
     $updates[] = "Name = ?";
@@ -1661,9 +1667,12 @@ if (isset($data['organiserName'])) {
             $stmt = $pdo->prepare($query);
             $stmt->execute($params);
 
+            // The tournament exists (read above). No changed row means the
+            // values were already the same (for example an organiser name
+            // that only differs in case): that is a success, not "not found"
             if ($stmt->rowCount() === 0) {
-                $pdo->rollBack();
-                sendJSON(['success' => false, 'message' => 'Tournament not found or no changes made'], 404);
+                $pdo->commit();
+                sendJSON(['success' => true, 'message' => 'Nothing to change']);
             }
 
             // Date of an approved or completed tournament changed: check each

@@ -2,3 +2,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Phones (UX-06): iOS Safari zooms in on any text field under 16px, so form
+   fields are at least 16px up to the sm breakpoint. Placed after the
+   utilities (and !important) so it also wins over text-xs / text-sm classes
+   and page <style> blocks on the fields; larger screens keep their sizes. */
+@media (max-width: 639.98px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not([type="hidden"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* Error text shown under a form field by js/kbf-forms.js (showFieldError) */
+.kbf-field-error {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #dc2626;
+}
+@media (prefers-color-scheme: dark) {
+    .kbf-field-error {
+        color: #f87171;
+    }
+}
+.kbf-field-error[hidden] {
+    display: none;
+}

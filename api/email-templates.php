@@ -58,6 +58,14 @@ const KBF_NOTIFY_EVENTS = [
         'audiences' => ['person' => 'To the applicant'],
         'placeholders' => ['first_name', 'full_name', 'site_link'],
     ],
+    'registration_duplicate' => [
+        'group' => 'Players', 'label' => 'Already registered or waiting', 'sort' => 15, 'priority' => 'important',
+        'description' => 'Sent instead of a new application when the email or person is already a member or already waiting for review. The registration page never says this itself.',
+        'person' => [1, 1], 'organiser' => [0, 0], 'admins' => [0, 0], 'news' => [0, 0],
+        'adminPermission' => null, 'locked' => 0,
+        'audiences' => ['person' => 'To the person who filled in the form'],
+        'placeholders' => ['first_name', 'full_name', 'reason', 'contact_email', 'site_link'],
+    ],
     'registration_approved' => [
         'group' => 'Players', 'label' => 'Registration approved', 'sort' => 20, 'priority' => 'important',
         'description' => 'Sent when an admin approves a registration. Includes the KBF ID.',
@@ -283,6 +291,16 @@ const KBF_EMAIL_DEFAULTS = [
             . '<p>Thank you for applying for KBF-UK membership. We\'ve received your application and it is now <strong>pending review</strong> by our admin team.</p>'
             . '<p>You don\'t need to do anything further right now. We\'ll email you again once a decision has been made — and if approved, that email will include your membership ID.</p>'
             . '<p>Thanks for your patience.</p>'
+            . '<p>Best regards,<br><strong>KBF-UK Admin Team</strong></p>',
+    ],
+    'registration_duplicate.person' => [
+        'subject' => 'KBF-UK: about your registration',
+        'body' => '<h2>About your registration</h2>'
+            . '<p>Hi {first_name},</p>'
+            . '<p>Thank you for filling in the KBF-UK registration form. We have not created a new application, because:</p>'
+            . '<p><strong>{reason}</strong></p>'
+            . '<p>If you are already a member, you do not need to register again. If you think this is a mistake, or you need help with your membership, please email us at {contact_email}.</p>'
+            . '<p>If you did not fill in the form, you can ignore this email.</p>'
             . '<p>Best regards,<br><strong>KBF-UK Admin Team</strong></p>',
     ],
     'registration_approved.person' => [

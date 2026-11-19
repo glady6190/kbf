@@ -8,6 +8,9 @@ require_once __DIR__ . '/auth/email-config.php';
 
 
 
+// The one reply for every accepted form, new or duplicate (SEC-13)
+const KBF_REGISTRATION_REPLY = 'Thank you. We will email you shortly.';
+
 // Load reCAPTCHA configuration
 $recaptchaConfig = require_once 'recaptcha-config.php';
 define('RECAPTCHA_SECRET_KEY', $recaptchaConfig['secret_key']);
@@ -134,11 +137,19 @@ if ($result['count'] >= $perIpLimit) {
         sendJSON(['success' => false, 'message' => 'Invalid email format'], 400);
     }
     
-    $firstName = sanitizeInput($_POST['firstName']);
-    $lastName = sanitizeInput($_POST['lastName']);
+    // Names, city and postcode are stored as typed (trimmed, no tags) and
+    // escaped when shown; they are checked below on this plain text
+    $firstName = kbfCleanText($_POST['firstName']);
+    $lastName = kbfCleanText($_POST['lastName']);
     $phoneNumber = sanitizeInput($_POST['phoneNumber']);
-    $location = sanitizeInput($_POST['location']);
-    $postCode = isset($_POST['postCode']) ? sanitizeInput($_POST['postCode']) : null;
+    $location = kbfCleanText($_POST['location']);
+    $postCode = isset($_POST['postCode']) ? kbfCleanText($_POST['postCode']) : null;
+    if ($location === '' || kbfTextLength($location) > 100) {
+        sendJSON(['success' => false, 'message' => 'Please enter your city (up to 100 characters)'], 400);
+    }
+    if ($postCode !== null && kbfTextLength($postCode) > 12) {
+        sendJSON(['success' => false, 'message' => 'Postcode is too long'], 400);
+    }
     
     // Validate year of birth
     $yearOfBirth = null;
@@ -159,21 +170,22 @@ if ($result['count'] >= $perIpLimit) {
     
     // Validate name lengths
    
-if (strlen($firstName) < 2 || strlen($lastName) < 2) {
+if (kbfTextLength($firstName) < 2 || kbfTextLength($lastName) < 2) {
     sendJSON(['success' => false, 'message' => 'First name and surname must be at least 2 characters'], 400);
 }
 
-if (strlen($firstName) > 50 || strlen($lastName) > 50) {
-    sendJSON(['success' => false, 'message' => 'Names must be less than 50 characters'], 400);
+if (kbfTextLength($firstName) > 50 || kbfTextLength($lastName) > 50) {
+    sendJSON(['success' => false, 'message' => 'Names must be 50 characters or fewer'], 400);
 }
 
-// Validate name format (only letters, spaces, hyphens, apostrophes)
-if (!preg_match("/^[A-Za-z\s\-']+$/", $firstName) || !preg_match("/^[A-Za-z\s\-']+$/", $lastName)) {
-    sendJSON(['success' => false, 'message' => 'Names can only contain letters, spaces, hyphens, and apostrophes'], 400);
+// Validate name format: letters in any language (accents are fine), spaces,
+// hyphens and apostrophes (O'Connor, Zoë, Jean-Luc)
+if (!kbfIsValidName($firstName) || !kbfIsValidName($lastName)) {
+    sendJSON(['success' => false, 'message' => 'Names can only contain letters (accents are fine), spaces, hyphens and apostrophes'], 400);
 }
 
 // Check for suspicious patterns (single character repeated)
-if (preg_match("/^(.)\1+$/", $firstName) || preg_match("/^(.)\1+$/", $lastName)) {
+if (preg_match("/^(.)\1+$/u", $firstName) || preg_match("/^(.)\1+$/u", $lastName)) {
     sendJSON(['success' => false, 'message' => 'Please enter a valid name'], 400);
 }
     
@@ -209,44 +221,72 @@ if (strlen($phoneDigits) < 8 || strlen($phoneDigits) > 15) {
 // Use the cleaned phone number
 $phoneNumber = $cleanPhoneNumber;
     
-    // Check for duplicate registration - email
+    // Duplicates (SEC-13): the page never says whether an email or person is
+    // already a member or waiting. The reply is always the same; the reason
+    // goes by email to the address given (registration_duplicate).
+    $duplicateReason = null;
     $stmt = $pdo->prepare("
-        SELECT UserId FROM Users 
+        SELECT UserId FROM Users
         WHERE Email = ? AND IsActive = 1
     ");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
-        sendJSON(['success' => false, 'message' => 'A player with this email address is already registered'], 400);
+        $duplicateReason = 'This email address already belongs to a KBF-UK member.';
     }
-    
-    $stmt = $pdo->prepare("
-        SELECT RegistrationId FROM PlayerRegistrations 
-        WHERE Email = ? AND Status = 'Pending'
-    ");
-    $stmt->execute([$email]);
-    if ($stmt->fetch()) {
-        sendJSON(['success' => false, 'message' => 'A registration with this email is already pending approval'], 400);
+
+    if ($duplicateReason === null) {
+        $stmt = $pdo->prepare("
+            SELECT RegistrationId FROM PlayerRegistrations
+            WHERE Email = ? AND Status = 'Pending'
+        ");
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+            $duplicateReason = 'An application with this email address is already waiting for review.';
+        }
     }
-    
+
     // Additional duplicate check: FirstName + LastName + YearOfBirth + PhoneNumber
-    if ($yearOfBirth !== null) {
+    if ($duplicateReason === null && $yearOfBirth !== null) {
         $stmt = $pdo->prepare("
-            SELECT UserId FROM Users 
-            WHERE FirstName = ? AND LastName = ? AND YearOfBirth = ? AND PhoneNumber = ? AND IsActive = 1
+            SELECT UserId FROM Users
+            WHERE FirstName IN (?, ?) AND LastName IN (?, ?) AND YearOfBirth = ? AND PhoneNumber = ? AND IsActive = 1
         ");
-        $stmt->execute([$firstName, $lastName, $yearOfBirth, $phoneNumber]);
+        // Names as typed, or HTML-escaped as older rows were stored
+        $nameForms = [$firstName, htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8'),
+                      $lastName, htmlspecialchars($lastName, ENT_QUOTES, 'UTF-8')];
+        $stmt->execute(array_merge($nameForms, [$yearOfBirth, $phoneNumber]));
         if ($stmt->fetch()) {
-            sendJSON(['success' => false, 'message' => 'A player with matching details already exists in the system'], 400);
+            $duplicateReason = 'A KBF-UK member with the same details is already registered.';
         }
-        
-        $stmt = $pdo->prepare("
-            SELECT RegistrationId FROM PlayerRegistrations 
-            WHERE FirstName = ? AND LastName = ? AND YearOfBirth = ? AND PhoneNumber = ? AND Status = 'Pending'
-        ");
-        $stmt->execute([$firstName, $lastName, $yearOfBirth, $phoneNumber]);
-        if ($stmt->fetch()) {
-            sendJSON(['success' => false, 'message' => 'A registration with matching details is already pending approval'], 400);
+
+        if ($duplicateReason === null) {
+            $stmt = $pdo->prepare("
+                SELECT RegistrationId FROM PlayerRegistrations
+                WHERE FirstName IN (?, ?) AND LastName IN (?, ?) AND YearOfBirth = ? AND PhoneNumber = ? AND Status = 'Pending'
+            ");
+            $stmt->execute(array_merge($nameForms, [$yearOfBirth, $phoneNumber]));
+            if ($stmt->fetch()) {
+                $duplicateReason = 'An application with the same details is already waiting for review.';
+            }
         }
+    }
+
+    if ($duplicateReason !== null) {
+        try {
+            require_once __DIR__ . '/notify.php';
+            notify('registration_duplicate', [
+                'person' => [
+                    'email' => $email,
+                    'firstName' => html_entity_decode((string) $firstName, ENT_QUOTES, 'UTF-8'),
+                    'lastName' => html_entity_decode((string) $lastName, ENT_QUOTES, 'UTF-8'),
+                ],
+                'values' => ['reason' => $duplicateReason],
+                'relatedType' => 'registration',
+            ]);
+        } catch (\Throwable $e) {
+            error_log('Registration duplicate notification error: ' . $e->getMessage());
+        }
+        sendJSON(['success' => true, 'message' => KBF_REGISTRATION_REPLY]);
     }
     
     // Handle profile photo upload
@@ -360,7 +400,8 @@ try {
         $gradeStmt->execute([$categoryId]);
         $gradeName = (string) $gradeStmt->fetchColumn();
 
-        // sanitizeInput() stored HTML-escaped text; emails escape values themselves
+        // Plain text (decoding is a no-op now names are stored as typed);
+        // emails escape values themselves
         $applicant = [
             'email' => $email,
             'firstName' => html_entity_decode((string) $firstName, ENT_QUOTES, 'UTF-8'),
@@ -385,10 +426,10 @@ try {
         error_log('Registration notification error: ' . $e->getMessage());
     }
 
+    // The same reply as for a duplicate (SEC-13)
     sendJSON([
         'success' => true,
-        'message' => 'Registration submitted successfully',
-        'registrationId' => $registrationId
+        'message' => KBF_REGISTRATION_REPLY,
     ]);
     
 } catch (Exception $e) {

@@ -48,9 +48,14 @@
             '.tf-optional{color:#9ca3af;font-weight:700;text-transform:none;}' +
             '.tf-hint{font-size:.75rem;color:#9ca3af;font-weight:600;margin-top:.375rem;}' +
             '.tf-btn-theme{background:var(--theme-primary);color:#0F172A;}' +
+            // Visible focus on the poster button (the file input itself is hidden)
+            '.tf-poster-row:has(#tf-poster-input:focus-visible) label[for="tf-poster-input"]{outline:2px solid #fff;outline-offset:2px;}' +
+            '#tf-poster-remove:focus-visible{outline:2px solid #fff;outline-offset:2px;}' +
             '.tf-poster-frame{background:#0f172a;border:2px dashed #374151;min-height:12rem;display:flex;align-items:center;justify-content:center;padding:.75rem;}' +
             '.tf-poster-frame img{display:block;max-width:100%;max-height:28rem;width:auto;height:auto;object-fit:contain;}' +
-            '@media (min-width:640px){.tf-input{border-width:4px;}.tf-poster-frame{border-width:4px;}}';
+            '@media (min-width:640px){.tf-input{border-width:4px;}.tf-poster-frame{border-width:4px;}}' +
+            // Phones: 16px so iOS does not zoom in on the field
+            '@media (max-width:639.98px){.tf-input{font-size:16px;}}';
         document.head.appendChild(style);
     }
 
@@ -183,15 +188,15 @@
                         '</div>' +
                     '</div>' +
                     '<p id="tf-poster-caption" class="tf-hint hidden"></p>' +
-                    '<div class="flex flex-col sm:flex-row gap-2">' +
-                        '<label for="tf-poster-input" class="tf-btn-theme cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 font-black uppercase text-xs sm:text-sm border-2 border-gray-700 hover:opacity-90 transition">' +
+                    '<div class="tf-poster-row flex flex-col sm:flex-row gap-2">' +
+                        '<label for="tf-poster-input" class="tf-btn-theme cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 font-black uppercase text-xs sm:text-sm border-2 border-gray-700 hover:opacity-90 transition" style="min-height:44px">' +
                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">' +
                                 '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>' +
                             '</svg>' +
                             '<span id="tf-poster-choose-text">Choose poster</span>' +
                         '</label>' +
                         '<input type="file" id="tf-poster-input" accept="image/jpeg,image/png,image/webp" class="sr-only">' +
-                        '<button type="button" id="tf-poster-remove" class="hidden inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs sm:text-sm hover:border-red-500 hover:text-red-400 transition">' +
+                        '<button type="button" id="tf-poster-remove" class="hidden inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs sm:text-sm hover:border-red-500 hover:text-red-400 transition" style="min-height:44px" aria-label="Remove poster">' +
                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">' +
                                 '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>' +
                             '</svg>' +
@@ -525,7 +530,18 @@
         }
 
         // ---- validation ----
+        // Returns the first problem (or null) and shows it next to its field.
         function validate() {
+            var formHelpers = window.KBF && window.KBF.showFieldError ? window.KBF : null;
+            if (formHelpers) formHelpers.clearFormErrors(host);
+            function fail(field, message) {
+                if (formHelpers && field) {
+                    formHelpers.showFieldError(field, message);
+                    try { field.focus(); } catch (e) { /* ignore */ }
+                }
+                return message;
+            }
+
             var coreEditable = state.mode === 'create' || opts.canEditCore;
             var tournamentDate = !coreEditable
                 ? ((state.tournament && state.tournament.TournamentDate) || '').slice(0, 10)
@@ -533,38 +549,38 @@
 
             if (!el.organiser.disabled) normaliseOrganiser();
             var organiser = el.organiser.value.trim();
-            if ((state.mode === 'create' || opts.canEditOrganiser) && !organiser) return 'Please enter the organiser.';
-            if (textLength(organiser) > ORGANISER_MAX) return 'Organiser must be 150 characters or fewer.';
+            if ((state.mode === 'create' || opts.canEditOrganiser) && !organiser) return fail(el.organiser, 'Please enter the organiser.');
+            if (textLength(organiser) > ORGANISER_MAX) return fail(el.organiser, 'Organiser must be 150 characters or fewer.');
 
             if (coreEditable) {
-                if (el.name.value.trim().length < 3) return 'Tournament name must be at least 3 characters.';
-                if (!el.date.value) return 'Please choose the tournament date.';
-                if (!el.categories.value.trim()) return 'Please enter the categories offered.';
-                if (textLength(el.categories.value.trim()) > CATEGORIES_MAX) return 'Categories text is too long (max 100 characters).';
-                if (!el.venue.value.trim()) return 'Please enter the venue name.';
-                if (!el.location.value.trim()) return 'Please enter the town or city.';
+                if (el.name.value.trim().length < 3) return fail(el.name, 'Tournament name must be at least 3 characters.');
+                if (!el.date.value) return fail(el.date, 'Please choose the tournament date.');
+                if (!el.categories.value.trim()) return fail(el.categories, 'Please enter the categories offered.');
+                if (textLength(el.categories.value.trim()) > CATEGORIES_MAX) return fail(el.categories, 'Categories text is too long (max 100 characters).');
+                if (!el.venue.value.trim()) return fail(el.venue, 'Please enter the venue name.');
+                if (!el.location.value.trim()) return fail(el.location, 'Please enter the town or city.');
             }
 
             var url = el.regUrl.value.trim();
             if (url) {
-                if (url.length > 500) return 'The registration link must be 500 characters or fewer.';
+                if (url.length > 500) return fail(el.regUrl, 'The registration link must be 500 characters or fewer.');
                 if (/^[a-z][a-z0-9+.\-]*:/i.test(url) && !/^https?:\/\//i.test(url) && !/^[^:]+:\d/.test(url)) {
-                    return 'The registration link must start with http:// or https://.';
+                    return fail(el.regUrl, 'The registration link must start with http:// or https://.');
                 }
             }
 
             var close = el.regClose.value;
             if (close && tournamentDate && close > tournamentDate) {
-                return 'Registration cannot close after the tournament date.';
+                return fail(el.regClose, 'Registration cannot close after the tournament date.');
             }
 
-            if (textLength(el.fee.value.trim()) > 100) return 'Entry fee must be 100 characters or fewer.';
-            if (textLength(el.description.value.trim()) > DESCRIPTION_MAX) return 'About this tournament must be 2,000 characters or fewer.';
-            if (textLength(el.contactName.value.trim()) > 100) return 'Contact name must be 100 characters or fewer.';
+            if (textLength(el.fee.value.trim()) > 100) return fail(el.fee, 'Entry fee must be 100 characters or fewer.');
+            if (textLength(el.description.value.trim()) > DESCRIPTION_MAX) return fail(el.description, 'About this tournament must be 2,000 characters or fewer.');
+            if (textLength(el.contactName.value.trim()) > 100) return fail(el.contactName, 'Contact name must be 100 characters or fewer.');
 
             var phone = el.contactPhone.value.trim();
             if (phone && (phone.length > 40 || !/^[0-9 +()\-]+$/.test(phone) || !/\d/.test(phone))) {
-                return 'Contact phone may only contain digits, spaces, +, brackets and hyphens.';
+                return fail(el.contactPhone, 'Contact phone may only contain digits, spaces, +, brackets and hyphens.');
             }
             return null;
         }

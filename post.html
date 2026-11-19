@@ -16,7 +16,7 @@
         .theme-switcher-btn { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: all 0.3s ease; position: relative; }
         .theme-switcher-btn:hover { transform: scale(1.1); border-color: white; }
         .theme-switcher-btn.active { border-color: white; box-shadow: 0 0 15px currentColor; }
-        .theme-switcher-btn.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 20px; }
+        .theme-switcher-btn.active::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 20px; }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
         /* ============ Single post (theme colour only via --theme-primary) ============ */
@@ -172,7 +172,7 @@
 }
 
 .dropdown-toggle::after {
-    content: '▼';
+    content: '';
     font-size: 0.6rem;
     margin-left: 5px;
     transition: transform 0.3s;
@@ -215,6 +215,8 @@
 }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
+    <link rel="stylesheet" href="/assets/css/public-ui.css">
+    <script src="/js/public-ui.js" defer></script>
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
    <!-- Navigation -->
@@ -233,11 +235,11 @@
                 </div>
                 <div>
                     <span class="text-2xl font-black text-white uppercase tracking-tight">KBF-UK</span>
-                    <p class="text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
+                    <p class="kbf-nav-tagline text-xs theme-primary-text font-bold uppercase tracking-wider">Compete • Dominate • Win</p>
                 </div>
             </a>
             
-            <div class="hidden md:flex items-center space-x-2">
+            <div class="kbf-desktop-nav hidden lg:flex items-center space-x-2">
                 <a href="/" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Home</a>
                 <a href="/rankings" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Grading</a>
                 <a href="/tournaments" class="text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition">Tournaments</a>
@@ -245,10 +247,8 @@
                 
                 <!-- Dropdown More Menu -->
                 <div class="dropdown">
-                    <a href="#" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" onclick="event.preventDefault();">
-                        More
-                    </a>
-                    <div class="dropdown-menu">
+                    <button type="button" class="dropdown-toggle text-gray-400 hover:text-white font-bold px-5 py-2 uppercase text-sm tracking-wider transition" aria-expanded="false" aria-controls="more-menu">More</button>
+                    <div class="dropdown-menu" id="more-menu">
                         <a href="/news">News</a>
                         <a href="/register">Register</a>
                     </div>
@@ -263,16 +263,16 @@
                 </div>
                 
                 <div class="ml-4">
-                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all">
-                        Login
+                    <a href="/login" class="theme-primary-bg hover:opacity-90 text-slate-900 px-6 py-3 font-black uppercase text-sm tracking-wider brutal-shadow transition-all whitespace-nowrap">
+                        Staff<span class="sr-only"> sign in</span>
                     </a>
                 </div>
             </div>
-            
+
             <!-- Mobile menu button -->
-            <div class="md:hidden flex items-center">
-                <button id="mobile-menu-btn" class="theme-primary-text p-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+            <div class="lg:hidden flex items-center">
+                <button type="button" id="mobile-menu-btn" class="theme-primary-text p-2" aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
+                    <svg class="w-6 h-6" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
@@ -281,7 +281,7 @@
     </div>
     
     <!-- Mobile menu -->
-    <div id="mobile-menu" class="hidden md:hidden bg-slate-800 border-t-2 theme-primary-border">
+    <div id="mobile-menu" class="hidden lg:hidden bg-slate-800 border-t-2 theme-primary-border">
         <div class="px-2 pt-2 pb-3 space-y-1">
             <a href="/" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Home</a>
             <a href="/rankings" class="block text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm">Grading</a>
@@ -290,9 +290,9 @@
             
             <!-- Mobile Dropdown More -->
             <div>
-                <button onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center">
+                <button type="button" id="mobile-more-btn" onclick="toggleMobileDropdown()" class="w-full text-left text-gray-400 hover:bg-slate-700 px-3 py-2 font-bold uppercase text-sm flex justify-between items-center" aria-expanded="false" aria-controls="mobile-dropdown-content">
                     More
-                    <span id="mobile-dropdown-arrow" class="text-xs">▼</span>
+                    <span id="mobile-dropdown-arrow" class="kbf-chevron" aria-hidden="true"></span>
                 </button>
                 <div id="mobile-dropdown-content" class="mobile-dropdown-menu">
                     <a href="/news">News</a>
@@ -311,7 +311,7 @@
                 </div>
             </div>
             
-            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Login</a>
+            <a href="/login" class="block theme-primary-bg text-slate-900 px-3 py-2 font-black uppercase text-sm text-center">Staff sign in</a>
         </div>
     </div>
 </nav>
@@ -458,7 +458,7 @@
                 <nav aria-label="Organisers">
                     <h3 class="kf-heading">Organisers</h3>
                     <ul class="kf-links">
-                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Organiser login</a></li>
+                        <li><a href="/login" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Staff sign in</a></li>
                         <li><a href="mailto:admin@kbf-uk.org?subject=Sponsorship%20enquiry" class="kf-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Become a sponsor</a></li>
                     </ul>
                 </nav>
@@ -526,7 +526,7 @@
     // ============================================
     function changeTheme(theme) {
         document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('badminton-theme', theme);
+        KBF.storage.set('badminton-theme', theme);
         document.querySelectorAll('.theme-switcher-btn').forEach(btn => {
             btn.classList.remove('active');
             if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
@@ -539,9 +539,9 @@
 
     function toggleMobileDropdown() {
         const dropdown = document.getElementById('mobile-dropdown-content');
-        const arrow = document.getElementById('mobile-dropdown-arrow');
-        dropdown.classList.toggle('active');
-        arrow.textContent = dropdown.classList.contains('active') ? '▲' : '▼';
+        const open = dropdown.classList.toggle('active');
+        const btn = document.getElementById('mobile-more-btn');
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     // Every value from a post goes in with textContent (KBFNews.el) or as a
@@ -625,7 +625,7 @@
             const u = new URL(href);
             text = u.hostname.replace(/^www\./i, '') + (u.pathname && u.pathname !== '/' ? u.pathname.replace(/\/$/, '') : '');
         } catch (e) { /* keep the address as it is */ }
-        return text.length > 50 ? text.slice(0, 49) + '…' : text;
+        return text.length > 50 ? text.slice(0, 47) + '...' : text;
     }
 
     // Plain text, line breaks kept (white-space: pre-line); http and https
@@ -658,7 +658,7 @@
     // INITIALIZATION
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('badminton-theme') || 'emerald';
+        const savedTheme = KBF.storage.get('badminton-theme', 'emerald');
         changeTheme(savedTheme);
         loadPost();
     });
@@ -676,22 +676,31 @@
             return;
         }
 
+        const loading = document.getElementById('loading');
+        let response;
+        let data;
         try {
-            const response = await fetch('/api/announcements.php?id=' + encodeURIComponent(postId), {
+            response = await fetch('/api/announcements.php?id=' + encodeURIComponent(postId), {
                 credentials: 'include'
             });
-            const data = await response.json();
-
-            document.getElementById('loading').classList.add('hidden');
-
-            if (data.success && data.announcement) {
-                displayPost(data);
-            } else {
-                showError();
-            }
+            data = await response.json();
         } catch (error) {
             console.error('Error loading post:', error);
+            data = null;
+        }
+
+        if (data && data.success && data.announcement) {
+            loading.classList.add('hidden');
+            displayPost(data);
+        } else if (data && response && (response.status === 404 || response.status === 400)) {
             showError();
+        } else {
+            // Network or server trouble: offer to try again
+            loading.classList.remove('hidden');
+            KBF.showLoadError(loading, {
+                message: 'This post could not be loaded. Please check your connection and try again.',
+                retry: loadPost
+            });
         }
     }
 

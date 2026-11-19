@@ -180,11 +180,11 @@ function bReadTarget($pdo, array $data) {
     return ['type' => $type, 'grades' => $grades];
 }
 
-// Validate subject and message. Returns [subject (escaped as stored), bodyHtml (cleaned)]
+// Validate subject and message. Returns [subject (plain text, stored as typed), bodyHtml (cleaned)]
 function bReadMessage(array $data) {
     $rawSubject = is_string($data['subject'] ?? null) ? $data['subject'] : '';
-    $subject = sanitizeInput($rawSubject);
-    if ($subject === '' || strlen($subject) > 255) {
+    $subject = kbfCleanText($rawSubject);
+    if ($subject === '' || kbfTextLength($subject) > 255) {
         bFail('The subject is required and must be 1 to 255 characters.', 400, 'subject');
     }
     $rawBody = is_string($data['bodyHtml'] ?? null) ? $data['bodyHtml'] : '';
@@ -449,18 +449,25 @@ try {
                 }
             }
         }
-        // A newly chosen file is not stored for a test: it is attached as it is
+        // A newly chosen file to attach is stored in the attachments folder
+        // first (not attached from PHP's temporary upload, which is deleted
+        // when this request ends), so a test that has to wait still goes
+        // out later with its file
+        $testStored = null;
         $file = $_FILES['attachment'] ?? null;
         if ($isMultipart && $file && is_array($file) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
             && (int) $file['size'] > 0 && (int) $file['size'] <= kbfAttachmentMaxBytes()) {
-            $check = kbfCheckAttachmentFile($file['tmp_name'], $file['name']);
-            if (isset($check['error'])) {
-                bFail($check['error'], 400, 'attachment');
-            }
-            $name = kbfCleanFileName($file['name']);
             if (($data['attachmentMode'] ?? 'link') === 'attach') {
-                $attachments = [['path' => $file['tmp_name'], 'name' => $name]];
+                $testStored = bStoreAttachment($pdo, $isMultipart, $data);
+                if ($testStored !== null) {
+                    $attachments = [['file' => KBF_ATTACHMENT_DIR . '/' . $testStored['stored'], 'name' => $testStored['name']]];
+                }
             } else {
+                $check = kbfCheckAttachmentFile($file['tmp_name'], $file['name']);
+                if (isset($check['error'])) {
+                    bFail($check['error'], 400, 'attachment');
+                }
+                $name = kbfCleanFileName($file['name']);
                 $bodyHtml .= '<p><strong>Download:</strong> ' . htmlspecialchars($name, ENT_NOQUOTES, 'UTF-8')
                     . ' (the link is added when the broadcast is saved)</p>';
             }
@@ -485,6 +492,10 @@ try {
             'normal'
         );
         auditLog('broadcast_test_sent', 'broadcast', $id ?: null, 'Subject: ' . bPlain($subject) . '; to: ' . $me['Email'] . '; result: ' . $status);
+        // The stored copy is kept while the test is waiting to go out
+        if ($testStored !== null && $status !== 'waiting') {
+            bDropAttachment($testStored);
+        }
         if ($status === 'failed') {
             bFail('The test could not be sent: ' . kbfMailLastError(), 502);
         }

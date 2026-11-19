@@ -584,6 +584,14 @@ if ($method === 'POST') {
             if ($firstName === '' || $lastName === '' || $location === '') {
                 sendJSON(['success' => false, 'message' => 'First name, last name and location are required'], 400);
             }
+            // Stored as typed (escaped when shown); letters in any language,
+            // spaces, apostrophes and hyphens (O'Connor, Zoë, Jean-Luc)
+            $firstName = kbfCleanText($firstName);
+            $lastName = kbfCleanText($lastName);
+            $location = kbfCleanText($location);
+            if (!kbfIsValidName($firstName) || !kbfIsValidName($lastName)) {
+                sendJSON(['success' => false, 'message' => 'Names can only contain letters (accents are fine), spaces, hyphens and apostrophes'], 400);
+            }
             if (!$email) {
                 sendJSON(['success' => false, 'message' => 'A valid email is required'], 400);
             }
@@ -619,9 +627,9 @@ if ($method === 'POST') {
             ");
             $stmt->execute([
                 $email,
-                sanitizeInput($firstName),
-                sanitizeInput($lastName),
-                sanitizeInput($location),
+                $firstName,
+                $lastName,
+                $location,
                 legacyRoleForLabels($labels),
             ]);
             $userId = (int) $pdo->lastInsertId();

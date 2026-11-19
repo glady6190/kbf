@@ -450,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // SECURITY: Validate input lengths
-        if (strlen($title) < 3 || strlen($title) > 200) {
+        if (kbfTextLength($title) < 3 || kbfTextLength($title) > 200) {
             sendJSON(['success' => false, 'message' => 'Title must be between 3 and 200 characters'], 400);
         }
         
@@ -473,7 +473,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!hasPermission('content.all_news_gallery') && !canPostAboutOwnTournament($tournamentId)) {
             sendJSON(['success' => false, 'message' => 'Posts must be linked to one of your own approved tournaments'], 403);
         }
-                
+
+        // A repeat of the same one-time request id (double tap, retry) gets
+        // the first answer back; no second post is created
+        require_once __DIR__ . '/request-ids.php';
+        kbfRequestIdBegin($pdo, 'news_post');
+
         // SECURITY: Handle image upload with validation
         $imagePath = null;
         if (isset($_FILES['featuredImage']) && is_array($_FILES['featuredImage'])
@@ -555,7 +560,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         // Update title if provided (never < or >)
 if (isset($data['title'])) {
     $title = trim(str_replace(['<', '>'], '', $data['title']));
-    if (strlen($title) < 3 || strlen($title) > 200) {
+    if (kbfTextLength($title) < 3 || kbfTextLength($title) > 200) {
         sendJSON(['success' => false, 'message' => 'Title must be between 3 and 200 characters'], 400);
     }
     $updates[] = "Title = ?";

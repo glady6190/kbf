@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Announcements - Admin</title>
+    <title>News - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -15,6 +15,9 @@
         .theme-primary-border { border-color: var(--theme-primary); }
         .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
         .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
+        .theme-focus:focus { border-color: var(--theme-primary); }
+        .tap-target { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .tap-target:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
 </head>
@@ -23,47 +26,49 @@
 
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="mb-8">
-            <h1 class="text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Post</span> Announcement</h1>
+            <h1 class="text-3xl sm:text-4xl font-black uppercase mb-2"><span class="theme-primary-text">Post</span> news</h1>
             <div class="h-2 w-32 theme-primary-bg mb-4"></div>
-            <p class="text-gray-400 font-bold uppercase text-sm">Create news announcements for the homepage</p>
+            <p class="text-gray-400 font-bold uppercase text-sm">Write a news post for the public site</p>
         </div>
 
         <div class="bg-slate-900 border-4 border-gray-700 p-8 mb-8">
-            <form id="announcementForm" class="space-y-4">
+            <form id="announcementForm" class="space-y-4" novalidate>
                 <div>
-                    <label class="block text-xs font-black theme-primary-text uppercase mb-2">Title *</label>
-                    <input type="text" name="title" required 
-                           class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-sm focus:outline-none focus:border-emerald-500 transition"
+                    <label for="announcementTitle" class="block text-xs font-black theme-primary-text uppercase mb-2">Title *</label>
+                    <input type="text" id="announcementTitle" name="title" required minlength="3" maxlength="200"
+                           class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition"
                            placeholder="NEW TOURNAMENT SEASON STARTING SOON">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-black theme-primary-text uppercase mb-2">Content *</label>
-                    <textarea name="content" required rows="8"
-                              class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white placeholder-gray-500 font-semibold text-sm focus:outline-none focus:border-emerald-500 transition"
-                              placeholder="Write your announcement here..."></textarea>
+                    <label for="announcementContent" class="block text-xs font-black theme-primary-text uppercase mb-2">Content *</label>
+                    <textarea id="announcementContent" name="content" required rows="8" minlength="10" maxlength="10000"
+                              class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white placeholder-gray-500 font-semibold text-base sm:text-sm focus:outline-none theme-focus transition"
+                              placeholder="Write your news post here..."></textarea>
                 </div>
 
-                <div id="formMessage" class="hidden p-4 border-4 font-bold uppercase text-sm"></div>
+                <div id="formMessage" class="hidden p-4 border-4 font-bold text-sm" role="status" aria-live="polite"></div>
 
                 <div class="flex justify-end pt-4">
-                    <button type="submit" 
+                    <button type="submit" id="announcementSubmit"
                             class="px-6 py-3 theme-primary-bg text-slate-900 font-black uppercase text-sm brutal-shadow transition-all">
-                        Publish Announcement →
+                        Publish news post
                     </button>
                 </div>
             </form>
         </div>
 
         <div class="bg-slate-900 border-4 border-gray-700 p-8">
-            <h2 class="text-2xl font-black theme-primary-text uppercase mb-6">All Announcements</h2>
-            <div id="announcementsList" class="space-y-4">
-                <p class="text-gray-400 text-center py-8 font-bold uppercase">Loading...</p>
+            <h2 class="text-2xl font-black theme-primary-text uppercase mb-6">All news posts</h2>
+            <div id="announcementsList" class="space-y-4" aria-live="polite">
+                <p class="text-gray-400 text-center py-8 font-bold uppercase" role="status">Loading...</p>
             </div>
         </div>
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
   <script>
     // Page guard (shared shell): needs content.all_news_gallery
@@ -106,11 +111,27 @@
             const response = await authenticatedFetch('/api/announcements.php?limit=50');
             const data = await response.json();
 
-            loadedAnnouncements = (data.success && Array.isArray(data.announcements)) ? data.announcements : [];
+            if (!data.success || !Array.isArray(data.announcements)) {
+                KBF.showLoadError('announcementsList', {
+                    message: data.message || 'The news posts could not be loaded.',
+                    retry: loadAnnouncements
+                });
+                return;
+            }
+            loadedAnnouncements = data.announcements;
             renderAnnouncements(loadedAnnouncements);
         } catch (error) {
             console.error('Error loading announcements:', error);
+            KBF.showLoadError('announcementsList', {
+                message: 'The news posts could not be loaded. Please check your connection and try again.',
+                retry: loadAnnouncements
+            });
         }
+    }
+
+    // Short message for list actions (hide, show, remove)
+    function showListMessage(text, ok) {
+        if (window.KBFDialog) KBFDialog.toast(text, ok ? 'success' : 'error');
     }
 
     function renderAnnouncements(announcements) {
@@ -127,7 +148,7 @@
                                 <h3 class="font-black text-white uppercase text-lg mb-2">${escapeHtml(ann.Title)}</h3>
                                 ${ann.TournamentName ? `<span class="inline-block px-3 py-1 bg-indigo-500 text-slate-900 border-2 border-gray-700 text-xs font-black uppercase mb-2">${escapeHtml(ann.TournamentName)}</span>` : ''}
                             </div>
-                            <span class="px-3 py-1 border-2 text-xs font-black uppercase ${ann.IsVisible == 1 ? 'bg-green-500 text-slate-900 border-gray-700' : 'bg-red-500 text-white border-gray-700'}">
+                            <span class="px-3 py-1 border-2 text-xs font-black uppercase ${ann.IsVisible == 1 ? 'bg-green-500 text-slate-900 border-gray-700' : 'bg-red-500 text-slate-900 border-gray-700'}">
                                 ${ann.IsVisible == 1 ? 'Visible' : 'Hidden'}
                             </span>
                         </div>
@@ -137,24 +158,24 @@
                             <span class="text-gray-400 font-bold uppercase">Posted by ${escapeHtml(ann.AuthorName)}</span>
                             <span class="text-gray-400 font-bold uppercase">${new Date(ann.PublishedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1})"
-                                    class="flex-1 px-3 py-2 ${ann.IsVisible == 1 ? 'bg-yellow-500' : 'bg-green-500'} text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:opacity-90 transition">
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" data-ann-id="${Number(ann.AnnouncementId)}" data-ann-action="toggle" onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1}, this)"
+                                    class="tap-target flex-1 px-3 py-2 ${ann.IsVisible == 1 ? 'bg-yellow-500' : 'bg-green-500'} text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:opacity-90 transition">
                                 ${ann.IsVisible == 1 ? 'Hide' : 'Show'}
                             </button>
-                            <button onclick="deleteAnnouncement(${Number(ann.AnnouncementId)})"
-                                    class="px-3 py-2 bg-red-500 text-white border-4 border-gray-700 font-black uppercase text-xs hover:bg-red-600 transition">
-                                Delete
+                            <button type="button" onclick="deleteAnnouncement(${Number(ann.AnnouncementId)}, this)"
+                                    class="tap-target px-3 py-2 bg-red-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-red-400 transition">
+                                Remove
                             </button>
-                            <a href="/post?id=${encodeURIComponent(ann.AnnouncementId)}" target="_blank"
-                               class="px-3 py-2 bg-indigo-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-indigo-400 transition">
+                            <a href="/post?id=${encodeURIComponent(ann.AnnouncementId)}" target="_blank" rel="noopener"
+                               class="tap-target px-3 py-2 bg-indigo-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-indigo-400 transition">
                                 View
                             </a>
                         </div>
                     </div>
                 `).join('');
             } else {
-                container.innerHTML = '<p class="text-gray-400 text-center py-8 font-bold uppercase">No announcements yet</p>';
+                container.innerHTML = '<p class="text-gray-400 text-center py-8 font-bold uppercase">No news posts yet</p>';
             }
         } catch (error) {
             console.error('Error rendering announcements:', error);
@@ -165,9 +186,16 @@
     // CRUD OPERATIONS
     // ============================================
     // newVisibility: 1 = show, 0 = hide
-    async function toggleVisibility(announcementId, newVisibility) {
-        if (!confirm('Toggle visibility for this announcement?')) return;
+    async function toggleVisibility(announcementId, newVisibility, btn) {
+        if (KBF.isBusy(btn)) return;
+        const ok = await KBFDialog.confirm({
+            title: newVisibility ? 'Show this news post?' : 'Hide this news post?',
+            message: newVisibility ? 'It will appear on the public site again.' : 'It will no longer appear on the public site. You can show it again later.',
+            confirmText: newVisibility ? 'Show' : 'Hide'
+        });
+        if (!ok) return;
 
+        const restore = KBF.setBusy(btn, 'Saving...');
         try {
             const response = await authenticatedFetch('/api/announcements.php', {
                 method: 'PUT',
@@ -186,18 +214,32 @@
                     }
                 });
                 renderAnnouncements(loadedAnnouncements);
+                // The list was redrawn: put focus back on this post's button
+                const again = document.querySelector('[data-ann-action="toggle"][data-ann-id="' + Number(announcementId) + '"]');
+                if (again) again.focus();
+                showListMessage(newVisibility ? 'News post shown on the public site.' : 'News post hidden from the public site.', true);
             } else {
-                alert(result.message || 'Error toggling visibility');
+                showListMessage(result.message || 'The news post could not be changed.', false);
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error toggling visibility');
+            showListMessage('The news post could not be changed. Please check your connection and try again.', false);
+        } finally {
+            restore();
         }
     }
 
-    async function deleteAnnouncement(announcementId) {
-        if (!confirm('Are you sure you want to delete this announcement? This will hide it from public view.')) return;
+    async function deleteAnnouncement(announcementId, btn) {
+        if (KBF.isBusy(btn)) return;
+        const ok = await KBFDialog.confirm({
+            title: 'Remove this news post?',
+            message: 'Remove this news post from the public site? It will no longer appear in the news list.',
+            confirmText: 'Remove',
+            danger: true
+        });
+        if (!ok) return;
 
+        const restore = KBF.setBusy(btn, 'Removing...');
         try {
             const response = await authenticatedFetch(`/api/announcements.php?id=${announcementId}`, {
                 method: 'DELETE'
@@ -206,55 +248,83 @@
             const result = await response.json();
 
             if (result.success) {
-                alert('Announcement deleted successfully');
+                showListMessage('News post removed from the public site.', true);
                 loadAnnouncements();
             } else {
-                alert(result.message || 'Error deleting announcement');
+                showListMessage(result.message || 'The news post could not be removed.', false);
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error deleting announcement');
+            showListMessage('The news post could not be removed. Please check your connection and try again.', false);
+        } finally {
+            restore();
         }
     }
 
     document.getElementById('announcementForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const formData = new FormData(e.target);
-        const data = {
-            title: formData.get('title'),
-            content: formData.get('content')
-        };
+        const form = e.target;
+        const submit = document.getElementById('announcementSubmit');
+        const messageDiv = document.getElementById('formMessage');
+        const titleField = document.getElementById('announcementTitle');
+        const contentField = document.getElementById('announcementContent');
 
-        try {
-            const response = await authenticatedFetch('/api/announcements.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-            const messageDiv = document.getElementById('formMessage');
-
-            if (result.success) {
-                messageDiv.className = 'p-4 border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-sm';
-                messageDiv.textContent = 'Announcement Published Successfully!';
-                messageDiv.classList.remove('hidden');
-
-                e.target.reset();
-                loadAnnouncements();
-
-                setTimeout(() => {
-                    messageDiv.classList.add('hidden');
-                }, 3000);
-            } else {
-                messageDiv.className = 'p-4 border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-sm';
-                messageDiv.textContent = result.message || 'Error publishing announcement';
-                messageDiv.classList.remove('hidden');
-            }
-        } catch (error) {
-            console.error('Error:', error);
+        function showFormMessage(text, ok) {
+            messageDiv.className = ok
+                ? 'p-4 border-4 border-green-500 bg-green-500/20 text-green-400 font-bold text-sm'
+                : 'p-4 border-4 border-red-500 bg-red-500/20 text-red-400 font-bold text-sm';
+            messageDiv.textContent = text;
+            messageDiv.classList.remove('hidden');
         }
+
+        // Same limits as the server, shown next to the field
+        KBF.clearFormErrors(form);
+        messageDiv.classList.add('hidden');
+        const title = titleField.value.trim();
+        const content = contentField.value.trim();
+        if (title.length < 3 || title.length > 200) {
+            KBF.showFieldError(titleField, 'The title must be 3 to 200 characters.');
+            titleField.focus();
+            return;
+        }
+        if (content.length < 10 || content.length > 10000) {
+            KBF.showFieldError(contentField, 'The content must be 10 to 10,000 characters.');
+            contentField.focus();
+            return;
+        }
+
+        await KBF.withBusy(submit, 'Publishing...', async function () {
+            // The server reads form fields (not JSON). The one-time request id
+            // means a repeat of this request never publishes a second post.
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('content', content);
+            try {
+                const response = await authenticatedFetch('/api/announcements.php', {
+                    method: 'POST',
+                    headers: { [KBF.REQUEST_ID_HEADER]: KBF.requestId(form) },
+                    body: formData
+                });
+
+                const result = await response.json().catch(() => ({ success: false }));
+
+                if (result.success) {
+                    KBF.clearRequestId(form);
+                    showFormMessage('News post published.', true);
+                    form.reset();
+                    loadAnnouncements();
+                    setTimeout(() => {
+                        messageDiv.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    showFormMessage(result.message || 'The news post could not be published.', false);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showFormMessage('The news post could not be published. Please check your connection and try again.', false);
+            }
+        });
     });
 </script>
 <script src="/js/session-manager.js"></script>

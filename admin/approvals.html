@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Approvals - Admin</title>
+    <title>Approvals - KBF-UK Admin</title>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -25,10 +25,12 @@
         .btn-ghost:hover:not(:disabled) { color: #fff; border-color: #9ca3af; }
         .btn-reject { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: #f87171; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
         .btn-reject:hover:not(:disabled) { background: rgba(239, 68, 68, .15); }
-        .btn-reject-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #ef4444; color: #fff; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-reject-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #ef4444; color: #0F172A; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
         .btn-reject-solid:disabled, .btn-reject:disabled, .btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
         .btn-solid:focus-visible, .btn-plain:focus-visible, .btn-ghost:focus-visible, .btn-reject:focus-visible, .btn-reject-solid:focus-visible,
         .ap-tab:focus-visible, .ap-open:focus-visible, .ap-check:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        /* Touch targets at least 44px */
+        .btn-solid, .btn-plain, .btn-ghost, .btn-reject, .btn-reject-solid, .ap-tab { min-height: 44px; }
 
         /* Tabs */
         .ap-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
@@ -39,6 +41,7 @@
 
         /* Fields */
         .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .55rem .7rem; font-weight: 700; font-size: .8125rem; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
         .field:focus { outline: none; border-color: var(--theme-primary); }
         .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
         .choice { accent-color: var(--theme-primary); width: 18px; height: 18px; flex-shrink: 0; }
@@ -69,7 +72,7 @@
         .ap-tag.is-amber { border-color: #f59e0b; color: #fbbf24; background: rgba(245, 158, 11, .1); }
         .ap-tag.is-red { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .ap-tag.is-approved { border-color: var(--theme-primary); background: var(--theme-primary); color: #0F172A; }
-        .ap-tag.is-rejected { border-color: #ef4444; background: #ef4444; color: #fff; }
+        .ap-tag.is-rejected { border-color: #ef4444; background: #ef4444; color: #0F172A; }
         .ap-tag.is-grey { border-color: #4b5563; color: #d1d5db; background: #1e293b; }
         .ap-grade { width: 2.1rem; height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; font-size: .78rem; flex-shrink: 0; }
 
@@ -121,7 +124,7 @@
         <div id="queueView" class="ap-split hidden">
             <section class="bg-slate-900 border-2 sm:border-4 border-gray-700 min-w-0" aria-label="Queue">
                 <div class="p-3 space-y-2 border-b-2 border-gray-700">
-                    <div class="relative">
+                    <div class="relative min-w-0">
                         <label for="searchInput" class="sr-only">Search</label>
                         <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         <input type="search" id="searchInput" class="field pl-9" autocomplete="off" maxlength="100">
@@ -149,7 +152,7 @@
                 </div>
                 <ul id="queueList" aria-label="Waiting for review"></ul>
                 <p id="queueEmpty" class="hidden px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm"></p>
-                <div id="selectionBar" class="hidden p-3 border-t-2 border-gray-700 flex items-center justify-between gap-2 bg-slate-800">
+                <div id="selectionBar" class="hidden p-3 border-t-2 border-gray-700 flex flex-wrap items-center justify-between gap-2 bg-slate-800">
                     <span id="selectionCount" class="text-xs font-black uppercase text-white"></span>
                     <div class="flex gap-2">
                         <button type="button" id="selectionClear" class="btn-plain">Clear</button>
@@ -277,6 +280,8 @@
     </div>
 
     <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
     <script>
     // ============================================
@@ -319,8 +324,22 @@
     }
 
     async function getJson(url) {
-        const res = await authenticatedFetch(url);
+        let res;
+        try {
+            res = await authenticatedFetch(url);
+        } catch (e) {
+            // Offline or the server did not answer
+            return { success: false, message: 'This could not be loaded. Please check your connection and try again.' };
+        }
         return res.json().catch(() => ({ success: false, message: 'Unexpected response from the server.' }));
+    }
+
+    // "Could not be loaded" with a Try again button (KBF.showLoadError)
+    function showLoadFailure(target, text, retry, tag) {
+        const box = typeof target === 'string' ? document.getElementById(target) : target;
+        if (!box) return;
+        box.classList.remove('hidden');
+        KBF.showLoadError(box, { message: text, retry: retry, tag: tag });
     }
 
     async function postJson(payload) {
@@ -464,60 +483,33 @@
     }
 
     // ============================================
-    // DIALOGS: focus, Escape and the Tab key
+    // DIALOGS: focus, Escape, the Tab key and returning focus come from
+    // js/kbf-dialog.js. layers lists what is open, for the page scroll lock.
     // ============================================
-    function focusables(root) {
-        return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'))
-            .filter(n => n.offsetParent !== null);
-    }
-
-    function pushLayer(node, close) {
-        layers.push({ node: node, close: close, returnFocus: document.activeElement });
+    function pushLayer(node, close, initialFocus) {
+        layers.push({ node: node });
+        KBFDialog.open(node, { onClose: close, initialFocus: initialFocus || null });
     }
 
     function popLayer(node) {
         const i = layers.findIndex(l => l.node === node);
         if (i === -1) return null;
+        KBFDialog.close(node);
         return layers.splice(i, 1)[0];
     }
-
-    document.addEventListener('keydown', function (e) {
-        const top = layers[layers.length - 1];
-        if (!top) return;
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            top.close();
-            return;
-        }
-        if (e.key === 'Tab' && top.node.classList.contains('ap-dialog-wrap')) {
-            const items = focusables(top.node);
-            if (!items.length) return;
-            const first = items[0];
-            const last = items[items.length - 1];
-            if (e.shiftKey && (document.activeElement === first || !top.node.contains(document.activeElement))) {
-                e.preventDefault();
-                last.focus();
-            } else if (!e.shiftKey && (document.activeElement === last || !top.node.contains(document.activeElement))) {
-                e.preventDefault();
-                first.focus();
-            }
-        }
-    });
 
     function openDialog(id, focusEl) {
         const wrap = document.getElementById(id);
         wrap.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        pushLayer(wrap, () => closeDialog(id));
-        (focusEl || focusables(wrap)[0] || wrap).focus();
+        pushLayer(wrap, () => closeDialog(id), focusEl);
     }
 
     function closeDialog(id) {
         const wrap = document.getElementById(id);
         wrap.classList.add('hidden');
-        const layer = popLayer(wrap);
+        popLayer(wrap);
         if (!layers.length) document.body.style.overflow = '';
-        if (layer && layer.returnFocus && document.contains(layer.returnFocus)) layer.returnFocus.focus();
     }
 
     function askConfirm(title, text, yesText) {
@@ -541,8 +533,7 @@
             const wrap = document.getElementById('confirmDialog');
             wrap.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            pushLayer(wrap, () => finish(false));
-            no.focus();
+            pushLayer(wrap, () => finish(false), no);
         });
     }
 
@@ -608,9 +599,12 @@
     async function initPage() {
         const data = await getJson(API + '?action=meta');
         if (!data.success) {
-            showMsg(data.message || 'The approvals could not be loaded.', 'error');
+            const box = document.getElementById('pageMessage');
+            box.className = 'msg msg-error mb-5';
+            showLoadFailure(box, data.message || 'The approvals could not be loaded.', initPage);
             return;
         }
+        document.getElementById('pageMessage').classList.add('hidden');
         meta = data;
         document.querySelectorAll('#tabs .ap-tab').forEach(btn => {
             const tab = btn.dataset.tab;
@@ -707,7 +701,13 @@
         const data = await getJson(API + '?' + p.toString());
         if (seq !== queue.seq || tab !== state.tab) return queue.items;
         if (!data.success) {
-            showMsg(data.message || 'The list could not be loaded.', 'error');
+            if (reset) {
+                document.getElementById('queueEmpty').classList.add('hidden');
+                document.getElementById('queueCount').textContent = '';
+                showLoadFailure('queueList', data.message || 'The list could not be loaded.', () => loadQueue(true), 'li');
+            } else {
+                showMsg(data.message || 'The list could not be loaded.', 'error');
+            }
             return queue.items;
         }
         setCounts(data.counts);
@@ -780,7 +780,7 @@
             open.appendChild(avatar(item.photo, item.name, 'w-10 h-10 text-xs'));
             const text = el('div', 'min-w-0 flex-1');
             text.appendChild(el('p', 'text-sm font-black text-white break-words', item.name));
-            text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [item.city, item.grade ? 'Chose ' + item.grade : ''].filter(Boolean).join(' • ')));
+            text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', [item.city, item.grade ? 'Chose grade ' + item.grade : ''].filter(Boolean).join(', ')));
             if (item.possibleMember) {
                 const tagLine = el('div', 'mt-1');
                 tagLine.appendChild(el('span', 'ap-tag is-amber', 'Possible existing member'));
@@ -877,7 +877,12 @@
 
     function closeReviewMobile() {
         reviewEl.classList.remove('is-open');
-        if (popLayer(reviewEl)) document.body.style.overflow = '';
+        if (popLayer(reviewEl)) {
+            document.body.style.overflow = '';
+            // Beside the list (wider screens) the review is not a dialog
+            reviewEl.removeAttribute('role');
+            reviewEl.removeAttribute('aria-modal');
+        }
     }
 
     function backToList() {
@@ -908,8 +913,7 @@
         const data = await getJson(API + '?action=' + DETAIL_ACTION[tab] + '&id=' + encodeURIComponent(String(state.openId)));
         if (state.openId !== Number(id) || tab !== state.tab) return;
         if (!data.success) {
-            body.textContent = '';
-            body.appendChild(el('p', 'p-8 text-center text-gray-400 font-bold text-sm', data.message || 'This item could not be loaded.'));
+            showLoadFailure(body, data.message || 'This item could not be loaded.', () => openItem(id, opts));
             return;
         }
         detail = data;
@@ -1131,7 +1135,41 @@
         if (byName.length) byName.forEach(m => warning(m, 'this name and city')); else tick('No existing member with this name and city');
         checks.appendChild(ul);
         main.appendChild(checks);
+
+        // The email belongs to a deactivated member: approving can never
+        // succeed, so the page offers to reactivate them instead
+        const dm = data.deactivatedMember || null;
+        if (dm) {
+            const note = el('div', 'msg msg-warn');
+            note.setAttribute('role', 'status');
+            note.appendChild(el('p', 'font-bold', 'This email belongs to a deactivated member: ' + dm.name +
+                (dm.kbfId ? ' (' + dm.kbfId + ')' : '') + '.'));
+            note.appendChild(el('p', 'text-xs font-semibold mt-1',
+                'A new player cannot be created with the same email. Reactivate this member instead: their grade, points and history are kept, and this application is closed.' +
+                (dm.staff ? ' They have staff access, so only a Super Admin can reactivate them.' : '')));
+            main.appendChild(note);
+        }
         body.appendChild(main);
+
+        if (dm) {
+            footer(body, 'Reactivate this member', async btn => {
+                btn.disabled = true;
+                try {
+                    const result = await postJson({ type: 'registration', id: r.id, action: 'reactivate' });
+                    if (!result.success) {
+                        showMsg(result.message || 'The member could not be reactivated.', 'error');
+                        return;
+                    }
+                    await afterDecision(result.message || (dm.name + ' reactivated.'), r.id);
+                } catch (e) {
+                    console.error('Reactivate error:', e);
+                    showMsg('The member could not be reactivated.', 'error');
+                } finally {
+                    if (document.contains(btn)) btn.disabled = false;
+                }
+            }, btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
+            return;
+        }
 
         const f = footer(body, 'Approve as ' + (r.grade || 'chosen grade'), btn => {
             const extra = {};
@@ -1265,7 +1303,7 @@
             cat.teams.forEach(team => {
                 const box = el('div', 'border-2 border-gray-700 bg-slate-900 p-3');
                 const top = el('div', 'flex items-center justify-between gap-2 mb-1');
-                top.appendChild(el('span', 'text-xs font-black uppercase text-gray-300', team.label + (team.placing ? ' • ' + team.placing : '')));
+                top.appendChild(el('span', 'text-xs font-black uppercase text-gray-300', team.label + (team.placing ? ', ' + team.placing : '')));
                 top.appendChild(el('span', 'text-xs font-black theme-primary-text whitespace-nowrap', team.points + ' pts each'));
                 box.appendChild(top);
                 const ul = el('ul');
@@ -1273,7 +1311,7 @@
                     const li = el('li', 'flex items-center justify-between gap-3 py-0.5');
                     li.appendChild(el('span', 'text-sm font-bold text-white break-words', p.name + (p.kbfId ? ' (' + p.kbfId + ')' : '')));
                     li.appendChild(el('span', 'text-xs font-black whitespace-nowrap ' + (p.guest || p.careerOnly ? 'text-gray-400' : 'theme-primary-text'),
-                        p.guest ? 'Guest • no points' : (p.careerOnly ? team.points + ' pts • career only' : team.points + ' pts')));
+                        p.guest ? 'Guest, no points' : (p.careerOnly ? team.points + ' pts, career only' : team.points + ' pts')));
                     ul.appendChild(li);
                     // Career points only: tournament before their latest grade change or this season
                     if (p.note) ul.appendChild(el('li', 'text-xs font-semibold text-gray-400 pb-1', p.note));
@@ -1408,7 +1446,14 @@
         const data = await getJson(API + '?' + p.toString());
         if (seq !== hist.seq) return;
         if (!data.success) {
-            showMsg(data.message || 'The history could not be loaded.', 'error');
+            if (reset) {
+                const body = document.getElementById('hBody');
+                body.innerHTML = '<tr><td colspan="7"></td></tr>';
+                document.getElementById('hEmpty').classList.add('hidden');
+                showLoadFailure(body.querySelector('td'), data.message || 'The history could not be loaded.', () => loadHistory(true));
+            } else {
+                showMsg(data.message || 'The history could not be loaded.', 'error');
+            }
             return;
         }
         fillSelect('hType', data.types || [], t => [t.key, t.label]);

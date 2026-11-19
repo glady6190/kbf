@@ -47,7 +47,7 @@ $categoriesOffered = trim($data['categoriesOffered']);
 $tournamentDate = $data['tournamentDate'];
 
 // Validate tournament name length
-if (strlen($tournamentName) < 3 || strlen($tournamentName) > 200) {
+if (kbfTextLength($tournamentName) < 3 || kbfTextLength($tournamentName) > 200) {
     sendJSON(['success' => false, 'message' => 'Tournament name must be between 3 and 200 characters'], 400);
 }
 
@@ -84,9 +84,14 @@ if (($data['createAnyway'] ?? false) !== true) {
     }
 }
 
+// A repeat of the same one-time request id (double tap, retry) gets the
+// first answer back; no second tournament is created
+require_once __DIR__ . '/request-ids.php';
+kbfRequestIdBegin($pdo, 'quick_tournament', is_string($data['requestId'] ?? null) ? $data['requestId'] : null);
+
 try {
     $pdo->beginTransaction();
-    
+
     // The organiser is free text (OrganiserName); no club is created or linked.
     // Created as Approved: this endpoint is for tournaments.manage_all only.
     $stmt = $pdo->prepare("

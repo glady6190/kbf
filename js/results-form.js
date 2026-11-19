@@ -64,6 +64,8 @@
             '.rf-btn-outline{background:transparent;border-color:var(--theme-primary);color:var(--theme-primary);}' +
             '.rf-btn-outline:hover:not(:disabled){background:var(--theme-primary);color:#0F172A;border-color:var(--theme-primary);}' +
             '.rf-btn-sm{padding:.35rem .6rem;font-size:.65rem;}' +
+            // Touch targets at least 44px
+            '.rf-btn,.rf-chip-btn{min-height:44px;}' +
             '.rf-btn:focus-visible,.rf-chip-btn:focus-visible,.rf-x:focus-visible{outline:2px solid #fff;outline-offset:2px;}' +
             '.rf-date{width:4rem;flex-shrink:0;border:2px solid #374151;background:#0f172a;text-align:center;padding:.25rem 0 .3rem;line-height:1.05;}' +
             '.rf-date-month{display:block;color:var(--theme-primary);font-size:.7rem;font-weight:900;text-transform:uppercase;}' +
@@ -76,6 +78,7 @@
             '.rf-chip-btn.is-active{background:var(--theme-primary);border-color:var(--theme-primary);color:#0F172A;box-shadow:4px 4px 0 #020617;transform:translate(-2px,-2px);}' +
             '.rf-chip-btn.is-active .rf-chip-state{color:#0F172A;}' +
             '.rf-field{width:100%;background:#1e293b;border:2px solid #374151;color:#fff;padding:.55rem .7rem;font-weight:700;font-size:.8125rem;}' +
+            '@media (max-width:639.98px){.rf-field{font-size:16px;}}' +
             '.rf-field:focus{outline:none;border-color:var(--theme-primary);}' +
             '.rf-round{background:#0f172a;border:2px solid #374151;padding:1rem;}' +
             '.rf-team{background:#111827;border:2px solid #374151;padding:.75rem;}' +
@@ -84,7 +87,7 @@
             '.rf-tag.is-winner{background:var(--theme-primary);border-color:var(--theme-primary);color:#0F172A;}' +
             '.rf-win-btn{width:100%;margin-top:.6rem;}' +
             '.rf-win-btn[aria-pressed="true"]{background:var(--theme-primary);border-color:var(--theme-primary);color:#0F172A;}' +
-            '.rf-guest-btn{font-size:.62rem;font-weight:900;text-transform:uppercase;color:#9ca3af;border:2px solid #374151;padding:.1rem .4rem;}' +
+            '.rf-guest-btn{display:inline-flex;align-items:center;min-height:44px;font-size:.62rem;font-weight:900;text-transform:uppercase;color:#9ca3af;border:2px solid #374151;padding:.1rem .6rem;}' +
             '.rf-guest-btn:hover:not(:disabled){color:#fff;border-color:#6b7280;}' +
             '.rf-guest-btn:disabled{opacity:.35;cursor:not-allowed;}' +
             '.rf-guest-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}' +
@@ -100,7 +103,7 @@
             '.rf-grade{width:1.9rem;height:1.9rem;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--theme-primary);color:var(--theme-primary);font-weight:900;font-size:.72rem;flex-shrink:0;}' +
             '.rf-grade.is-none{border-color:#374151;color:#6b7280;}' +
             '.rf-picked{display:flex;align-items:center;gap:.6rem;background:#1e293b;border:2px solid #374151;padding:.4rem .5rem;}' +
-            '.rf-x{padding:.2rem;color:#9ca3af;flex-shrink:0;}' +
+            '.rf-x{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:.2rem;color:#9ca3af;flex-shrink:0;}' +
             '.rf-x:hover{color:#fff;}' +
             '.rf-msg{padding:.75rem;border:2px solid;font-weight:700;font-size:.78rem;}' +
             '.rf-msg-ok{border-color:var(--theme-primary);color:#e5e7eb;background:#1e293b;}' +
@@ -324,6 +327,10 @@
         var loading = el('p', 'py-12 text-center text-gray-400 font-bold uppercase text-sm', 'Loading...');
         root.appendChild(loading);
 
+        // "Could not be loaded" with Try again (KBF.showLoadError)
+        var loadError = el('div', 'hidden');
+        root.appendChild(loadError);
+
         var body = el('div', 'hidden space-y-6');
         root.appendChild(body);
 
@@ -416,54 +423,30 @@
 
         // ============================================
         // MODALS (confirm and summary)
+        // Focus, Tab trap, Escape, inert background and return focus come
+        // from the shared helper (js/kbf-dialog.js).
         // ============================================
-        var modalStack = [];
+        var openModals = [];
 
-        function modalFocusables(node) {
-            return Array.prototype.slice.call(node.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'))
-                .filter(function (n) { return n.offsetParent !== null; });
-        }
-
-        function openModal(wrap, onClose) {
+        function openModal(wrap, onClose, initialFocus) {
             document.body.appendChild(wrap);
-            modalStack.push({ wrap: wrap, onClose: onClose, returnFocus: document.activeElement });
+            openModals.push(wrap);
             document.body.style.overflow = 'hidden';
-            var items = modalFocusables(wrap);
-            if (items.length) items[0].focus();
+            if (window.KBFDialog) {
+                window.KBFDialog.open(wrap, { onClose: onClose, initialFocus: initialFocus || null });
+            } else if (initialFocus) {
+                initialFocus.focus();
+            }
         }
 
         function closeModal(wrap) {
-            var i = -1;
-            modalStack.forEach(function (m, idx) { if (m.wrap === wrap) i = idx; });
+            var i = openModals.indexOf(wrap);
             if (i === -1) return;
-            var m = modalStack.splice(i, 1)[0];
+            openModals.splice(i, 1);
+            if (window.KBFDialog) window.KBFDialog.close(wrap);
             if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
-            if (!modalStack.length) document.body.style.overflow = '';
-            if (m.returnFocus && document.contains(m.returnFocus)) m.returnFocus.focus();
+            if (!openModals.length) document.body.style.overflow = '';
         }
-
-        document.addEventListener('keydown', function (e) {
-            var top = modalStack[modalStack.length - 1];
-            if (!top) return;
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                top.onClose();
-                return;
-            }
-            if (e.key === 'Tab') {
-                var items = modalFocusables(top.wrap);
-                if (!items.length) return;
-                var first = items[0];
-                var last = items[items.length - 1];
-                if (e.shiftKey && (document.activeElement === first || !top.wrap.contains(document.activeElement))) {
-                    e.preventDefault();
-                    last.focus();
-                } else if (!e.shiftKey && (document.activeElement === last || !top.wrap.contains(document.activeElement))) {
-                    e.preventDefault();
-                    first.focus();
-                }
-            }
-        });
 
         function modalShell(titleText) {
             var wrap = el('div', 'rf-modal-wrap');
@@ -501,22 +484,39 @@
                 }
                 no.addEventListener('click', function () { finish(false); });
                 yes.addEventListener('click', function () { finish(true); });
-                openModal(m.wrap, function () { finish(false); });
-                no.focus();
+                openModal(m.wrap, function () { finish(false); }, no);
             });
         }
 
         // ============================================
         // LOAD
         // ============================================
+        function loadFailed(text, retry) {
+            loading.classList.add('hidden');
+            body.classList.add('hidden');
+            loadError.classList.remove('hidden');
+            if (window.KBF && typeof window.KBF.showLoadError === 'function') {
+                window.KBF.showLoadError(loadError, { message: text, retry: retry || null });
+            } else {
+                loadError.textContent = text;
+            }
+        }
+
         function load(selectKey, opening) {
+            function retry() {
+                loadError.classList.add('hidden');
+                loading.classList.remove('hidden');
+                load(selectKey, opening);
+            }
             return request(API + '?action=form&tournamentId=' + encodeURIComponent(String(tid))).then(function (res) {
                 if (!res.success) {
-                    loading.textContent = res.message || 'This tournament could not be loaded.';
-                    loading.classList.remove('hidden');
-                    body.classList.add('hidden');
+                    // Server or connection trouble can be retried; "not
+                    // found" or "not allowed" cannot
+                    var canRetry = !res._status || res._status >= 500;
+                    loadFailed(res.message || 'This tournament could not be loaded.', canRetry ? retry : null);
                     return false;
                 }
+                loadError.classList.add('hidden');
                 data = res;
                 // Players already in the results; others are searched on
                 // the server as the organiser types (formPlayers)
@@ -543,7 +543,7 @@
                 selectCategory(selectKey, true);
                 return true;
             }).catch(function () {
-                loading.textContent = 'This tournament could not be loaded.';
+                loadFailed('This tournament could not be loaded. Please check your connection and try again.', retry);
             });
         }
 
@@ -887,7 +887,7 @@
                 section.setAttribute('aria-labelledby', h.id);
                 section.appendChild(h);
                 var caption = r === 'final'
-                    ? 'Winners ' + p.winners + ' pts • Runners-up ' + p.runnersUp + ' pts'
+                    ? 'Winners ' + p.winners + ' pts, runners-up ' + p.runnersUp + ' pts'
                     : (r === 'semi' ? p.semi : p.quarter) + ' pts each player';
                 section.appendChild(el('p', 'text-xs font-bold theme-primary-text mb-3', caption));
                 var list = el('div', 'space-y-3');
@@ -998,9 +998,9 @@
             var text = el('div', 'min-w-0 flex-1');
             text.appendChild(el('p', 'text-sm font-black text-white break-words', fullName(value)));
             if (value.kind === 'guest') {
-                text.appendChild(el('p', 'text-xs font-bold text-gray-400', 'Guest • no points'));
+                text.appendChild(el('p', 'text-xs font-bold text-gray-400', 'Guest, no points'));
             } else {
-                var sub = [value.kbfId, value.city].filter(Boolean).join(' • ');
+                var sub = [value.kbfId, value.city].filter(Boolean).join(', ');
                 if (sub) text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', sub));
             }
             row.appendChild(text);
@@ -1216,7 +1216,7 @@
                     li.appendChild(avatar(p));
                     var text = el('div', 'min-w-0 flex-1');
                     text.appendChild(el('p', 'text-sm font-black text-white break-words', fullName(p)));
-                    var sub = [p.kbfId, p.city].filter(Boolean).join(' • ');
+                    var sub = [p.kbfId, p.city].filter(Boolean).join(', ');
                     if (sub) text.appendChild(el('p', 'text-xs font-bold text-gray-400 break-words', sub));
                     li.appendChild(text);
                     li.appendChild(gradeBox(p.grade));
@@ -1426,8 +1426,8 @@
         function refresh() {
             var st = stats();
             checkHeading.textContent = mode === 'edit' ? 'Before you save' : (data.autoApprove ? 'Before you publish' : 'Before you submit');
-            checkStats.textContent = st.chosen + ' of 16 players chosen • points go to ' + plural(st.registered, 'player') +
-                ' • ' + st.total.toLocaleString('en-GB') + ' points in total';
+            checkStats.textContent = st.chosen + ' of 16 players chosen. Points go to ' + plural(st.registered, 'player') +
+                ', ' + st.total.toLocaleString('en-GB') + ' points in total';
             checkProblems.textContent = '';
             if (mode !== 'readonly') {
                 var pr = problems();
@@ -1505,7 +1505,7 @@
             }
             row.appendChild(el('span', 'text-sm font-black text-white break-words', fullName(v) + (v.kind === 'player' && v.kbfId ? ' (' + v.kbfId + ')' : '')));
             row.appendChild(el('span', 'text-xs font-black whitespace-nowrap ' + (v.kind === 'guest' ? 'text-gray-400' : 'theme-primary-text'),
-                v.kind === 'guest' ? 'Guest • no points' : (pts === null ? 'Winners not marked' : pts + ' pts')));
+                v.kind === 'guest' ? 'Guest, no points' : (pts === null ? 'Winners not marked' : pts + ' pts')));
             return row;
         }
 
@@ -1533,7 +1533,7 @@
             });
             m.box.appendChild(content);
             var st = stats();
-            m.box.appendChild(el('p', 'text-sm font-bold text-gray-200 mt-4', st.chosen + ' of 16 players chosen • points go to ' + plural(st.registered, 'player') + ' • ' + st.total.toLocaleString('en-GB') + ' points in total'));
+            m.box.appendChild(el('p', 'text-sm font-bold text-gray-200 mt-4', st.chosen + ' of 16 players chosen. Points go to ' + plural(st.registered, 'player') + ', ' + st.total.toLocaleString('en-GB') + ' points in total'));
             var row = el('div', 'flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5');
             var close = btn('rf-btn', 'Close');
             row.appendChild(close);
@@ -1630,16 +1630,27 @@
         function send() {
             busy = true;
             mainBtn.disabled = true;
+            mainBtn.setAttribute('aria-busy', 'true');
+            mainBtn.lastChild.textContent = mode === 'edit' ? 'Saving...' : (data.autoApprove ? 'Publishing...' : 'Submitting...');
             showMsg('');
             var savedCategory = current;
             var isEdit = mode === 'edit';
             var payload = { tournamentId: tid, categoryName: current.name, matches: buildMatches() };
+            var headers = { 'Content-Type': 'application/json' };
+            // New results: a one-time id, so a repeat of this request (double
+            // tap, retry after a lost connection) never saves them twice
+            var requestKey = 'results:' + tid + ':' + savedCategory.key;
+            var forms = window.KBF && window.KBF.requestId ? window.KBF : null;
+            if (!isEdit && forms) headers[forms.REQUEST_ID_HEADER] = forms.requestId(requestKey);
             request(API, {
                 method: isEdit ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify(payload)
             }).then(function (res) {
                 busy = false;
+                mainBtn.removeAttribute('aria-busy');
+                renderActions();
+                if (res.success && !isEdit && forms) forms.clearRequestId(requestKey);
                 if (!res.success) {
                     if (res._status === 401) {
                         showMsg('Your session has expired. Log in again in a new tab, then press the button again. Your results are still here.', 'error');
@@ -1666,6 +1677,8 @@
                 });
             }).catch(function () {
                 busy = false;
+                mainBtn.removeAttribute('aria-busy');
+                renderActions();
                 showMsg('The results could not be saved. Please check your connection and try again.', 'error');
                 refresh();
             });
