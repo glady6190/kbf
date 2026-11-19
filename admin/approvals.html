@@ -52,7 +52,17 @@
         .ap-review { display: none; background: #0f172a; border: 4px solid #374151; }
         @media (min-width: 1024px) { .ap-review { display: block; position: sticky; top: 1rem; } }
         @media (max-width: 1023px) {
-            .ap-review.is-open { display: block; position: fixed; inset: 0; z-index: 40; overflow-y: auto; border: 0; background: #020617; }
+            /* Phones: the review is full screen; a top bar (Back to list, "3 of 47")
+               and the action bar stay in place while the content scrolls */
+            .ap-review.is-open { display: block; position: fixed; inset: 0; z-index: 40; overflow-y: auto; overscroll-behavior: contain; border: 0; background: #020617; }
+            .ap-review.is-open #reviewBody { min-height: 100%; display: flex; flex-direction: column; }
+            .ap-review.is-open #reviewBody.hidden { display: none; }
+            .ap-review.is-open .ap-topbar { position: sticky; top: 0; z-index: 2; background: #020617; padding-top: calc(.75rem + env(safe-area-inset-top, 0px)); padding-bottom: .75rem; border-bottom: 2px solid #1e293b; }
+            .ap-review.is-open .ap-topbar button { min-height: 48px; }
+            .ap-review.is-open .ap-foot { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px)); }
+            .ap-review.is-open .ap-foot button { min-height: 48px; width: 100%; }
+            .ap-review.is-open .ap-foot-note { display: none; }
+            .ap-review.is-open .ap-foot-approve { grid-column: 1 / -1; }
         }
 
         /* Queue rows */
@@ -106,7 +116,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191755">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -290,12 +300,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191755"></script>
-    <script src="/js/kbf-toast.js?v=2611191755"></script>
-    <script src="/js/kbf-dialog.js?v=2611191755"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191755"></script>
-    <script src="/js/kbf-forms.js?v=2611191755"></script>
-    <script src="/js/admin-shell.js?v=2611191755"></script>
+    <script src="/js/escape.js?v=2611191807"></script>
+    <script src="/js/kbf-toast.js?v=2611191807"></script>
+    <script src="/js/kbf-dialog.js?v=2611191807"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191807"></script>
+    <script src="/js/kbf-forms.js?v=2611191807"></script>
+    <script src="/js/admin-shell.js?v=2611191807"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -982,13 +992,118 @@
         markOpen();
     }
 
+    function isPhone() {
+        return window.matchMedia('(max-width: 1023px)').matches;
+    }
+
+    // Phones (below 1024px): the review is a full-screen view. Focus moves
+    // into it first (its heading), then everything around it is made inert.
+    // inert only, never aria-hidden, so focus is never inside something
+    // hidden. Toasts and live regions stay usable. Dialogs opened from the
+    // review lift the inert themselves (js/kbf-dialog.js).
+    let reviewInerted = [];
+
+    function inertAroundReview() {
+        liftReviewInert();
+        let node = reviewEl;
+        while (node && node.parentElement && node !== document.body) {
+            const parent = node.parentElement;
+            Array.from(parent.children).forEach(sib => {
+                if (sib === node || sib.inert || sib.hasAttribute('inert')) return;
+                if (/^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(sib.tagName)) return;
+                if (sib.id === 'kbf-toasts' || sib.classList.contains('kbf-toast-live') || sib.hasAttribute('data-kbf-live')) return;
+                sib.setAttribute('inert', '');
+                reviewInerted.push(sib);
+            });
+            node = parent;
+        }
+    }
+
+    function liftReviewInert() {
+        reviewInerted.forEach(n => n.removeAttribute('inert'));
+        reviewInerted = [];
+    }
+
+    function openReviewMobile() {
+        if (reviewEl.classList.contains('is-open')) return;
+        reviewEl.classList.add('is-open');
+        reviewEl.setAttribute('role', 'dialog');
+        reviewEl.setAttribute('aria-modal', 'true');
+        document.body.style.overflow = 'hidden';
+        layers.push({ node: reviewEl });
+    }
+
+    // Focus the review's heading (and name the full-screen view after it)
+    function focusReviewHeading() {
+        const heading = document.querySelector('#reviewBody h2');
+        if (!heading) return;
+        if (!heading.id) heading.id = 'reviewHeading';
+        heading.tabIndex = -1;
+        if (reviewEl.classList.contains('is-open')) reviewEl.setAttribute('aria-labelledby', heading.id);
+        heading.focus();
+    }
+
     function closeReviewMobile() {
+        const wasOpen = reviewEl.classList.contains('is-open');
         reviewEl.classList.remove('is-open');
-        if (popLayer(reviewEl)) {
-            document.body.style.overflow = '';
+        liftReviewInert();
+        const i = layers.findIndex(l => l.node === reviewEl);
+        if (i !== -1) layers.splice(i, 1);
+        if (wasOpen || i !== -1) {
+            if (!layers.length) document.body.style.overflow = '';
             // Beside the list (wider screens) the review is not a dialog
             reviewEl.removeAttribute('role');
             reviewEl.removeAttribute('aria-modal');
+            reviewEl.removeAttribute('aria-labelledby');
+        }
+    }
+
+    // Escape goes back to the list (a dialog on top handles its own Escape)
+    reviewEl.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !e.defaultPrevented && reviewEl.classList.contains('is-open')) {
+            e.preventDefault();
+            backToList();
+        }
+    });
+
+    // Turning a tablet (or widening the window) past 1024px: the review sits
+    // beside the list again
+    try {
+        window.matchMedia('(max-width: 1023px)').addEventListener('change', e => {
+            if (!e.matches && reviewEl.classList.contains('is-open')) closeReviewMobile();
+        });
+    } catch (e) { /* older browsers: nothing to do */ }
+
+    // Focus a queue row's button by item id (true when found)
+    function focusRow(id) {
+        const b = document.querySelector(`#queueList .ap-row[data-id="${Number(id)}"] .ap-open`);
+        if (!b) return false;
+        b.focus({ preventScroll: true });
+        return true;
+    }
+
+    // Phones, after Approve or Reject: back to the list, scrolled to where
+    // the decided item was, which then fades out of the queue. Focus goes to
+    // the item that took its place.
+    async function returnToListAfterDecision(decidedId) {
+        const tab = state.tab;
+        const i = queue.items.findIndex(x => x.id === Number(decidedId));
+        const neighbour = i === -1 ? null : (queue.items[i + 1] || queue.items[i - 1] || null);
+        clearReview();
+        writeUrl(false);
+        const row = document.querySelector(`#queueList .ap-row[data-id="${Number(decidedId)}"]`);
+        if (row) row.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+        if (neighbour) focusRow(neighbour.id);
+        await removeFromQueue(decidedId);
+        if (tab !== state.tab) return;
+        await loadQueue(true);
+        if (tab !== state.tab) return;
+        if (!(neighbour && focusRow(neighbour.id))) {
+            const empty = document.getElementById('queueEmpty');
+            if (!empty.classList.contains('hidden')) {
+                empty.tabIndex = -1;
+                empty.focus({ preventScroll: true });
+            }
         }
     }
 
@@ -1008,14 +1123,26 @@
         markOpen();
         const body = document.getElementById('reviewBody');
         body.textContent = '';
-        body.appendChild(el('p', 'p-8 text-center text-gray-400 font-bold uppercase text-sm', 'Loading...'));
+        const phone = isPhone();
+        if (phone) {
+            // Phones: the review opens full screen with its top bar and the
+            // item's name straight away; focus moves in, then the rest is inert
+            panelTop(body);
+            const item = queue.items.find(x => x.id === Number(id));
+            const head = el('div', 'px-4 sm:px-5 py-4');
+            head.appendChild(el('h2', 'text-xl font-black uppercase text-white break-words', item ? item.name : 'Loading...'));
+            if (item) head.appendChild(el('p', 'mt-6 text-center text-gray-400 font-bold uppercase text-sm', 'Loading...'));
+            body.appendChild(head);
+        } else {
+            body.appendChild(el('p', 'p-8 text-center text-gray-400 font-bold uppercase text-sm', 'Loading...'));
+        }
         body.classList.remove('hidden');
         document.getElementById('reviewEmpty').classList.add('hidden');
-        // Phones: the review opens full screen
-        if (window.matchMedia('(max-width: 1023px)').matches && !reviewEl.classList.contains('is-open')) {
-            reviewEl.classList.add('is-open');
-            document.body.style.overflow = 'hidden';
-            pushLayer(reviewEl, backToList);
+        if (phone) {
+            openReviewMobile();
+            reviewEl.scrollTop = 0;
+            focusReviewHeading();
+            inertAroundReview();
         }
         const data = await getJson(API + '?action=' + DETAIL_ACTION[tab] + '&id=' + encodeURIComponent(String(state.openId)));
         if (state.openId !== Number(id) || tab !== state.tab) return;
@@ -1027,10 +1154,8 @@
         if (tab === 'registrations') renderRegistration(data);
         else if (tab === 'tournaments') renderTournament(data.tournament);
         else renderResults(data.results);
-        if (!opts.fromUrl) {
-            const heading = body.querySelector('h2');
-            if (heading) { heading.tabIndex = -1; heading.focus(); }
-        }
+        // Phones: focus is always inside the full-screen review
+        if (!opts.fromUrl || reviewEl.classList.contains('is-open')) focusReviewHeading();
     }
 
     // The next item after the one open now (used after a decision or Skip)
@@ -1040,11 +1165,17 @@
         return queue.items[i + 1] || null;
     }
 
+    // Top bar (phones): "Back to list" and the item's place in the queue
     function panelTop(container) {
-        const top = el('div', 'flex items-center justify-between gap-2 px-4 sm:px-5 pt-4');
+        const top = el('div', 'ap-topbar flex items-center justify-between gap-2 px-4 sm:px-5 pt-4');
         const back = button('btn-plain lg:hidden', 'Back to list', 'back');
         back.addEventListener('click', backToList);
         top.appendChild(back);
+        const i = state.openId === null ? -1 : queue.items.findIndex(x => x.id === state.openId);
+        if (i !== -1 && queue.total) {
+            top.appendChild(el('span', 'lg:hidden text-xs font-black uppercase text-gray-300 whitespace-nowrap',
+                (i + 1).toLocaleString('en-GB') + ' of ' + queue.total.toLocaleString('en-GB')));
+        }
         container.appendChild(top);
     }
 
@@ -1067,16 +1198,20 @@
     }
 
     function footer(container, approveText, onApprove, onReject, nextNote) {
-        const foot = el('div', 'sticky bottom-0 bg-slate-800 border-t-4 border-gray-700 px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2');
+        // Phones: Reject and Skip side by side, Approve full width below
+        // (styles .ap-foot), without the "Then opens the next" note
+        const foot = el('div', 'ap-foot sticky bottom-0 bg-slate-800 border-t-4 border-gray-700 px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2');
         const reject = button('btn-reject', 'Reject');
         const skip = button('btn-ghost', 'Skip');
         foot.appendChild(reject);
         foot.appendChild(skip);
-        foot.appendChild(el('span', 'text-xs font-semibold text-gray-400 flex-1 min-w-[8rem]', nextNote));
-        const approve = button('btn-solid', approveText, 'check');
+        foot.appendChild(el('span', 'ap-foot-note text-xs font-semibold text-gray-400 flex-1 min-w-[8rem]', nextNote));
+        const approve = button('btn-solid ap-foot-approve', approveText, 'check');
         foot.appendChild(approve);
         reject.addEventListener('click', () => onReject(reject));
         skip.addEventListener('click', () => {
+            // Phones go back to the list; wider screens open the next item
+            if (reviewEl.classList.contains('is-open')) { backToList(); return; }
             const next = nextAfter(state.openId);
             if (next) openItem(next.id, { push: true }); else backToList();
         });
@@ -1095,6 +1230,11 @@
     // is clear someone new is shown.
     async function afterDecision(text, decidedId, reply, type, link) {
         KBF.toast.fromReply(text, reply, 'success', emailWho(type), link || null);
+        // Phones return to the list; wider screens open the next item
+        if (reviewEl.classList.contains('is-open')) {
+            await returnToListAfterDecision(decidedId);
+            return;
+        }
         const tab = state.tab;
         const next = nextAfter(decidedId);
         await removeFromQueue(decidedId);
@@ -1666,6 +1806,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191755"></script>
+    <script src="/js/session-manager.js?v=2611191807"></script>
 </body>
 </html>

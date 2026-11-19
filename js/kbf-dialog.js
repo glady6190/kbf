@@ -29,7 +29,10 @@
  *
  * Options: onClose (Escape), initialFocus (element or selector),
  *          role ('dialog' or 'alertdialog'), labelledBy (id), opener,
- *          escape (false = Escape does nothing, e.g. while saving).
+ *          escape (false = Escape does nothing, e.g. while saving),
+ *          focusFirst (true = focus initialFocus straight away, before
+ *          anything is made inert; the element must already be shown),
+ *          inertOnly (true = make the rest inert without aria-hidden).
  *
  * 3. Ready-made dialogs in the staff style:
  *      KBFDialog.confirm({ title, message, confirmText, cancelText, danger, opener })
@@ -69,7 +72,7 @@
     }
 
     // Make everything outside node inert. Returns what was changed.
-    function inertOutside(node) {
+    function inertOutside(node, inertOnly) {
         var changed = [];
         var el = node;
         while (el && el.parentElement && el !== document.body) {
@@ -82,7 +85,9 @@
                 if (sib.hasAttribute('data-kbf-backdrop')) return; // a panel's backdrop must still take the closing click
                 if (!sib.inert && !sib.hasAttribute('inert')) {
                     sib.setAttribute('inert', '');
-                    if (!sib.hasAttribute('aria-hidden')) {
+                    if (inertOnly) {
+                        changed.push({ el: sib, aria: false });
+                    } else if (!sib.hasAttribute('aria-hidden')) {
                         sib.setAttribute('aria-hidden', 'true');
                         changed.push({ el: sib, aria: true });
                     } else {
@@ -148,7 +153,16 @@
             lifted: liftInert(node),
             inerted: null
         };
-        entry.inerted = inertOutside(node);
+        // focusFirst: focus moves in before the rest becomes inert, so focus
+        // is never left inside an inert element
+        if (opts.focusFirst) {
+            var first = resolveEl(opts.initialFocus, node);
+            if (first) {
+                if (!first.hasAttribute('tabindex') && !first.matches(FOCUSABLE)) first.setAttribute('tabindex', '-1');
+                try { first.focus(); } catch (e) { /* ignore */ }
+            }
+        }
+        entry.inerted = inertOutside(node, !!opts.inertOnly);
         stack.push(entry);
 
         // Move focus in (after the page's own show code has run)

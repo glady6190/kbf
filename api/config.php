@@ -50,13 +50,12 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 // Required .env values: a clear message (names only, never values) when one
 // is missing. The site then falls back safely: no database connection
 // ("Service temporarily unavailable"), no emails sent, registration
-// refused, 2-step setup unavailable, or an empty fingerprint salt.
+// refused, or 2-step setup unavailable.
 (function () {
     $required = [
         'DB_NAME' => 'the site cannot connect to the database',
         'DB_USER' => 'the site cannot connect to the database',
         'DB_PASS' => 'the site cannot connect to the database',
-        'SESSION_FINGERPRINT_SALT' => 'sessions use an empty fingerprint salt',
         'SMTP_PASSWORD' => 'no email can be sent',
         'RECAPTCHA_SECRET_KEY' => 'every registration is refused',
         'TWO_FACTOR_KEY' => 'nobody can set up 2-step verification',
@@ -271,14 +270,13 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 // The account is re-read from the database (once per request): a user who no
 // longer exists, has been deactivated, has had sign-in turned off or is no
 // longer staff is logged out immediately.
-// The browser fingerprint (user agent only, so a phone whose IP address
-// changes stays signed in) must match the one taken at sign-in.
+// There is no browser fingerprint check: the user agent changes during a
+// session (browser updates, "Request desktop website", device views), so
+// it ended sessions wrongly. Protection comes from secure, HttpOnly,
+// SameSite cookies, a new session id at sign-in, strict mode, the idle and
+// absolute limits, SessionVersion and CSRF tokens.
 function isLoggedIn() {
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_fingerprint'])) {
-        return false;
-    }
-    if (!hash_equals((string) $_SESSION['user_fingerprint'], generateUserFingerprint())) {
-        kbfEndSession();
+    if (!isset($_SESSION['user_id'])) {
         return false;
     }
     return refreshSessionUser();
@@ -355,7 +353,6 @@ function kbfBeginUserSession(array $user) {
     $_SESSION['name'] = $user['FirstName'] . ' ' . $user['LastName'];
     $_SESSION['category_id'] = $user['CategoryId'];
     $_SESSION['club_id'] = $user['ClubId'];
-    $_SESSION['user_fingerprint'] = generateUserFingerprint();
     $_SESSION['session_version'] = kbfReadSessionVersion($user['UserId']);
     $_SESSION['SIGNED_IN_AT'] = time();
     $_SESSION['CREATED'] = time();
@@ -610,14 +607,6 @@ function kbfIsValidName($text) {
 // Length in characters (not bytes), so accented letters count once
 function kbfTextLength($text) {
     return function_exists('mb_strlen') ? mb_strlen((string) $text, 'UTF-8') : strlen((string) $text);
-}
-
-// Generate user fingerprint for session validation. User agent only: the IP
-// address is left out so mobile users whose address changes stay signed in.
-function generateUserFingerprint() {
-    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    $salt = getenv('SESSION_FINGERPRINT_SALT') ?: '';
-    return hash('sha256', 'ua:' . $userAgent . $salt);
 }
 
 // ============================================

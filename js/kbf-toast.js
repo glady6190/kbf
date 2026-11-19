@@ -92,6 +92,8 @@
         node.className = 'kbf-toast-live';
         node.setAttribute('aria-live', level);
         node.setAttribute('aria-atomic', 'true');
+        // Never made inert behind a dialog or full-screen panel (js/kbf-dialog.js)
+        node.setAttribute('data-kbf-live', '');
         node.setAttribute('role', level === 'assertive' ? 'alert' : 'status');
         document.body.appendChild(node);
         return node;
@@ -103,6 +105,7 @@
         host = document.createElement('div');
         host.className = 'kbf-toasts';
         host.id = 'kbf-toasts';
+        host.setAttribute('data-kbf-live', '');
         document.body.appendChild(host);
         // Live regions exist before any text goes into them, so screen
         // readers announce the change

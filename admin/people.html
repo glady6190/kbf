@@ -71,6 +71,22 @@
         .pp-panel.is-open { transform: translateX(0); }
         @media (max-width: 640px) { .pp-panel { border-left-width: 0; } }
         @media (prefers-reduced-motion: reduce) { .pp-panel { transition: none; } }
+        /* Phones: the person panel is full screen with a top bar (Back to list
+           and the name), one row of scrolling tabs and a fixed bottom bar */
+        .pp-topbar { display: none; }
+        @media (max-width: 767.98px) {
+            #personPanel { max-width: none; border-left-width: 0; }
+            #personPanel .pp-topbar { display: flex; align-items: center; gap: .75rem; padding-top: env(safe-area-inset-top, 0px); margin-bottom: .75rem; }
+            #personPanel .pp-topbar .btn-plain { min-height: 48px; flex-shrink: 0; }
+            .pp-topname { flex: 1; min-width: 0; font-size: .875rem; font-weight: 900; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #ppClose, #ppName { display: none; }
+            #ppTabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            #ppTabs::-webkit-scrollbar { display: none; }
+            #ppFooter { flex-direction: column; align-items: stretch; padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px)); }
+            #ppFooter > div { flex-direction: row; }
+            #ppFooter > div > button { flex: 1 1 0; min-height: 48px; white-space: normal; }
+            #ppFooter #saveDetailsBtn { width: 100%; min-height: 48px; }
+        }
         .pp-ptab { padding: .65rem .8rem; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: #9ca3af; border-bottom: 4px solid transparent; white-space: nowrap; }
         .pp-ptab:hover { color: #fff; }
         .pp-ptab.is-active { color: #fff; border-bottom-color: var(--theme-primary); }
@@ -101,7 +117,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191755">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191807">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -205,6 +221,14 @@
     <div id="personBackdrop" class="pp-backdrop hidden" data-kbf-backdrop></div>
     <aside id="personPanel" class="pp-panel hidden" role="dialog" aria-modal="true" aria-labelledby="ppName">
         <div class="bg-slate-800 border-b-4 border-gray-700 px-4 sm:px-6 pt-4">
+            <!-- Phones: top bar with Back to list and the person's name -->
+            <div class="pp-topbar">
+                <button type="button" id="ppBack" class="btn-plain">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    Back to list
+                </button>
+                <h2 id="ppTopName" class="pp-topname" tabindex="-1"></h2>
+            </div>
             <div class="flex items-start gap-4">
                 <div id="ppAvatar" class="pp-avatar w-16 h-16 text-lg" aria-hidden="true"></div>
                 <div class="min-w-0 flex-1">
@@ -654,14 +678,14 @@
         </form>
     </div>
 
-    <script src="/js/escape.js?v=2611191755"></script>
-    <script src="/js/kbf-toast.js?v=2611191755"></script>
-    <script src="/js/kbf-dialog.js?v=2611191755"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191755"></script>
-    <script src="/js/kbf-cropper.js?v=2611191755"></script>
-    <script src="/js/kbf-forms.js?v=2611191755"></script>
-    <script src="/js/admin-shell.js?v=2611191755"></script>
-    <script src="/js/grade-change.js?v=2611191755"></script>
+    <script src="/js/escape.js?v=2611191807"></script>
+    <script src="/js/kbf-toast.js?v=2611191807"></script>
+    <script src="/js/kbf-dialog.js?v=2611191807"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191807"></script>
+    <script src="/js/kbf-cropper.js?v=2611191807"></script>
+    <script src="/js/kbf-forms.js?v=2611191807"></script>
+    <script src="/js/admin-shell.js?v=2611191807"></script>
+    <script src="/js/grade-change.js?v=2611191807"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.view_export, players.edit_details
@@ -910,11 +934,12 @@
             .filter(n => n.offsetParent !== null || n === document.activeElement);
     }
 
-    function pushLayer(node, close, returnFocus) {
+    // extra: more KBFDialog options (e.g. focusFirst, inertOnly, initialFocus)
+    function pushLayer(node, close, returnFocus, extra) {
         const back = returnFocus || document.activeElement;
         layers.push({ node: node, close: close, returnFocus: back });
         document.body.style.overflow = 'hidden';
-        KBFDialog.open(node, { onClose: close, opener: back });
+        KBFDialog.open(node, Object.assign({ onClose: close, opener: back }, extra || {}));
     }
 
     function popLayer(node) {
@@ -1237,7 +1262,7 @@
         tr.dataset.personId = String(r.id);
         tr.addEventListener('click', e => {
             if (e.target.closest('a')) return;
-            openPerson(r.id, 'details', { returnFocus: tr.querySelector('.pp-open') });
+            openPerson(r.id, 'details', { returnFocus: tr.querySelector('.pp-open'), name: r.name });
         });
 
         const tdPerson = el('td', 'px-4 py-3');
@@ -1286,7 +1311,7 @@
         btn.setAttribute('aria-label', 'Open ' + r.name);
         btn.addEventListener('click', e => {
             e.stopPropagation();
-            openPerson(r.id, 'details', { returnFocus: btn });
+            openPerson(r.id, 'details', { returnFocus: btn, name: r.name });
         });
         tdOpen.appendChild(btn);
         tr.appendChild(tdOpen);
@@ -1313,7 +1338,7 @@
         right.appendChild(gradeBox(r.grade));
         if (r.grade) right.appendChild(el('span', 'text-xs font-black theme-primary-text', Number(r.seasonPoints).toLocaleString('en-GB') + ' pts'));
         btn.appendChild(right);
-        btn.addEventListener('click', () => openPerson(r.id, 'details', { returnFocus: btn }));
+        btn.addEventListener('click', () => openPerson(r.id, 'details', { returnFocus: btn, name: r.name }));
         return btn;
     }
 
@@ -1331,6 +1356,10 @@
 
     function panelIsOpen() {
         return layers.some(l => l.node === panelEl);
+    }
+
+    function isPanelPhone() {
+        return window.matchMedia('(max-width: 767.98px)').matches;
     }
 
     function showPanelShell() {
@@ -1352,14 +1381,27 @@
         panelName = panel || 'details';
         if (!me.isSuperAdmin && panelName === 'access') panelName = 'details';
 
-        if (!wasOpen) {
-            pushLayer(panelEl, () => closePerson(false), opts.returnFocus || document.activeElement);
+        // Phones (below 768px): the panel is full screen with a top bar
+        // ("Back to list" and the name). Focus moves to its heading first,
+        // then the rest of the page is made inert (inert only, no aria-hidden).
+        const phone = isPanelPhone();
+        if (phone) {
+            showPanelShell();
+            resetPanelView();
+            document.getElementById('ppTopName').textContent = opts.name || 'Loading...';
         }
-        showPanelShell();
+        if (!wasOpen) {
+            pushLayer(panelEl, () => closePerson(false), opts.returnFocus || document.activeElement,
+                phone ? { focusFirst: true, inertOnly: true, initialFocus: document.getElementById('ppTopName') } : null);
+        }
+        if (!phone) {
+            showPanelShell();
+            resetPanelView();
+        }
         if (!opts.fromHistory) writeUrl(true);
         markOpenRow();
-        resetPanelView();
-        document.getElementById('ppClose').focus();
+        if (phone) document.getElementById('ppTopName').focus();
+        else document.getElementById('ppClose').focus();
 
         try {
             const data = await getJson('/api/people.php?action=person&id=' + encodeURIComponent(id));
@@ -1393,6 +1435,7 @@
         document.getElementById('tempPasswordPanel').classList.add('hidden');
         showMsg('ppMessage', '');
         document.getElementById('ppName').textContent = '';
+        document.getElementById('ppTopName').textContent = '';
         document.getElementById('ppMeta').textContent = '';
         document.getElementById('ppChip').textContent = '';
         document.getElementById('ppPlays').textContent = '';
@@ -1427,6 +1470,7 @@
     }
 
     document.getElementById('ppClose').addEventListener('click', () => closePerson(false));
+    document.getElementById('ppBack').addEventListener('click', () => closePerson(false));
     backdropEl.addEventListener('click', () => closePerson(false));
 
     function renderPersonHeader() {
@@ -1436,6 +1480,7 @@
         // The photo opens larger (js/kbf-lightbox.js); initials have nothing to open
         KBFLightbox.sync(headAvatar, safePhoto(p.photo), p.name, { round: true });
         document.getElementById('ppName').textContent = p.name;
+        document.getElementById('ppTopName').textContent = p.name;
         document.getElementById('ppMeta').textContent = [p.kbfId ? 'ID: ' + p.kbfId : '', p.city || ''].filter(Boolean).join(', ');
         const chip = document.getElementById('ppChip');
         chip.textContent = '';
@@ -1454,6 +1499,7 @@
         fillAvatar(headAvatar, accessDraft.member ? d.profilePhoto : null, name);
         KBFLightbox.sync(headAvatar, accessDraft.member ? safePhoto(d.profilePhoto) : null, name, { round: true });
         document.getElementById('ppName').textContent = name;
+        document.getElementById('ppTopName').textContent = name;
         document.getElementById('ppMeta').textContent = d.location || '';
         const chip = document.getElementById('ppChip');
         chip.textContent = '';
@@ -2487,15 +2533,26 @@
         person = null;
         accessData = null;
         panelName = 'access';
-        pushLayer(panelEl, () => closePerson(false), document.getElementById('addStaffBtn'));
-        showPanelShell();
-        resetPanelView();
-        document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => t.classList.toggle('hidden', t.getAttribute('data-panel') !== 'access'));
-        renderDraftHeader();
+        // Phones: shown and named first, focus moves in, then the rest is inert
+        const phone = isPanelPhone();
+        if (phone) {
+            showPanelShell();
+            resetPanelView();
+            document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => t.classList.toggle('hidden', t.getAttribute('data-panel') !== 'access'));
+            renderDraftHeader();
+        }
+        pushLayer(panelEl, () => closePerson(false), document.getElementById('addStaffBtn'),
+            phone ? { focusFirst: true, inertOnly: true, initialFocus: document.getElementById('ppTopName') } : null);
+        if (!phone) {
+            showPanelShell();
+            resetPanelView();
+            document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => t.classList.toggle('hidden', t.getAttribute('data-panel') !== 'access'));
+            renderDraftHeader();
+        }
         showPane('access', true);
         renderAccess();
         markOpenRow();
-        document.getElementById('ppClose').focus();
+        document.getElementById(phone ? 'ppTopName' : 'ppClose').focus();
     }
 
     // ============================================
@@ -2769,6 +2826,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191755"></script>
+    <script src="/js/session-manager.js?v=2611191807"></script>
 </body>
 </html>

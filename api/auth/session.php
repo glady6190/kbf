@@ -62,8 +62,8 @@ if (isset($_SESSION['must_change_password']) && !isset($_SESSION['temp_user_id']
     unset($_SESSION['must_change_password']);
 }
 
-// Full sessions (isLoggedIn() also checks the browser fingerprint, the
-// session version and the absolute 12-hour limit)
+// Full sessions (isLoggedIn() also checks the session version and the
+// absolute 12-hour limit)
 if (isLoggedIn()) {
 
     // Per-user access, read fresh through api/permissions.php
