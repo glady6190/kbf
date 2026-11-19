@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KBF-UK - Home</title>
+    <link rel="preload" href="/assets/fonts/archivo-black-v23-latin.woff2" as="font" type="font/woff2" crossorigin>
     <!-- Link previews (social media and messaging apps) -->
     <meta property="og:title" content="KBF-UK - Kerala Badminton Federation UK">
     <meta property="og:description" content="Badminton tournaments, player grading, news and photos from Kerala Badminton Federation UK.">
@@ -1326,10 +1327,25 @@
             text-transform: uppercase;
         }
 
+        /* Hero title font: Archivo Black (SIL Open Font License, Google Fonts
+           v23, font version 1.006; licence in assets/fonts/ArchivoBlack-OFL.txt).
+           Each letter is one clean shape, so the outlined word shows no
+           extra lines inside the letters (Android's system font has them). */
+        @font-face {
+            font-family: 'Archivo Black';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('/assets/fonts/archivo-black-v23-latin.woff2') format('woff2');
+        }
+
+        /* FEDERATION UK is 8.7em wide: 10vw keeps it on one line from 320px */
         .hero-title {
             margin: 0;
-            font-size: min(44px, 10.5vw);
-            font-weight: 900;
+            font-family: 'Archivo Black', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+            font-size: min(44px, 10vw);
+            font-weight: 400;
+            font-synthesis: none;
             line-height: 0.96;
             letter-spacing: -0.04em;
             text-transform: uppercase;
@@ -1468,8 +1484,9 @@
                 grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
                 gap: 56px;
             }
-            /* 86px, scaled down on narrow lg screens so FEDERATION UK stays on one line */
-            .hero-title { font-size: min(86px, 6.4vw); }
+            /* 78px, scaled down on narrow lg screens so FEDERATION UK stays on one line
+               (left column at 1024px is about 542px; 6vw there is 61px, 534px wide) */
+            .hero-title { font-size: min(78px, 6vw); }
         }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
