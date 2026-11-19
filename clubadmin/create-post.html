@@ -6,19 +6,19 @@
     <title>Post news - KBF-UK Admin</title>
     <meta name="robots" content="noindex">
     <script>
-    // The organiser area has been retired. News is posted on the admin News
-    // page; ?id= (a tournament) becomes ?tournament= there.
+    // The organiser area has been retired. News is written in the admin post
+    // editor; ?id= (a tournament) becomes ?tournament= there.
     (function () {
         var id = new URLSearchParams(window.location.search).get('id');
         var target = id && /^\d+$/.test(id)
-            ? '/admin/announcements?tournament=' + encodeURIComponent(id)
-            : '/admin/announcements';
+            ? '/admin/post-editor?tournament=' + encodeURIComponent(id)
+            : '/admin/post-editor';
         window.location.replace(target + window.location.hash);
     })();
     </script>
     <style>body { background: #020617; color: #e5e7eb; font-family: system-ui, sans-serif; padding: 2rem; } a { color: #10b981; font-weight: 700; }</style>
 </head>
 <body>
-    <p>This page has moved to <a href="/admin/announcements">News</a>.</p>
+    <p>This page has moved to <a href="/admin/post-editor">New post</a>.</p>
 </body>
 </html>

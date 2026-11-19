@@ -12,6 +12,10 @@
  *     assets/images/sponsors
  * Pages ask for the WebP version first, then the JPEG one, then the original.
  *
+ * It also makes the share pictures used by link previews (1200 x 630 JPEG,
+ * api/share-images.php) for existing posts, tournaments and players that
+ * have none yet, and the default share picture when it is missing.
+ *
  * Safe to stop and run again: a file whose two versions already exist is
  * skipped, so each run carries on where the last one stopped. The originals
  * are never changed.
@@ -87,6 +91,56 @@ foreach ($folders as $folder) {
         } else {
             $failed++;
             echo "Could not make versions of " . substr($file, strlen($root)) . "\n";
+        }
+    }
+}
+
+// ============================================
+// SHARE PICTURES (link previews, api/share-images.php): the default one
+// when missing, then one for each post with a main picture, each tournament
+// with a poster and each active player with a photo (never under 18) that
+// has none yet. Needs database/news-editor.sql (ShareImagePath).
+// ============================================
+require_once $root . '/api/config.php';
+require_once $root . '/api/share-images.php';
+if (!$dryRun) {
+    kbfEnsureDefaultShareImage();
+    echo is_file($root . KBF_SHARE_DEFAULT) ? "Default share picture: ok\n" : "Default share picture: could not be made\n";
+}
+$shareSources = [
+    'post' => "SELECT AnnouncementId AS Id, FeaturedImage AS Source, ShareImagePath FROM Announcements
+               WHERE FeaturedImage LIKE '/uploads/announcements/%' ORDER BY AnnouncementId",
+    'tournament' => "SELECT TournamentId AS Id, PosterPath AS Source, ShareImagePath FROM Tournaments
+                     WHERE PosterPath IS NOT NULL AND PosterPath <> '' ORDER BY TournamentId",
+    'player' => "SELECT UserId AS Id, ProfilePhoto AS Source, ShareImagePath FROM Users
+                 WHERE ProfilePhoto IS NOT NULL AND ProfilePhoto <> '' AND IsActive = 1 AND COALESCE(IsRemoved, 0) = 0
+                   AND NOT (YearOfBirth IS NOT NULL AND YearOfBirth > 0 AND YearOfBirth >= " . kbfUnder18FromYear() . ")
+                 ORDER BY UserId",
+];
+foreach ($shareSources as $kind => $sql) {
+    try {
+        $rows = $pdo->query($sql)->fetchAll();
+    } catch (PDOException $e) {
+        echo "Share pictures ({$kind}): skipped, run database/news-editor.sql first\n";
+        continue;
+    }
+    foreach ($rows as $row) {
+        if (kbfShareImageExists($row['ShareImagePath']) || kbfShareSourceFile($row['Source']) === null) {
+            continue;
+        }
+        $todo++;
+        if ($dryRun || $stopped) {
+            continue;
+        }
+        if ($made + $failed >= $limit || time() - $started >= $timeBudget) {
+            $stopped = true;
+            continue;
+        }
+        if (kbfUpdateShareImage($pdo, $kind, (int) $row['Id'], $row['Source']) !== null) {
+            $made++;
+        } else {
+            $failed++;
+            echo "Could not make the share picture of {$kind} " . (int) $row['Id'] . "\n";
         }
     }
 }

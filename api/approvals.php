@@ -524,6 +524,9 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                                 // Display version and thumbnail follow the photo
                                 require_once __DIR__ . '/image-helpers.php';
                                 kbfMakeImageVariants($newPath);
+                                // And the link preview picture (share-page.php)
+                                require_once __DIR__ . '/share-images.php';
+                                kbfUpdateShareImage($pdo, 'player', $userId, '/uploads/profiles/' . $newFilename);
                                 $deleteAfterCommit[] = $oldPath;
                             }
                         }

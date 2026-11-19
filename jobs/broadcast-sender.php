@@ -12,6 +12,8 @@
  *      each recipient's placeholders ({first_name}, {full_name}, ...) filled in.
  *      Paused and cancelled broadcasts are skipped; a broadcast paused or
  *      cancelled during a run stops at once.
+ * Every run also publishes scheduled news posts whose time has come (logged
+ * in the Activity log), whatever the email allowance.
  * Once a day it also deletes EmailLog rows older than email_log_retention_days
  * (waiting emails are never deleted).
  *
@@ -152,6 +154,52 @@ try {
         echo "Sending is PAUSED until {$mailSettings['pausedUntil']}\n";
     }
     echo "\n";
+
+    // ============================================
+    // 1b. SCHEDULED NEWS POSTS whose time has come are published (news
+    // editor; database/news-editor.sql). Each is logged (Activity log and
+    // this run's summary). Not affected by the email allowance or a pause.
+    // ============================================
+    try {
+        $stmt = $pdo->query("
+            SELECT AnnouncementId, Title, ScheduledFor FROM Announcements
+            WHERE PostStatus = 'scheduled' AND ScheduledFor IS NOT NULL AND ScheduledFor <= NOW()
+            ORDER BY ScheduledFor ASC, AnnouncementId ASC
+            LIMIT 50
+        ");
+        $duePosts = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // PostStatus not added yet
+        $duePosts = [];
+    }
+    if ($duePosts) {
+        $publish = $pdo->prepare("
+            UPDATE Announcements
+            SET PostStatus = 'published', IsPublished = 1, PublishedDate = NOW(), ScheduledFor = NULL, UpdatedDate = NOW()
+            WHERE AnnouncementId = ? AND PostStatus = 'scheduled'
+        ");
+        $publishedPosts = 0;
+        foreach ($duePosts as $post) {
+            if ($dryRun) {
+                echo "[DRY RUN] Would publish scheduled post #{$post['AnnouncementId']} (due {$post['ScheduledFor']})\n";
+                continue;
+            }
+            $publish->execute([(int) $post['AnnouncementId']]);
+            if ($publish->rowCount() === 0) {
+                continue;
+            }
+            $publishedPosts++;
+            echo "Published scheduled post #{$post['AnnouncementId']} (due {$post['ScheduledFor']})\n";
+            if (function_exists('auditLog')) {
+                auditLog('post_published', 'post', (int) $post['AnnouncementId'],
+                    'Scheduled post "' . mb_substr((string) $post['Title'], 0, 80) . '" published (due ' . $post['ScheduledFor'] . ')', 0);
+            }
+        }
+        if ($publishedPosts > 0) {
+            $notes[] = "published {$publishedPosts} scheduled news post" . ($publishedPosts === 1 ? '' : 's');
+        }
+        echo "\n";
+    }
 
     // ============================================
     // 2. DAILY CLEAN-UP of old EmailLog rows (sent or failed only)

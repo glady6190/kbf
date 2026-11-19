@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News - KBF-UK</title>
+    <!-- Link previews (social media and messaging apps) -->
+    <meta property="og:title" content="News - KBF-UK">
+    <meta property="og:description" content="News, results and promotions from Kerala Badminton Federation UK.">
+    <meta property="og:image" content="https://kbf-uk.org/uploads/share/kbf-default.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://kbf-uk.org/news">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="KBF-UK">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="News - KBF-UK">
+    <meta name="twitter:description" content="News, results and promotions from Kerala Badminton Federation UK.">
+    <meta name="twitter:image" content="https://kbf-uk.org/uploads/share/kbf-default.jpg">
     <style>
         :root {
             --theme-primary: #10b981;
@@ -75,6 +88,7 @@
         .nw-panel:hover, .nw-panel:focus-visible { border-color: var(--theme-primary); outline: none; }
         .nw-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
         .nw-tag { display: inline-block; padding: 3px 8px; background: var(--theme-primary); color: #0F172A; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+        .nw-pinned { display: inline-block; padding: 1px 7px; background: #0F172A; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
         .nw-date { display: inline-flex; align-items: center; gap: 6px; color: #9CA3AF; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
         .nw-date .nw-icon { width: 14px; height: 14px; }
         .nw-tourney { display: flex; align-items: center; gap: 6px; color: #D1D5DB; font-size: 13px; font-weight: 700; min-width: 0; margin-top: 6px; }
@@ -155,6 +169,7 @@
         .nw-card-media { position: relative; height: 220px; background: #0B1324; border-bottom: 4px solid #374151; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; overflow: hidden; }
         .nw-card-media > img { width: 100%; height: 100%; object-fit: contain; }
         .nw-card-media .nw-tag { position: absolute; top: 12px; left: 12px; z-index: 2; }
+        .nw-card-media .nw-pinned { position: absolute; top: 12px; right: 12px; z-index: 2; }
         .nw-card-media .nw-avatar { width: 96px; height: 96px; font-size: 28px; }
         .nw-card-media .nw-stack { transform: scale(.85); }
         .nw-card-body { flex: 1; display: flex; flex-direction: column; padding: 18px; }
@@ -645,9 +660,8 @@
         return Number(post.TournamentId) > 0;
     }
 
-    function sortTime(post) {
-        const d = N.postDate(post);
-        return d ? d.getTime() : 0;
+    function isPinned(post) {
+        return Number(post.IsPinned) === 1;
     }
 
     // ============================================
@@ -789,9 +803,10 @@
         if (seq !== loadSeq) return false;
         if (!data.success) throw new Error('not loaded');
         const posts = (data.announcements || []).map(preparePost);
-        allPosts = allPosts.concat(posts);
-        // Newest first by PublishedDate (falling back to CreatedDate)
-        allPosts.sort((a, b) => (sortTime(b) - sortTime(a)) || (Number(b.AnnouncementId) - Number(a.AnnouncementId)));
+        // Kept in the server's order (pinned posts first, then newest first);
+        // a post already loaded on an earlier page is not added twice
+        const seen = new Set(allPosts.map(p => String(p.AnnouncementId)));
+        allPosts = allPosts.concat(posts.filter(p => !seen.has(String(p.AnnouncementId))));
         serverTotal = Number(data.total) || 0;
         serverHasMore = !!data.hasMore && posts.length > 0;
         if (data.counts) {
@@ -956,13 +971,14 @@
 
     // Items to show: posts, promotions and (when not searching or filtering
     // by tournament) groups of 2+ non-promotion posts about one tournament,
-    // placed at the date of their newest post
+    // placed at the date of their newest post. Pinned posts are never grouped:
+    // they stay at the top on their own, in the server's order.
     function buildItems(list) {
         const groupable = !state.q && !state.tournament;
         const byTournament = {};
         if (groupable) {
             list.forEach(p => {
-                if (!p._promotion && hasTournament(p)) {
+                if (!p._promotion && !isPinned(p) && hasTournament(p)) {
                     const key = Number(p.TournamentId);
                     (byTournament[key] = byTournament[key] || []).push(p);
                 }
@@ -972,7 +988,7 @@
         const placed = {};
         list.forEach(p => {
             const key = Number(p.TournamentId);
-            if (groupable && !p._promotion && hasTournament(p) && byTournament[key].length >= 2) {
+            if (groupable && !p._promotion && !isPinned(p) && hasTournament(p) && byTournament[key].length >= 2) {
                 if (placed[key]) return;
                 placed[key] = true;
                 items.push({ type: 'group', tournamentId: key, posts: byTournament[key] });
@@ -1031,9 +1047,10 @@
     }
 
     // ---------- shared pieces ----------
-    function meta(tagText, dateText) {
+    function meta(tagText, dateText, pinned) {
         const row = N.el('div', 'nw-meta');
         row.appendChild(N.el('span', 'nw-tag', tagText));
+        if (pinned) row.appendChild(N.el('span', 'nw-pinned', 'Pinned'));
         const date = N.el('span', 'nw-date');
         date.appendChild(N.icon('calendar', 'nw-icon'));
         date.appendChild(N.el('span', '', dateText));
@@ -1171,7 +1188,7 @@
             a.href = N.postHref(p);
             a.appendChild(avatar(p, name));
             const body = N.el('div', 'nw-row-body');
-            body.appendChild(meta('Promotion', N.formatDate(p)));
+            body.appendChild(meta('Promotion', N.formatDate(p), isPinned(p)));
             const line = N.el('p', 'nw-promo-line nw-clamp-2');
             line.appendChild(document.createTextNode(name));
             if (grades) {
@@ -1189,7 +1206,7 @@
         a.href = N.postHref(p);
         a.appendChild(thumb(p));
         const body = N.el('div', 'nw-row-body');
-        body.appendChild(meta(hasTournament(p) ? 'Tournament news' : 'News', N.formatDate(p)));
+        body.appendChild(meta(hasTournament(p) ? 'Tournament news' : 'News', N.formatDate(p), isPinned(p)));
         body.appendChild(N.el('h3', 'nw-row-title nw-clamp-2', p._title));
         if (p._tournament) body.appendChild(tournamentLine(p._tournament));
         if (p._excerpt) body.appendChild(N.el('p', 'nw-excerpt nw-clamp-2', p._excerpt));
@@ -1224,6 +1241,7 @@
             a = N.el('a', 'nw-panel nw-card');
             a.href = N.postHref(p);
             media.appendChild(N.el('span', 'nw-tag', 'Promotion'));
+            if (isPinned(p)) media.appendChild(N.el('span', 'nw-pinned', 'Pinned'));
             media.appendChild(avatar(p, name));
             if (grades) media.appendChild(gradeBoxes(grades));
             const title = N.el('h3', 'nw-card-title nw-promo-line nw-clamp-2');
@@ -1241,6 +1259,7 @@
             a = N.el('a', 'nw-panel nw-card');
             a.href = N.postHref(p);
             media.appendChild(N.el('span', 'nw-tag', hasTournament(p) ? 'Tournament news' : 'News'));
+            if (isPinned(p)) media.appendChild(N.el('span', 'nw-pinned', 'Pinned'));
             const src = safeImage(p.FeaturedImage);
             if (src) {
                 const img = document.createElement('img');

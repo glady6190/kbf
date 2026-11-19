@@ -46,6 +46,7 @@ is the record of where the migrations start from.
 | 18 | `schema-fixes.sql` | All of 1 to 17 have finished (it uses their columns). The backup is done: this script rebuilds eight tables to change their collation. On a very large table this can take a minute. | See below. |
 | 19 | `request-ids.sql` | Script 18 has finished. | A `RequestIds` table exists (empty). Pages that create news posts, tournaments, players or results can no longer create a duplicate by sending the same form twice. |
 | 20 | `data-retention.sql` | Script 18 has finished (`Settings.SettingValue` is TEXT). | Settings retention_ip_days (90), retention_email_body_days (30), retention_rejected_registration_days (365) and file_cleanup_mode (`report`) exist. Nothing else changes: the nightly job applies them from its next run (see below). |
+| 21 | `news-editor.sql` | Nothing special. | `Announcements` has ContentFormat (`text` for every existing post), PostStatus (`published` for every existing post), ScheduledFor, UpdatedDate and ShareImagePath, and IsPinned is NOT NULL (0 where it was empty). An `AnnouncementPhotos` table exists (empty). `Tournaments` and `Users` have ShareImagePath (empty). Existing posts show exactly as before. |
 
 ### After `schema-fixes.sql`
 
@@ -106,7 +107,10 @@ is the record of where the migrations start from.
    until it reports "0 still to do". Each run handles up to 200 images in
    about 50 seconds and can be stopped and run again at any time; nothing
    is lost if it stops halfway. Until an image has its versions, pages show
-   the original instead.
+   the original instead. After `news-editor.sql` the same job also makes
+   the share pictures (link previews) of existing posts, tournaments and
+   players, and the default share picture; until then shared links use the
+   default picture.
 
 Do not upload the `tools/` and `docs/` folders, or `tailwind.config.js`:
 they are only used to build the stylesheet (see `docs/BUILD.md`), and the

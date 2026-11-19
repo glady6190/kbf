@@ -1099,7 +1099,8 @@
     function menuItems(t) {
         const items = [];
         if (canEditDetails(t)) {
-            items.push(['Edit', 'edit', () => {
+            // Every status for tournaments.manage_all (Completed and Cancelled too)
+            items.push(['Edit details', 'edit', () => {
                 if (openId === t.id && panelIsOpen()) showPane('details');
                 else openTournament(t.id, 'details', { returnFocus: menu.button });
             }]);
@@ -1607,7 +1608,7 @@
                 // Editable: any post with content.all_news_gallery, otherwise the person's own
                 const canEdit = can('content.all_news_gallery') || (canPost && !!p.mine);
                 const inner = canEdit
-                    ? link('/admin/announcements?edit=' + idParam(p.id), 'flex items-center gap-3 px-3 py-3 hover:bg-slate-800')
+                    ? link('/admin/post-editor?id=' + idParam(p.id), 'flex items-center gap-3 px-3 py-3 hover:bg-slate-800')
                     : el('div', 'flex items-center gap-3 px-3 py-3');
                 inner.appendChild(icon('news', 'w-5 h-5 flex-shrink-0 text-gray-500'));
                 const text = el('div', 'min-w-0 flex-1');
@@ -1627,7 +1628,7 @@
         // Organisers post only about their own Approved or Completed tournaments (the API checks too)
         const postable = row.storedStatus === 'Approved' || row.storedStatus === 'Completed';
         if (canPost && postable) {
-            pane.appendChild(link('/admin/announcements?tournament=' + idParam(row.id), 'btn-outline', 'Post news about this tournament', 'plus'));
+            pane.appendChild(link('/admin/post-editor?tournament=' + idParam(row.id), 'btn-outline', 'Post news about this tournament', 'plus'));
         }
     }
 

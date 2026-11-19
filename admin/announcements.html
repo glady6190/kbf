@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News - KBF-UK Admin</title>
+    <script>
+    // Old addresses: ?edit=ID opened a post for editing here; it now has its own page
+    (function () {
+        var edit = new URLSearchParams(window.location.search).get('edit');
+        if (edit && /^\d+$/.test(edit)) window.location.replace('/admin/post-editor?id=' + encodeURIComponent(edit));
+    })();
+    </script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -13,157 +20,165 @@
         .theme-primary-bg { background-color: var(--theme-primary); }
         .theme-primary-text { color: var(--theme-primary); }
         .theme-primary-border { border-color: var(--theme-primary); }
-        .brutal-shadow { box-shadow: 6px 6px 0px var(--theme-primary); }
-        .brutal-shadow:hover { box-shadow: 8px 8px 0px var(--theme-primary); transform: translate(-2px, -2px); }
-        .theme-focus:focus { border-color: var(--theme-primary); }
-        .tap-target { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
-        .tap-target:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-        #featuredImage::file-selector-button { background: var(--theme-primary); color: #0F172A; }
-        #featuredImage:hover::file-selector-button { opacity: .9; }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-sm { padding: .45rem .7rem; font-size: .68rem; }
+        /* Touch targets at least 44px */
+        .btn-solid, .btn-plain, .nw-tab, .nw-menu-item { min-height: 44px; }
+        .btn-solid:focus-visible, .btn-plain:focus-visible, .nw-tab:focus-visible, .nw-menu-btn:focus-visible, .nw-menu-item:focus-visible,
+        .nw-title:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Tabs */
+        .nw-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem .9rem; border: 2px solid #374151; background: #0f172a; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+        .nw-tab:hover { color: #fff; }
+        .nw-tab .nw-count { background: #1e293b; color: #e5e7eb; padding: .05rem .45rem; font-size: .7rem; }
+        .nw-tab.is-active { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; box-shadow: 4px 4px 0 #020617; transform: translate(-2px, -2px); }
+        .nw-tab.is-active .nw-count { background: #0F172A; color: var(--theme-primary); }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; min-height: 44px; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+
+        /* Thumbnail, tags */
+        .nw-thumb { width: 4rem; height: 3rem; flex-shrink: 0; border: 2px solid #374151; background: #0f172a; display: flex; align-items: center; justify-content: center; color: #4b5563; overflow: hidden; }
+        .nw-thumb img { width: 100%; height: 100%; object-fit: contain; }
+        .nw-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .nw-tag.is-published { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .nw-tag.is-scheduled { background: #F59E0B; border-color: #F59E0B; color: #0F172A; }
+        .nw-tag.is-draft { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .nw-tag.is-hidden { background: #1e293b; border-color: #4b5563; color: #9ca3af; }
+        .nw-chip { display: inline-block; padding: .1rem .4rem; border: 2px solid #4b5563; background: #1e293b; color: #9ca3af; font-size: .6rem; font-weight: 900; text-transform: uppercase; }
+        .nw-title { color: #fff; font-weight: 900; font-size: .875rem; overflow-wrap: anywhere; }
+        .nw-title:hover { color: var(--theme-primary); }
+
+        /* Row menu */
+        .nw-menu-btn { width: 2.75rem; height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #374151; background: #1e293b; color: #e5e7eb; flex-shrink: 0; }
+        .nw-menu-btn:hover, .nw-menu-btn[aria-expanded="true"] { border-color: var(--theme-primary); color: #fff; }
+        .nw-menu { position: fixed; z-index: 55; min-width: 12rem; background: #0f172a; border: 2px solid #4b5563; box-shadow: 4px 4px 0 #020617; padding: .25rem 0; }
+        .nw-menu-item { display: flex; width: 100%; align-items: center; gap: .6rem; padding: .6rem .9rem; color: #e5e7eb; font-weight: 800; font-size: .78rem; text-align: left; }
+        .nw-menu-item:hover, .nw-menu-item:focus { background: #1e293b; color: #fff; outline: none; }
+        .nw-menu-item.is-danger { color: #fca5a5; }
     </style>
     <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
 
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="mb-8">
-            <h1 class="text-3xl sm:text-4xl font-black uppercase mb-2"><span class="theme-primary-text" id="pageVerb">Post</span> news</h1>
-            <div class="h-2 w-32 theme-primary-bg mb-4"></div>
-            <p class="text-gray-400 font-bold uppercase text-sm" id="pageIntro">Write a news post for the public site</p>
-        </div>
-
-        <div class="bg-slate-900 border-4 border-gray-700 p-4 sm:p-8 mb-8" id="formCard">
-            <form id="announcementForm" class="space-y-4" novalidate>
-                <div>
-                    <label for="tournamentSelect" class="block text-xs font-black theme-primary-text uppercase mb-2"><span id="tournamentLabel">Tournament</span></label>
-                    <select id="tournamentSelect" name="tournamentId" aria-describedby="tournamentHint"
-                            class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition disabled:opacity-60 disabled:cursor-not-allowed">
-                        <option value="">No tournament (general news)</option>
-                    </select>
-                    <p id="tournamentHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Approved or completed tournaments only</p>
-                </div>
-
-                <div>
-                    <label for="announcementTitle" class="block text-xs font-black theme-primary-text uppercase mb-2">Title *</label>
-                    <input type="text" id="announcementTitle" name="title" required minlength="3" maxlength="200"
-                           class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white placeholder-gray-500 font-bold uppercase text-base sm:text-sm focus:outline-none theme-focus transition"
-                           placeholder="NEW TOURNAMENT SEASON STARTING SOON">
-                </div>
-
-                <div>
-                    <label for="announcementContent" class="block text-xs font-black theme-primary-text uppercase mb-2">Content *</label>
-                    <textarea id="announcementContent" name="content" required rows="8" minlength="10" maxlength="10000"
-                              class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white placeholder-gray-500 font-semibold text-base sm:text-sm focus:outline-none theme-focus transition"
-                              placeholder="Write your news post here..."></textarea>
-                </div>
-
-                <div>
-                    <label for="featuredImage" class="block text-xs font-black theme-primary-text uppercase mb-2">Featured image</label>
-                    <input type="file" name="featuredImage" id="featuredImage" accept="image/*" aria-describedby="featuredImageHint"
-                           class="w-full px-4 py-3 bg-slate-800 border-4 border-gray-700 text-white font-bold text-xs sm:text-sm focus:outline-none theme-focus transition file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:font-bold file:cursor-pointer">
-                    <p id="featuredImageHint" class="text-xs text-gray-500 mt-2 uppercase font-bold">Optional. Recommended: 1200x630px (JPG, PNG)</p>
-                    <div id="imagePreview" class="hidden mt-3">
-                        <p class="text-xs font-black theme-primary-text uppercase mb-2" id="imagePreviewLabel">Preview</p>
-                        <div class="border-4 border-gray-700 p-2 bg-slate-800">
-                            <img id="previewImg" src="" alt="" class="w-full h-auto max-h-64 object-contain bg-slate-950">
-                        </div>
-                        <button type="button" id="removeImageBtn" class="tap-target mt-2 px-4 py-2 bg-red-500 text-slate-900 font-black uppercase text-xs hover:bg-red-400 transition">Remove image</button>
-                    </div>
-                </div>
-
-                <div id="formMessage" class="hidden p-4 border-4 font-bold text-sm" role="status" aria-live="polite"></div>
-
-                <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-                    <button type="button" id="cancelEdit"
-                            class="hidden tap-target px-6 py-3 bg-slate-800 border-4 border-gray-700 font-black uppercase text-sm hover:border-gray-600 transition">
-                        Cancel
-                    </button>
-                    <button type="submit" id="announcementSubmit"
-                            class="px-6 py-3 theme-primary-bg text-slate-900 font-black uppercase text-sm brutal-shadow transition-all">
-                        Publish news post
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div class="bg-slate-900 border-4 border-gray-700 p-4 sm:p-8">
-            <h2 class="text-2xl font-black theme-primary-text uppercase mb-6" id="listTitle">All news posts</h2>
-            <div id="announcementsList" class="space-y-4" aria-live="polite">
-                <p class="text-gray-400 text-center py-8 font-bold uppercase" role="status">Loading...</p>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Heading band -->
+        <div class="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">News</h1>
+                <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
+                <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Posts on the public News page</p>
+            </div>
+            <div class="flex">
+                <a href="/admin/post-editor" id="newPostBtn" class="btn-solid btn-shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                    New post
+                </a>
             </div>
         </div>
-    </div>
+
+        <!-- Tabs -->
+        <div class="flex flex-wrap gap-3 pb-2 pt-1 pl-1 mb-3" role="tablist" aria-label="Which posts to show" id="listTabs">
+            <button type="button" class="nw-tab" role="tab" data-tab="all" aria-controls="listArea">All <span class="nw-count" data-count="all">0</span></button>
+            <button type="button" class="nw-tab" role="tab" data-tab="published" aria-controls="listArea">Published <span class="nw-count" data-count="published">0</span></button>
+            <button type="button" class="nw-tab" role="tab" data-tab="drafts" aria-controls="listArea">Drafts <span class="nw-count" data-count="drafts">0</span></button>
+            <button type="button" class="nw-tab" role="tab" data-tab="scheduled" aria-controls="listArea">Scheduled <span class="nw-count" data-count="scheduled">0</span></button>
+            <button type="button" class="nw-tab" role="tab" data-tab="hidden" aria-controls="listArea">Hidden <span class="nw-count" data-count="hidden">0</span></button>
+        </div>
+
+        <!-- Search, tournament and author -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <div class="md:col-span-2 relative">
+                <label for="searchInput" class="sr-only">Search titles and text</label>
+                <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="search" id="searchInput" class="field pl-9" placeholder="Search titles and text" autocomplete="off" maxlength="100">
+            </div>
+            <div id="tournamentWrap">
+                <label for="tournamentFilter" class="sr-only">Tournament</label>
+                <select id="tournamentFilter" class="field"><option value="">All tournaments</option></select>
+            </div>
+            <div id="authorWrap" class="hidden">
+                <label for="authorFilter" class="sr-only">Written by</label>
+                <select id="authorFilter" class="field"><option value="">Everyone’s posts</option></select>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div id="listArea" role="tabpanel" aria-labelledby="listTabs" class="bg-slate-900 border-2 sm:border-4 border-gray-700">
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-800 border-b-2 border-gray-700">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Post</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Tournament</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Written by</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Date</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-black theme-primary-text uppercase">Status</th>
+                            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y-2 divide-gray-800"></tbody>
+                </table>
+            </div>
+            <ul id="cardList" class="md:hidden divide-y-2 divide-gray-800"></ul>
+            <div id="listState" class="px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm" role="status" aria-live="polite">Loading...</div>
+        </div>
+
+        <!-- Paging -->
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p id="listCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite"></p>
+            <div id="pager" class="hidden flex items-center gap-2">
+                <button type="button" id="prevBtn" class="btn-plain">Previous</button>
+                <span id="pageText" class="text-xs text-gray-400 font-bold uppercase px-2"></span>
+                <button type="button" id="nextBtn" class="btn-plain">Next</button>
+            </div>
+        </div>
+
+        <p class="mt-6 text-xs text-gray-500 font-bold">Promotion posts are created automatically when someone is promoted and appear here too. Organisers see only their own posts.</p>
+    </main>
+
+    <!-- Row menu (one, shared by every row) -->
+    <div id="rowMenu" class="nw-menu hidden" role="menu" aria-label="Post actions"></div>
 
     <script src="/js/escape.js"></script>
     <script src="/js/kbf-dialog.js"></script>
     <script src="/js/kbf-forms.js"></script>
     <script src="/js/admin-shell.js"></script>
   <script>
-    // Page guard (shared shell).
-    // content.all_news_gallery: every post, posts about any tournament or none.
-    // content.own_news_gallery only: their own posts, each linked to one of
-    // their own Approved or Completed tournaments (api/announcements.php checks).
-    // Address: ?tournament=ID starts a post about that tournament; ?edit=ID
-    // opens that post for editing.
+    // News list (staff). Data: GET /api/announcements.php?staff=1 with tab,
+    // q, tournament, author and page; 50 posts a page. The API decides what
+    // each person sees (content.own_news_gallery: their own posts only).
+    // Address: ?tournament=ID starts with that tournament's posts.
+    const state = { tab: 'all', q: '', tournament: '', author: '', page: 1 };
     let canAll = false;
-    let editingId = null;      // post being edited, or null when creating
-    let tournamentsReady = null;
+    let loadSeq = 0;
 
     KBFShell.start({ anyOf: ['content.all_news_gallery', 'content.own_news_gallery'], active: 'news' }).then(function (user) {
         window.kbfUser = user;
         canAll = user.has('content.all_news_gallery');
-        if (!canAll) {
-            document.getElementById('pageIntro').textContent = 'Write news about your own tournaments';
-            document.getElementById('listTitle').textContent = 'My news posts';
-            document.getElementById('tournamentLabel').textContent = 'Tournament *';
-            document.getElementById('tournamentSelect').required = true;
-            document.getElementById('tournamentSelect').options[0].textContent = 'Select tournament...';
-        }
-        tournamentsReady = loadTournamentPicker();
-        loadAnnouncements();
-
+        document.getElementById('authorWrap').classList.toggle('hidden', !canAll);
         const params = new URLSearchParams(window.location.search);
-        const editRaw = params.get('edit');
-        const tournamentRaw = params.get('tournament');
-        if (editRaw && /^\d+$/.test(editRaw)) {
-            startEdit(parseInt(editRaw, 10));
-        } else if (tournamentRaw && /^\d+$/.test(tournamentRaw)) {
-            tournamentsReady.then(() => {
-                const select = document.getElementById('tournamentSelect');
-                const value = String(parseInt(tournamentRaw, 10));
-                if (Array.from(select.options).some(o => o.value === value)) select.value = value;
-                document.getElementById('announcementTitle').focus();
-            });
-        }
+        const t = params.get('tournament');
+        if (t && /^\d+$/.test(t)) state.tournament = String(parseInt(t, 10));
+        const tab = params.get('tab');
+        if (tab && TABS.indexOf(tab) !== -1) state.tab = tab;
+        markTabs();
+        loadPosts();
     });
 
-    // Tournament picker: Approved or Completed tournaments; the person's own
-    // ones only without content.all_news_gallery
-    async function loadTournamentPicker() {
-        const select = document.getElementById('tournamentSelect');
-        try {
-            const response = await authenticatedFetch(canAll ? '/api/tournaments.php' : '/api/tournaments.php?mine=1');
-            const data = await response.json();
-            const eligible = (data.success && Array.isArray(data.tournaments) ? data.tournaments : [])
-                .filter(t => t.Status === 'Approved' || t.Status === 'Completed');
-            while (select.options.length > 1) select.remove(1);
-            eligible.forEach(t => {
-                const option = document.createElement('option');
-                option.value = String(parseInt(t.TournamentId, 10));
-                option.textContent = `${t.Name} (${t.Status})`;
-                select.appendChild(option);
-            });
-            if (!canAll && !eligible.length) {
-                showFormMessage('You can post news once one of your tournaments has been approved.', false);
-            }
-        } catch (error) {
-            console.error('Error loading tournaments:', error);
-        }
-    }
-
     // ============================================
-    // HELPER FUNCTIONS
+    // HELPERS
     // ============================================
     function getCSRFToken() {
         return sessionStorage.getItem('csrf_token');
@@ -171,415 +186,507 @@
 
     async function authenticatedFetch(url, options = {}) {
         const token = getCSRFToken();
-        
-        if (!options.headers) {
-            options.headers = {};
-        }
-        
-        if (token) {
-            options.headers['X-CSRF-Token'] = token;
-        }
-        
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
         options.credentials = 'include';
-        
         return fetch(url, options);
     }
 
-    // ============================================
-    // DATA LOADING FUNCTIONS
-    // ============================================
-    // Announcements as last loaded, so a hide/show change can re-render without a reload
-    let loadedAnnouncements = [];
-
-    async function loadAnnouncements() {
-        try {
-            // Organisers: their own posts (?mine=1); removed posts are hidden and left out
-            const response = await authenticatedFetch(canAll ? '/api/announcements.php?limit=50' : '/api/announcements.php?mine=1');
-            const data = await response.json();
-
-            if (!data.success || !Array.isArray(data.announcements)) {
-                KBF.showLoadError('announcementsList', {
-                    message: data.message || 'The news posts could not be loaded.',
-                    retry: loadAnnouncements
-                });
-                return;
-            }
-            loadedAnnouncements = canAll ? data.announcements : data.announcements.filter(p => String(p.IsVisible) !== '0');
-            renderAnnouncements(loadedAnnouncements);
-        } catch (error) {
-            console.error('Error loading announcements:', error);
-            KBF.showLoadError('announcementsList', {
-                message: 'The news posts could not be loaded. Please check your connection and try again.',
-                retry: loadAnnouncements
-            });
-        }
+    // Every value reaches the page with textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
     }
 
-    // Short message for list actions (hide, show, remove)
-    function showListMessage(text, ok) {
+    // Constant icon markup only (never data)
+    const ICONS = {
+        image: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+        dots: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 5h.01M12 12h.01M12 19h.01"/>',
+        edit: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>',
+        external: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>',
+        eyeOff: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>',
+        eye: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>',
+        trash: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>'
+    };
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('class', className || 'w-4 h-4');
+        svg.innerHTML = ICONS[name] || '';
+        return svg;
+    }
+
+    function idParam(id) { return encodeURIComponent(String(parseInt(id, 10) || 0)); }
+
+    function toast(text, ok) {
         if (window.KBFDialog) KBFDialog.toast(text, ok ? 'success' : 'error');
     }
 
-    function renderAnnouncements(announcements) {
-        try {
-            const data = { success: true, announcements: announcements };
+    const STATUS = {
+        published: ['Published', 'is-published'],
+        draft: ['Draft', 'is-draft'],
+        scheduled: ['Scheduled', 'is-scheduled'],
+        hidden: ['Hidden', 'is-hidden']
+    };
 
-            const container = document.getElementById('announcementsList');
+    function statusTag(status) {
+        const s = STATUS[status] || STATUS.draft;
+        return el('span', 'nw-tag ' + s[1], s[0]);
+    }
 
-            if (data.success && data.announcements.length > 0) {
-                container.innerHTML = data.announcements.map(ann => `
-                    <div class="border-4 border-gray-700 bg-slate-800 p-5 ${ann.IsVisible == 0 ? 'opacity-60' : ''}">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex-1">
-                                <h3 class="font-black text-white uppercase text-lg mb-2">${escapeHtml(ann.Title)}</h3>
-                                ${ann.TournamentName ? `<span class="inline-block px-3 py-1 bg-indigo-500 text-slate-900 border-2 border-gray-700 text-xs font-black uppercase mb-2">${escapeHtml(ann.TournamentName)}</span>` : ''}
-                            </div>
-                            <span class="px-3 py-1 border-2 text-xs font-black uppercase ${ann.IsVisible == 1 ? 'bg-green-500 text-slate-900 border-gray-700' : 'bg-red-500 text-slate-900 border-gray-700'}">
-                                ${ann.IsVisible == 1 ? 'Visible' : 'Hidden'}
-                            </span>
-                        </div>
-                        ${ann.FeaturedImage ? `<img${imgVariantAttrs(ann.FeaturedImage, 'thumb')} alt="${escapeHtml(ann.Title)}" width="400" height="128" loading="lazy" decoding="async" class="w-full h-32 object-contain bg-slate-700 border-4 border-gray-700 mb-4">` : ''}
-                        <p class="text-sm text-gray-300 mb-3 font-semibold">${escapeHtml(String(ann.Content || '').substring(0, 150))}${String(ann.Content || '').length > 150 ? '...' : ''}</p>
-                        <div class="flex justify-between items-center gap-3 text-xs mb-4 pb-4 border-b-4 border-gray-700">
-                            <span class="text-gray-400 font-bold uppercase">${ann.AuthorName ? 'Posted by ' + escapeHtml(ann.AuthorName) : ''}</span>
-                            <span class="text-gray-400 font-bold uppercase">${escapeHtml(KBF.formatDate(ann.PublishedDate || ann.CreatedDate))}</span>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" onclick="startEdit(${Number(ann.AnnouncementId)})"
-                                    class="tap-target px-3 py-2 bg-slate-700 text-white border-4 border-gray-700 font-black uppercase text-xs hover:border-gray-500 transition">
-                                Edit
-                            </button>
-                            ${canAll ? `<button type="button" data-ann-id="${Number(ann.AnnouncementId)}" data-ann-action="toggle" onclick="toggleVisibility(${Number(ann.AnnouncementId)}, ${ann.IsVisible == 1 ? 0 : 1}, this)"
-                                    class="tap-target flex-1 px-3 py-2 ${ann.IsVisible == 1 ? 'bg-yellow-500' : 'bg-green-500'} text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:opacity-90 transition">
-                                ${ann.IsVisible == 1 ? 'Hide' : 'Show'}
-                            </button>` : ''}
-                            <button type="button" onclick="deleteAnnouncement(${Number(ann.AnnouncementId)}, this)"
-                                    class="tap-target px-3 py-2 bg-red-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-red-400 transition">
-                                Remove
-                            </button>
-                            <a href="/post?id=${encodeURIComponent(ann.AnnouncementId)}" target="_blank" rel="noopener"
-                               class="tap-target px-3 py-2 bg-indigo-500 text-slate-900 border-4 border-gray-700 font-black uppercase text-xs hover:bg-indigo-400 transition">
-                                View
-                            </a>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<p class="text-gray-400 text-center py-8 font-bold uppercase">' + (canAll ? 'No news posts yet' : 'You have not posted any news yet') + '</p>';
-            }
-        } catch (error) {
-            console.error('Error rendering announcements:', error);
+    function dateText(p) {
+        return KBF.formatDate(p.date, { time: p.status === 'scheduled' });
+    }
+
+    function thumb(p) {
+        const box = el('div', 'nw-thumb');
+        const url = p.image ? KBF.safeUrl(p.image) : '';
+        if (url) {
+            const img = document.createElement('img');
+            img.alt = '';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 64;
+            img.height = 48;
+            KBF.setImageVariant(img, url, 'thumb');
+            box.appendChild(img);
+        } else {
+            box.appendChild(icon('image', 'w-5 h-5'));
         }
+        return box;
+    }
+
+    function editUrl(p) { return '/admin/post-editor?id=' + idParam(p.id); }
+
+    function titleBlock(p) {
+        const wrap = el('div', 'min-w-0');
+        const title = p.canEdit ? el('a', 'nw-title') : el('span', 'nw-title');
+        title.textContent = p.title || '(No title)';
+        if (p.canEdit) title.href = editUrl(p);
+        wrap.appendChild(title);
+        if (p.isPinned || p.isPromotion) {
+            const chips = el('div', 'flex flex-wrap gap-2 mt-1');
+            if (p.isPinned) chips.appendChild(el('span', 'nw-chip', 'Pinned'));
+            if (p.isPromotion) chips.appendChild(el('span', 'nw-chip', 'Promotion'));
+            wrap.appendChild(chips);
+        }
+        return wrap;
+    }
+
+    function actions(p) {
+        const box = el('div', 'flex items-center justify-end gap-2');
+        if (p.canEdit) {
+            const edit = el('a', 'btn-plain btn-sm');
+            edit.href = editUrl(p);
+            edit.appendChild(icon('edit', 'w-4 h-4 flex-shrink-0'));
+            edit.appendChild(document.createTextNode('Edit'));
+            edit.setAttribute('aria-label', 'Edit ' + (p.title || 'post'));
+            box.appendChild(edit);
+        }
+        box.appendChild(menuButton(p));
+        return box;
     }
 
     // ============================================
-    // CRUD OPERATIONS
+    // LOAD AND RENDER
     // ============================================
-    // newVisibility: 1 = show, 0 = hide
-    async function toggleVisibility(announcementId, newVisibility, btn) {
-        if (KBF.isBusy(btn)) return;
+    const TABS = ['all', 'published', 'drafts', 'scheduled', 'hidden'];
+
+    function setState(text) {
+        const s = document.getElementById('listState');
+        s.textContent = text || '';
+        s.classList.toggle('hidden', !text);
+    }
+
+    async function loadPosts() {
+        const seq = ++loadSeq;
+        const p = new URLSearchParams({ staff: '1', tab: state.tab, page: String(state.page) });
+        if (state.q) p.set('q', state.q);
+        if (state.tournament) p.set('tournament', state.tournament);
+        if (state.author && canAll) p.set('author', state.author);
+        document.getElementById('listArea').setAttribute('aria-busy', 'true');
+        try {
+            const response = await authenticatedFetch('/api/announcements.php?' + p.toString());
+            const data = await response.json();
+            if (seq !== loadSeq) return;
+            if (!data.success || !Array.isArray(data.posts)) {
+                showError(data.message || 'The news posts could not be loaded.');
+                return;
+            }
+            render(data);
+        } catch (error) {
+            if (seq !== loadSeq) return;
+            console.error('Error loading posts:', error);
+            showError('The news posts could not be loaded. Please check your connection and try again.');
+        } finally {
+            if (seq === loadSeq) document.getElementById('listArea').removeAttribute('aria-busy');
+        }
+    }
+
+    function showError(message) {
+        document.getElementById('tableBody').textContent = '';
+        document.getElementById('cardList').textContent = '';
+        document.getElementById('pager').classList.add('hidden');
+        document.getElementById('listCount').textContent = '';
+        const s = document.getElementById('listState');
+        s.classList.remove('hidden');
+        KBF.showLoadError(s, { message: message, retry: loadPosts });
+    }
+
+    function fillSelect(select, items, firstText, current, fallbackName) {
+        select.textContent = '';
+        const first = el('option', null, firstText);
+        first.value = '';
+        select.appendChild(first);
+        let found = false;
+        (Array.isArray(items) ? items : []).forEach(item => {
+            const id = String(parseInt(item.id, 10) || '');
+            if (!id) return;
+            const o = el('option', null, item.name || ('#' + id));
+            o.value = id;
+            if (id === current) found = true;
+            select.appendChild(o);
+        });
+        // Keep a chosen value that the list does not hold (e.g. ?tournament= with no posts yet)
+        if (current && !found) {
+            const o = el('option', null, fallbackName || 'Selected');
+            o.value = current;
+            select.appendChild(o);
+        }
+        select.value = current || '';
+    }
+
+    function render(data) {
+        if (typeof data.canSeeAll === 'boolean') {
+            canAll = data.canSeeAll;
+            document.getElementById('authorWrap').classList.toggle('hidden', !canAll);
+        }
+        const counts = data.counts || {};
+        TABS.forEach(t => {
+            const c = document.querySelector('[data-count="' + t + '"]');
+            if (c) c.textContent = (parseInt(counts[t], 10) || 0).toLocaleString('en-GB');
+        });
+
+        const posts = data.posts;
+        const matchName = posts.find(x => String(x.tournamentId) === state.tournament);
+        fillSelect(document.getElementById('tournamentFilter'), data.tournaments, 'All tournaments', state.tournament,
+            matchName ? matchName.tournamentName : 'This tournament');
+        if (canAll) fillSelect(document.getElementById('authorFilter'), data.authors, 'Everyone’s posts', state.author, 'This person');
+
+        const body = document.getElementById('tableBody');
+        const cards = document.getElementById('cardList');
+        body.textContent = '';
+        cards.textContent = '';
+        posts.forEach(p => {
+            body.appendChild(tableRow(p));
+            cards.appendChild(cardRow(p));
+        });
+
+        if (!posts.length) {
+            const filtered = state.q || state.tournament || state.author;
+            setState(filtered ? 'No posts match these filters' : (state.tab === 'all' ? 'No news posts yet' : 'No posts here'));
+        } else {
+            setState('');
+        }
+
+        const total = parseInt(data.total, 10) || 0;
+        const page = parseInt(data.page, 10) || 1;
+        const pages = parseInt(data.pages, 10) || 1;
+        const per = parseInt(data.perPage, 10) || 50;
+        state.page = page;
+        const from = total ? (page - 1) * per + 1 : 0;
+        const to = Math.min(total, (page - 1) * per + posts.length);
+        document.getElementById('listCount').textContent = total
+            ? 'Showing ' + from.toLocaleString('en-GB') + '–' + to.toLocaleString('en-GB') + ' of ' + total.toLocaleString('en-GB') + (total === 1 ? ' post' : ' posts')
+            : '';
+        document.getElementById('pager').classList.toggle('hidden', pages <= 1);
+        document.getElementById('pageText').textContent = 'Page ' + page + ' of ' + pages;
+        document.getElementById('prevBtn').disabled = page <= 1;
+        document.getElementById('nextBtn').disabled = page >= pages;
+    }
+
+    function tableRow(p) {
+        const tr = el('tr', 'hover:bg-slate-800 transition');
+        const tdPost = el('td', 'px-4 py-3');
+        const postWrap = el('div', 'flex items-center gap-3');
+        postWrap.appendChild(thumb(p));
+        postWrap.appendChild(titleBlock(p));
+        tdPost.appendChild(postWrap);
+        tr.appendChild(tdPost);
+        tr.appendChild(el('td', 'px-4 py-3 text-sm font-bold text-gray-300', p.tournamentName || '–'));
+        tr.appendChild(el('td', 'px-4 py-3 text-sm font-bold text-gray-300', p.authorName || ''));
+        tr.appendChild(el('td', 'px-4 py-3 text-sm font-bold text-gray-300 whitespace-nowrap', dateText(p)));
+        const tdStatus = el('td', 'px-4 py-3');
+        tdStatus.appendChild(statusTag(p.status));
+        tr.appendChild(tdStatus);
+        const tdActions = el('td', 'px-4 py-3');
+        tdActions.appendChild(actions(p));
+        tr.appendChild(tdActions);
+        return tr;
+    }
+
+    // Phones: one card per post
+    function cardRow(p) {
+        const li = el('li', 'px-4 py-4');
+        const top = el('div', 'flex items-start gap-3');
+        top.appendChild(thumb(p));
+        const mid = el('div', 'min-w-0 flex-1');
+        mid.appendChild(titleBlock(p));
+        const meta = [p.tournamentName, p.authorName, dateText(p)].filter(Boolean).join(' · ');
+        if (meta) mid.appendChild(el('p', 'text-xs font-bold text-gray-400 mt-1 break-words', meta));
+        const tagLine = el('div', 'mt-2');
+        tagLine.appendChild(statusTag(p.status));
+        mid.appendChild(tagLine);
+        top.appendChild(mid);
+        li.appendChild(top);
+        const act = actions(p);
+        act.classList.add('mt-3');
+        li.appendChild(act);
+        return li;
+    }
+
+    // ============================================
+    // TABS, FILTERS, PAGING
+    // ============================================
+    function markTabs() {
+        document.querySelectorAll('.nw-tab').forEach(b => {
+            const on = b.getAttribute('data-tab') === state.tab;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+            b.tabIndex = on ? 0 : -1;
+        });
+    }
+
+    document.querySelectorAll('.nw-tab').forEach(b => {
+        b.addEventListener('click', () => {
+            state.tab = b.getAttribute('data-tab');
+            state.page = 1;
+            markTabs();
+            loadPosts();
+        });
+    });
+    document.getElementById('listTabs').addEventListener('keydown', e => {
+        const tabs = Array.from(document.querySelectorAll('.nw-tab'));
+        const i = tabs.indexOf(document.activeElement);
+        if (i === -1) return;
+        let next = null;
+        if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+        else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+        else if (e.key === 'Home') next = tabs[0];
+        else if (e.key === 'End') next = tabs[tabs.length - 1];
+        if (next) { e.preventDefault(); next.focus(); next.click(); }
+    });
+
+    let searchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', e => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            const q = e.target.value.trim();
+            if (q === state.q) return;
+            state.q = q;
+            state.page = 1;
+            loadPosts();
+        }, 300);
+    });
+    document.getElementById('tournamentFilter').addEventListener('change', e => {
+        state.tournament = e.target.value;
+        state.page = 1;
+        loadPosts();
+    });
+    document.getElementById('authorFilter').addEventListener('change', e => {
+        state.author = e.target.value;
+        state.page = 1;
+        loadPosts();
+    });
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (state.page > 1) { state.page--; loadPosts(); window.scrollTo({ top: 0 }); }
+    });
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        state.page++;
+        loadPosts();
+        window.scrollTo({ top: 0 });
+    });
+
+    // ============================================
+    // ROW MENU: View, Hide or Show, Delete
+    // A real menu button (aria-haspopup, aria-expanded) with arrow keys,
+    // Home, End, Escape and Tab.
+    // ============================================
+    const menu = { open: false, button: null };
+    const menuEl = document.getElementById('rowMenu');
+
+    function menuItems(p) {
+        const items = [['View', 'external', null, '/post?id=' + idParam(p.id)]];
+        if (p.canEdit) {
+            if (p.status === 'hidden') items.push(['Show', 'eye', () => setVisible(p, true)]);
+            else if (p.status === 'published' || p.status === 'scheduled') items.push(['Hide', 'eyeOff', () => setVisible(p, false)]);
+            items.push(['Delete', 'trash', () => deletePost(p), null, true]);
+        }
+        return items;
+    }
+
+    function menuButton(p) {
+        const b = el('button', 'nw-menu-btn');
+        b.type = 'button';
+        b.setAttribute('aria-haspopup', 'menu');
+        b.setAttribute('aria-expanded', 'false');
+        b.setAttribute('aria-controls', 'rowMenu');
+        b.setAttribute('aria-label', 'More actions for ' + (p.title || 'post'));
+        b.appendChild(icon('dots', 'w-5 h-5'));
+        b.addEventListener('click', e => {
+            e.stopPropagation();
+            if (menu.open && menu.button === b) closeMenu(true);
+            else openMenu(b, p, 0);
+        });
+        b.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                openMenu(b, p, e.key === 'ArrowUp' ? -1 : 0);
+            }
+        });
+        return b;
+    }
+
+    function openMenu(btn, p, focusIndex) {
+        closeMenu(false);
+        menuEl.textContent = '';
+        menuItems(p).forEach(item => {
+            let node;
+            if (item[3]) {
+                node = el('a', 'nw-menu-item');
+                node.href = item[3];
+                node.target = '_blank';
+                node.rel = 'noopener';
+                node.addEventListener('click', () => closeMenu(false));
+            } else {
+                node = el('button', 'nw-menu-item' + (item[4] ? ' is-danger' : ''));
+                node.type = 'button';
+            }
+            node.setAttribute('role', 'menuitem');
+            node.tabIndex = -1;
+            node.appendChild(icon(item[1], 'w-4 h-4 flex-shrink-0 text-gray-400'));
+            node.appendChild(document.createTextNode(item[0]));
+            if (item[2]) {
+                node.addEventListener('click', () => {
+                    const action = item[2];
+                    closeMenu(true);
+                    action();
+                });
+            }
+            menuEl.appendChild(node);
+        });
+        menu.open = true;
+        menu.button = btn;
+        btn.setAttribute('aria-expanded', 'true');
+        menuEl.classList.remove('hidden');
+        positionMenu();
+        const items = menuItemNodes();
+        const target = focusIndex === -1 ? items[items.length - 1] : items[0];
+        if (target) target.focus();
+    }
+
+    function menuItemNodes() {
+        return Array.from(menuEl.querySelectorAll('[role="menuitem"]'));
+    }
+
+    function positionMenu() {
+        if (!menu.open || !menu.button) return;
+        const r = menu.button.getBoundingClientRect();
+        const w = menuEl.offsetWidth;
+        const h = menuEl.offsetHeight;
+        const left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+        let top = r.bottom + 4;
+        if (top + h > window.innerHeight - 8 && r.top - h - 4 > 8) top = r.top - h - 4;
+        menuEl.style.left = left + 'px';
+        menuEl.style.top = top + 'px';
+    }
+
+    function closeMenu(focusButton) {
+        if (!menu.open) return;
+        menu.open = false;
+        menuEl.classList.add('hidden');
+        if (menu.button) {
+            menu.button.setAttribute('aria-expanded', 'false');
+            if (focusButton && document.contains(menu.button)) menu.button.focus();
+        }
+    }
+
+    menuEl.addEventListener('keydown', e => {
+        const items = menuItemNodes();
+        const i = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+        else if (e.key === 'Home') { e.preventDefault(); items[0].focus(); }
+        else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+        else if (e.key === 'Tab') { closeMenu(true); }
+    });
+    document.addEventListener('click', e => {
+        if (menu.open && !menuEl.contains(e.target) && e.target !== menu.button && !(menu.button && menu.button.contains(e.target))) closeMenu(false);
+    });
+    window.addEventListener('resize', () => closeMenu(false));
+    window.addEventListener('scroll', () => closeMenu(false), { passive: true });
+
+    // ============================================
+    // HIDE, SHOW, DELETE
+    // ============================================
+    async function setVisible(p, visible) {
         const ok = await KBFDialog.confirm({
-            title: newVisibility ? 'Show this news post?' : 'Hide this news post?',
-            message: newVisibility ? 'It will appear on the public site again.' : 'It will no longer appear on the public site. You can show it again later.',
-            confirmText: newVisibility ? 'Show' : 'Hide'
+            title: visible ? 'Show this news post?' : 'Hide this news post?',
+            message: visible ? 'It will appear on the public site again.' : 'It will no longer appear on the public site. You can show it again later.',
+            confirmText: visible ? 'Show' : 'Hide',
+            opener: menu.button
         });
         if (!ok) return;
-
-        const restore = KBF.setBusy(btn, 'Saving...');
         try {
             const response = await authenticatedFetch('/api/announcements.php', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: announcementId, isVisible: newVisibility })
+                body: JSON.stringify({ postId: parseInt(p.id, 10), isVisible: visible })
             });
-
-            const result = await response.json();
-
+            const result = await response.json().catch(() => ({ success: false }));
             if (result.success) {
-                // Update this post's state in place and re-render the label, badge and styling.
-                // (Re-loading would drop a hidden post, since the list only returns visible posts.)
-                loadedAnnouncements.forEach(ann => {
-                    if (ann.AnnouncementId == announcementId) {
-                        ann.IsVisible = newVisibility;
-                    }
-                });
-                renderAnnouncements(loadedAnnouncements);
-                // The list was redrawn: put focus back on this post's button
-                const again = document.querySelector('[data-ann-action="toggle"][data-ann-id="' + Number(announcementId) + '"]');
-                if (again) again.focus();
-                showListMessage(newVisibility ? 'News post shown on the public site.' : 'News post hidden from the public site.', true);
+                toast(visible ? 'News post shown on the public site.' : 'News post hidden from the public site.', true);
+                loadPosts();
             } else {
-                showListMessage(result.message || 'The news post could not be changed.', false);
+                toast(result.message || 'The news post could not be changed.', false);
             }
         } catch (error) {
             console.error('Error:', error);
-            showListMessage('The news post could not be changed. Please check your connection and try again.', false);
-        } finally {
-            restore();
+            toast('The news post could not be changed. Please check your connection and try again.', false);
         }
     }
 
-    async function deleteAnnouncement(announcementId, btn) {
-        if (KBF.isBusy(btn)) return;
+    async function deletePost(p) {
         const ok = await KBFDialog.confirm({
-            title: 'Remove this news post?',
-            message: 'Remove this news post from the public site? It will no longer appear in the news list.',
-            confirmText: 'Remove',
-            danger: true
+            title: 'Delete this news post?',
+            message: '"' + (p.title || 'This post') + '" and its pictures will be deleted for good. This cannot be undone.',
+            confirmText: 'Delete',
+            danger: true,
+            opener: menu.button
         });
         if (!ok) return;
-
-        const restore = KBF.setBusy(btn, 'Removing...');
         try {
-            const response = await authenticatedFetch(`/api/announcements.php?id=${announcementId}`, {
-                method: 'DELETE'
-            });
-
-            const result = await response.json();
-
+            const response = await authenticatedFetch('/api/announcements.php?id=' + idParam(p.id), { method: 'DELETE' });
+            const result = await response.json().catch(() => ({ success: false }));
             if (result.success) {
-                showListMessage('News post removed from the public site.', true);
-                loadAnnouncements();
+                toast('News post deleted.', true);
+                loadPosts();
             } else {
-                showListMessage(result.message || 'The news post could not be removed.', false);
+                toast(result.message || 'The news post could not be deleted.', false);
             }
         } catch (error) {
             console.error('Error:', error);
-            showListMessage('The news post could not be removed. Please check your connection and try again.', false);
-        } finally {
-            restore();
+            toast('The news post could not be deleted. Please check your connection and try again.', false);
         }
     }
-
-    // ============================================
-    // CREATE AND EDIT FORM
-    // ============================================
-    function showFormMessage(text, ok) {
-        const messageDiv = document.getElementById('formMessage');
-        messageDiv.className = ok
-            ? 'p-4 border-4 border-green-500 bg-green-500/20 text-green-400 font-bold text-sm'
-            : 'p-4 border-4 border-red-500 bg-red-500/20 text-red-400 font-bold text-sm';
-        messageDiv.textContent = text;
-        messageDiv.classList.remove('hidden');
-    }
-
-    function imageLimitMb() {
-        return KBFShell.uploadLimitMb('news', 5);
-    }
-
-    document.getElementById('featuredImage').addEventListener('change', function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (file.size > imageLimitMb() * 1024 * 1024) {
-            showFormMessage('The image must be smaller than ' + imageLimitMb() + 'MB.', false);
-            e.target.value = '';
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            document.getElementById('previewImg').src = event.target.result;
-            document.getElementById('imagePreviewLabel').textContent = 'Preview';
-            document.getElementById('removeImageBtn').classList.remove('hidden');
-            document.getElementById('imagePreview').classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
-    });
-
-    // Clears a newly chosen image (an existing post image is kept unless replaced)
-    document.getElementById('removeImageBtn').addEventListener('click', function () {
-        document.getElementById('featuredImage').value = '';
-        document.getElementById('imagePreview').classList.add('hidden');
-        const current = editingId ? loadedEditImage : null;
-        if (current) showCurrentImage(current);
-    });
-
-    let loadedEditImage = null;
-    function showCurrentImage(path) {
-        setImageVariant(document.getElementById('previewImg'), path, 'display');
-        document.getElementById('imagePreviewLabel').textContent = 'Current image (choose a file to replace it)';
-        document.getElementById('removeImageBtn').classList.add('hidden');
-        document.getElementById('imagePreview').classList.remove('hidden');
-    }
-
-    function fileToDataUrl(file) {
-        return new Promise((resolve, reject) => {
-            if (!file || file.size === 0) { resolve(null); return; }
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-
-    // Back to an empty "Post news" form
-    function resetForm() {
-        const form = document.getElementById('announcementForm');
-        editingId = null;
-        loadedEditImage = null;
-        form.reset();
-        KBF.clearFormErrors(form);
-        document.getElementById('tournamentSelect').disabled = false;
-        document.getElementById('tournamentHint').textContent = 'Approved or completed tournaments only';
-        document.getElementById('imagePreview').classList.add('hidden');
-        document.getElementById('cancelEdit').classList.add('hidden');
-        document.getElementById('pageVerb').textContent = 'Post';
-        document.getElementById('announcementSubmit').textContent = 'Publish news post';
-        try {
-            const p = new URLSearchParams(window.location.search);
-            if (p.has('edit') || p.has('tournament')) window.history.replaceState(null, '', window.location.pathname);
-        } catch (e) { /* ignore */ }
-    }
-
-    document.getElementById('cancelEdit').addEventListener('click', function () {
-        resetForm();
-        document.getElementById('formMessage').classList.add('hidden');
-    });
-
-    // Load a post into the form for editing (GET ?id=)
-    async function startEdit(postId) {
-        const id = parseInt(postId, 10);
-        if (!id) return;
-        try {
-            const response = await authenticatedFetch('/api/announcements.php?id=' + encodeURIComponent(String(id)));
-            const data = await response.json();
-            if (!data.success || !data.announcement) {
-                showFormMessage(data.message || 'This news post could not be found.', false);
-                return;
-            }
-            const post = data.announcement;
-            await tournamentsReady;
-            editingId = id;
-            loadedEditImage = post.FeaturedImage || null;
-            document.getElementById('announcementTitle').value = post.Title || '';
-            document.getElementById('announcementContent').value = post.Content || '';
-            document.getElementById('featuredImage').value = '';
-            // A post's tournament is not changed after it is published
-            const select = document.getElementById('tournamentSelect');
-            const tid = post.TournamentId ? String(parseInt(post.TournamentId, 10)) : '';
-            if (tid && !Array.from(select.options).some(o => o.value === tid)) {
-                const option = document.createElement('option');
-                option.value = tid;
-                option.textContent = post.TournamentName || 'Current tournament';
-                select.appendChild(option);
-            }
-            select.value = tid;
-            select.disabled = true;
-            document.getElementById('tournamentHint').textContent = "A post's tournament cannot be changed after it is published";
-            if (loadedEditImage) showCurrentImage(loadedEditImage);
-            else document.getElementById('imagePreview').classList.add('hidden');
-            document.getElementById('cancelEdit').classList.remove('hidden');
-            document.getElementById('pageVerb').textContent = 'Edit';
-            document.getElementById('announcementSubmit').textContent = 'Save changes';
-            document.getElementById('formMessage').classList.add('hidden');
-            try {
-                window.history.replaceState(null, '', window.location.pathname + '?edit=' + encodeURIComponent(String(id)));
-            } catch (e) { /* ignore */ }
-            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            document.getElementById('announcementTitle').focus({ preventScroll: true });
-        } catch (error) {
-            console.error('Error loading post:', error);
-            showFormMessage('The news post could not be loaded. Please check your connection and try again.', false);
-        }
-    }
-
-    document.getElementById('announcementForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const form = e.target;
-        const submit = document.getElementById('announcementSubmit');
-        const messageDiv = document.getElementById('formMessage');
-        const titleField = document.getElementById('announcementTitle');
-        const contentField = document.getElementById('announcementContent');
-        const tournamentField = document.getElementById('tournamentSelect');
-        const imageField = document.getElementById('featuredImage');
-
-        // Same limits as the server, shown next to the field
-        KBF.clearFormErrors(form);
-        messageDiv.classList.add('hidden');
-        const title = titleField.value.trim();
-        const content = contentField.value.trim();
-        if (!editingId && !canAll && !tournamentField.value) {
-            KBF.showFieldError(tournamentField, 'Please choose one of your tournaments.');
-            tournamentField.focus();
-            return;
-        }
-        if (title.length < 3 || title.length > 200) {
-            KBF.showFieldError(titleField, 'The title must be 3 to 200 characters.');
-            titleField.focus();
-            return;
-        }
-        if (content.length < 10 || content.length > 10000) {
-            KBF.showFieldError(contentField, 'The content must be 10 to 10,000 characters.');
-            contentField.focus();
-            return;
-        }
-
-        if (editingId) {
-            const postId = editingId;
-            let saved = false;
-            await KBF.withBusy(submit, 'Saving...', async function () {
-                try {
-                    const image = imageField.files[0] ? await fileToDataUrl(imageField.files[0]) : null;
-                    const response = await authenticatedFetch('/api/announcements.php?id=' + encodeURIComponent(String(postId)), {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ postId: postId, title: title, content: content, featuredImage: image })
-                    });
-                    const result = await response.json().catch(() => ({ success: false }));
-                    if (result.success) {
-                        saved = true;
-                    } else {
-                        showFormMessage(result.message || 'The changes could not be saved.', false);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    showFormMessage('The changes could not be saved. Please check your connection and try again.', false);
-                }
-            });
-            // After the button is restored, so the form goes back to "Publish news post"
-            if (saved) {
-                resetForm();
-                showFormMessage('News post saved.', true);
-                loadAnnouncements();
-                setTimeout(() => { messageDiv.classList.add('hidden'); }, 3000);
-            }
-            return;
-        }
-
-        await KBF.withBusy(submit, 'Publishing...', async function () {
-            // The server reads form fields (not JSON). The one-time request id
-            // means a repeat of this request never publishes a second post.
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('content', content);
-            if (tournamentField.value) formData.append('tournamentId', tournamentField.value);
-            if (imageField.files[0]) formData.append('featuredImage', imageField.files[0]);
-            try {
-                const response = await authenticatedFetch('/api/announcements.php', {
-                    method: 'POST',
-                    headers: { [KBF.REQUEST_ID_HEADER]: KBF.requestId(form) },
-                    body: formData
-                });
-
-                const result = await response.json().catch(() => ({ success: false }));
-
-                if (result.success) {
-                    KBF.clearRequestId(form);
-                    resetForm();
-                    showFormMessage('News post published.', true);
-                    loadAnnouncements();
-                    setTimeout(() => {
-                        messageDiv.classList.add('hidden');
-                    }, 3000);
-                } else {
-                    showFormMessage(result.message || 'The news post could not be published.', false);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showFormMessage('The news post could not be published. Please check your connection and try again.', false);
-            }
-        });
-    });
 </script>
 <script src="/js/session-manager.js"></script>
 </body>

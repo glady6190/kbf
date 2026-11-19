@@ -6,12 +6,12 @@
     <title>Edit news post - KBF-UK Admin</title>
     <meta name="robots" content="noindex">
     <script>
-    // The organiser area has been retired. Posts are edited on the admin News
-    // page; ?id= (a post) becomes ?edit= there.
+    // The organiser area has been retired. Posts are edited in the admin post
+    // editor, with the same ?id= (a post).
     (function () {
         var id = new URLSearchParams(window.location.search).get('id');
         var target = id && /^\d+$/.test(id)
-            ? '/admin/announcements?edit=' + encodeURIComponent(id)
+            ? '/admin/post-editor?id=' + encodeURIComponent(id)
             : '/admin/announcements';
         window.location.replace(target + window.location.hash);
     })();

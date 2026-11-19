@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News post - KBF-UK Admin</title>
+    <meta name="robots" content="noindex">
+    <style>
+        :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
+        [data-theme="cyan"] { --theme-primary: #06b6d4; --theme-secondary: #0891b2; --theme-light: #22d3ee; }
+        [data-theme="yellow"] { --theme-primary: #f4f916; --theme-secondary: #eab308; --theme-light: #fef08a; }
+        [data-theme="orange"] { --theme-primary: #f97316; --theme-secondary: #ea580c; --theme-light: #fb923c; }
+        .theme-primary-bg { background-color: var(--theme-primary); }
+        .theme-primary-text { color: var(--theme-primary); }
+        .theme-primary-border { border-color: var(--theme-primary); }
+
+        /* Buttons */
+        .btn-solid { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: var(--theme-primary); color: #0F172A; border: 2px solid var(--theme-primary); font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; transition: transform .15s, box-shadow .15s, opacity .15s; }
+        .btn-solid:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-shadow { box-shadow: 5px 5px 0 #020617; }
+        .btn-shadow:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #020617; }
+        .btn-plain { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: #1e293b; color: #e5e7eb; border: 2px solid #374151; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-plain:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .btn-plain:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; background: transparent; color: #f87171; border: 2px solid #ef4444; font-weight: 900; text-transform: uppercase; font-size: .75rem; padding: .7rem 1.1rem; white-space: nowrap; }
+        .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, .15); }
+        .btn-solid, .btn-plain, .btn-danger { min-height: 44px; }
+        .pe-icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 2px solid #374151; background: #1e293b; color: #e5e7eb; }
+        .pe-icon-btn:hover:not(:disabled) { border-color: #6b7280; color: #fff; }
+        .pe-icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+        .pe-icon-btn.is-danger { color: #fca5a5; border-color: #7f1d1d; }
+        .pe-icon-btn.is-danger:hover { border-color: #ef4444; }
+        .btn-solid:focus-visible, .btn-plain:focus-visible, .btn-danger:focus-visible, .pe-icon-btn:focus-visible, .pe-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+        /* Fields */
+        .field { width: 100%; background: #1e293b; border: 2px solid #374151; color: #fff; padding: .6rem .75rem; font-weight: 700; font-size: .8125rem; min-height: 44px; }
+        @media (max-width: 639.98px) { .field { font-size: 16px; } }
+        .field:focus { outline: none; border-color: var(--theme-primary); }
+        .field[aria-invalid="true"] { border-color: #ef4444; }
+        .field-label { display: block; font-size: .7rem; font-weight: 900; text-transform: uppercase; color: var(--theme-primary); margin-bottom: .35rem; }
+        .choice { accent-color: var(--theme-primary); width: 18px; height: 18px; flex-shrink: 0; margin-top: .1rem; }
+        .hint { font-size: .75rem; font-weight: 600; color: #9ca3af; }
+        .kbf-field-error { color: #fca5a5; font-size: .75rem; font-weight: 700; margin-top: .35rem; }
+
+        /* Layout */
+        .pe-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+        @media (min-width: 1024px) { .pe-split { grid-template-columns: minmax(0, 1fr) 22rem; } .pe-side { position: sticky; top: 1rem; } }
+        .pe-panel { background: #0f172a; border: 4px solid #374151; padding: 1rem; }
+        @media (min-width: 640px) { .pe-panel { padding: 1.5rem; } }
+        .pe-panel-title { font-size: .875rem; font-weight: 900; text-transform: uppercase; color: #fff; margin-bottom: 1rem; }
+        .pe-back { display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; color: #9ca3af; font-weight: 900; text-transform: uppercase; font-size: .75rem; }
+        .pe-back:hover { color: #fff; }
+        .pe-editor .kbf-ed-area { min-height: 18rem; max-height: 40rem; }
+
+        /* Publish choices */
+        .pe-choice { display: flex; align-items: flex-start; gap: .75rem; padding: .7rem .8rem; border: 2px solid #374151; background: #1e293b; cursor: pointer; min-height: 44px; }
+        .pe-choice:has(input:checked) { border-color: var(--theme-primary); }
+        .pe-choice:focus-within { outline: 2px solid #fff; outline-offset: 2px; }
+        .pe-pin { display: flex; align-items: center; gap: .75rem; min-height: 44px; cursor: pointer; }
+        .pe-pin.hidden { display: none; }
+        .pe-pin:focus-within { outline: 2px solid #fff; outline-offset: 2px; }
+        .pe-choice-title { display: block; font-size: .8125rem; font-weight: 900; color: #fff; text-transform: uppercase; }
+
+        /* Pictures */
+        .pe-drop { display: block; border: 3px dashed #4b5563; background: #1e293b; padding: 1.5rem 1rem; text-align: center; cursor: pointer; }
+        .pe-drop:hover, .pe-drop:focus-within, .pe-drop.is-over { border-color: var(--theme-primary); }
+        .pe-main-img { display: block; width: 100%; height: auto; max-height: 26rem; object-fit: contain; background: #020617; border: 2px solid #374151; }
+        .pe-photo { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .6rem; border: 2px solid #374151; background: #1e293b; }
+        .pe-photo.is-dragging { opacity: .5; border-color: var(--theme-primary); }
+        .pe-grip { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 44px; color: #6b7280; cursor: grab; flex-shrink: 0; }
+        .pe-grip:active { cursor: grabbing; }
+        .pe-photo-img { width: 6rem; height: 4.5rem; flex-shrink: 0; border: 2px solid #374151; background: #020617; }
+        .pe-photo-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .pe-photo-cap { flex: 1 1 12rem; min-width: 0; }
+        .pe-photo-btns { display: flex; gap: .4rem; flex-shrink: 0; }
+
+        /* Messages */
+        .msg { padding: .75rem; border: 2px solid; font-weight: 700; font-size: .8125rem; }
+        .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
+        .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
+        .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
+        .msg a { color: var(--theme-primary); text-decoration: underline; }
+    </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body class="bg-slate-950 text-gray-100" data-theme="emerald">
+    <div id="kbf-admin-header"></div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <a href="/admin/announcements" class="pe-back mb-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg>
+            All news
+        </a>
+        <div class="mb-6 sm:mb-8">
+            <h1 id="pageHeading" class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">New post</h1>
+            <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-3"></div>
+            <p id="savedLine" class="hidden text-xs text-gray-400 font-bold uppercase" role="status" aria-live="polite"></p>
+        </div>
+
+        <div id="pageMessage" class="hidden msg mb-5" role="status" aria-live="polite"></div>
+
+        <div id="editorGrid" class="pe-split">
+            <!-- Left: words and pictures -->
+            <div class="space-y-6 min-w-0">
+                <section class="pe-panel" aria-label="Post">
+                    <div class="mb-5">
+                        <label for="postTitle" class="field-label">Title</label>
+                        <input type="text" id="postTitle" class="field" maxlength="200" autocomplete="off"
+                               placeholder="For example: Entries open for the Spring Open">
+                    </div>
+                    <div>
+                        <p id="textLabel" class="field-label">Text</p>
+                        <div id="editorHost" class="pe-editor"></div>
+                        <p id="textError" class="kbf-field-error" role="alert" hidden></p>
+                        <div class="mt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                            <div id="textHelp">
+                                <p class="hint">Write the post. Use the buttons above for headings, lists and links, and Photo to place a picture in the text.</p>
+                                <p class="hint mt-1">Web addresses become links automatically.</p>
+                            </div>
+                            <p id="wordCount" class="text-xs font-black uppercase text-gray-400 whitespace-nowrap">0 words</p>
+                        </div>
+                        <p id="inlineStatus" class="hint mt-2" role="status" aria-live="polite"></p>
+                        <input type="file" id="inlineFile" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif" tabindex="-1" aria-hidden="true">
+                    </div>
+                </section>
+
+                <section class="pe-panel" aria-labelledby="picturesTitle">
+                    <h2 id="picturesTitle" class="pe-panel-title">Pictures</h2>
+
+                    <!-- Main picture -->
+                    <div id="mainDropWrap">
+                        <label id="mainDrop" class="pe-drop" for="mainFile">
+                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="block text-sm font-black uppercase text-white">Add main picture</span>
+                            <span class="block hint mt-1">Poster or photo. Drag here or choose.</span>
+                        </label>
+                        <input type="file" id="mainFile" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif" aria-describedby="mainHint1 mainHint2">
+                    </div>
+                    <div id="mainCurrent" class="hidden">
+                        <p class="field-label">Main picture</p>
+                        <img id="mainImg" class="pe-main-img" src="" alt="Main picture">
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <button type="button" id="mainReplace" class="btn-plain">Replace</button>
+                            <button type="button" id="mainRemove" class="btn-danger">Remove</button>
+                        </div>
+                    </div>
+                    <p id="mainStatus" class="hint mt-2" role="status" aria-live="polite"></p>
+                    <p id="mainHint1" class="hint mt-2">Shown on the news card and at the top of the post, always whole, never cropped.</p>
+                    <p id="mainHint2" class="hint mt-1">JPG, PNG or WebP up to 5 MB. Every picture is converted to WebP and resized automatically, so pages stay fast.</p>
+
+                    <!-- More photos -->
+                    <div class="mt-8 pt-5 border-t-2 border-gray-800">
+                        <h3 class="text-xs font-black uppercase theme-primary-text mb-2">More photos (optional)</h3>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button type="button" id="addPhotos" class="btn-plain" aria-describedby="photosHint">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                                Add photos
+                            </button>
+                            <span id="photoCount" class="text-xs font-black uppercase text-gray-400"></span>
+                        </div>
+                        <input type="file" id="photosFile" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif" multiple tabindex="-1" aria-hidden="true">
+                        <p id="photosHint" class="hint mt-2">Up to 12. Shown as a photo gallery under the text. Drag to reorder. Each can have a caption.</p>
+                        <p id="photoStatus" class="hint mt-2" role="status" aria-live="polite"></p>
+                        <ul id="photoList" class="space-y-2 mt-3" aria-label="More photos"></ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right: publish, tournament, notes -->
+            <div class="pe-side space-y-6 min-w-0">
+                <section class="pe-panel" aria-labelledby="publishTitle">
+                    <h2 id="publishTitle" class="pe-panel-title">Publish</h2>
+                    <fieldset class="space-y-2">
+                        <legend class="sr-only">When to publish</legend>
+                        <label class="pe-choice">
+                            <input type="radio" name="mode" value="publish" class="choice" checked>
+                            <span class="pe-choice-title">Publish now</span>
+                        </label>
+                        <label class="pe-choice">
+                            <input type="radio" name="mode" value="schedule" class="choice" aria-describedby="scheduleHint">
+                            <span>
+                                <span class="pe-choice-title">Schedule</span>
+                                <span id="scheduleHint" class="block hint mt-0.5">Pick a date and time</span>
+                            </span>
+                        </label>
+                        <div id="scheduleFields" class="hidden grid grid-cols-2 gap-2 pl-1">
+                            <div>
+                                <label for="scheduleDate" class="field-label">Date</label>
+                                <input type="date" id="scheduleDate" class="field">
+                            </div>
+                            <div>
+                                <label for="scheduleTime" class="field-label">Time</label>
+                                <input type="time" id="scheduleTime" class="field" step="60">
+                            </div>
+                        </div>
+                        <label class="pe-choice">
+                            <input type="radio" name="mode" value="draft" class="choice" aria-describedby="draftHint">
+                            <span>
+                                <span class="pe-choice-title">Save as draft</span>
+                                <span id="draftHint" class="block hint mt-0.5">Only staff can see it</span>
+                            </span>
+                        </label>
+                    </fieldset>
+
+                    <label id="pinWrap" class="pe-pin hidden mt-4">
+                        <input type="checkbox" id="pinPost" class="choice">
+                        <span class="text-sm font-bold text-gray-200">Pin to the top of News</span>
+                    </label>
+
+                    <div class="flex flex-col gap-3 mt-5">
+                        <button type="button" id="mainBtn" class="btn-solid btn-shadow w-full">Publish post</button>
+                        <button type="button" id="previewBtn" class="btn-plain w-full">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Preview
+                        </button>
+                    </div>
+                </section>
+
+                <section class="pe-panel" aria-labelledby="tournamentTitle">
+                    <h2 id="tournamentTitle" class="pe-panel-title">Tournament</h2>
+                    <label for="tournamentSelect" class="field-label">Choose a tournament</label>
+                    <select id="tournamentSelect" class="field" aria-describedby="tournamentHint">
+                        <option value="">No tournament (general news)</option>
+                    </select>
+                    <p id="tournamentHint" class="hint mt-2">Link the post to a tournament so it is grouped with its other posts and shows its Register button.</p>
+                </section>
+
+                <section class="pe-panel" aria-labelledby="goodTitle">
+                    <h2 id="goodTitle" class="pe-panel-title">Good to know</h2>
+                    <ul class="space-y-2 list-disc pl-5 text-xs font-semibold text-gray-300">
+                        <li>Photos of players under 18 are not shown to visitors.</li>
+                        <li>Location details are removed from photos when they are uploaded.</li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/escape.js"></script>
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-forms.js"></script>
+    <script src="/js/kbf-editor.js"></script>
+    <script src="/js/admin-shell.js"></script>
+  <script>
+    // News post editor (create and edit).
+    //   ?id=N          edit post N
+    //   ?tournament=N  a new post about tournament N
+    // content.all_news_gallery: any post, about any tournament or none, and
+    // pinning. content.own_news_gallery only: their own posts, each linked to
+    // one of their own Approved or Completed tournaments (the API checks).
+    // Drafts (and new posts) are saved automatically every 30 seconds and
+    // when the page is left; published and scheduled posts never are.
+    const MAX_PHOTOS = 12;
+    const AUTOSAVE_MS = 30000;
+
+    let canAll = false;
+    let postId = 0;
+    let status = 'draft';          // status of the saved post (new posts count as drafts)
+    let saved = null;              // the state last saved, to tell what changed
+    let photos = [];               // [{id, url, caption}] in order
+    let mainImage = null;
+    let tournamentsReady = Promise.resolve();
+    let inFlight = 0;
+    let lastLeaveSent = null;
+    let editor = null;
+
+    const $ = id => document.getElementById(id);
+    const titleInput = $('postTitle');
+    const tournamentSelect = $('tournamentSelect');
+
+    // ============================================
+    // HELPERS
+    // ============================================
+    function getCSRFToken() {
+        return sessionStorage.getItem('csrf_token');
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+        const token = getCSRFToken();
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['X-CSRF-Token'] = token;
+        options.credentials = 'include';
+        return fetch(url, options);
+    }
+
+    // Every value reaches the page with textContent (escaped by the browser)
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+    }
+
+    // Constant icon markup only (never data)
+    const ICONS = {
+        grip: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01"/>',
+        up: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"/>',
+        down: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/>',
+        trash: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>'
+    };
+
+    function icon(name, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('class', className || 'w-4 h-4');
+        svg.innerHTML = ICONS[name] || '';
+        return svg;
+    }
+
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    function nowHHMM() { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+    // Page message; links: [[text, href, newTab]]
+    function showMessage(text, kind, links) {
+        const box = $('pageMessage');
+        box.className = 'msg mb-5 ' + (kind === 'error' ? 'msg-error' : kind === 'warn' ? 'msg-warn' : 'msg-ok');
+        box.textContent = text;
+        (links || []).forEach(l => {
+            box.appendChild(document.createTextNode(' '));
+            const a = el('a', null, l[0]);
+            a.href = l[1];
+            if (l[2]) { a.target = '_blank'; a.rel = 'noopener'; }
+            box.appendChild(a);
+        });
+        box.classList.remove('hidden');
+    }
+
+    function hideMessage() {
+        $('pageMessage').classList.add('hidden');
+    }
+
+    function toast(text, ok) {
+        if (window.KBFDialog) KBFDialog.toast(text, ok ? 'success' : 'error');
+    }
+
+    function showSaved(savedAt) {
+        const line = $('savedLine');
+        line.textContent = 'Draft saved ' + (savedAt || nowHHMM());
+        line.classList.remove('hidden');
+    }
+
+    // ============================================
+    // START
+    // ============================================
+    KBFShell.start({ anyOf: ['content.all_news_gallery', 'content.own_news_gallery'], active: 'news' }).then(function (user) {
+        window.kbfUser = user;
+        canAll = user.has('content.all_news_gallery');
+        $('pinWrap').classList.toggle('hidden', !canAll);
+        if (!canAll) {
+            tournamentSelect.required = true;
+            tournamentSelect.setAttribute('aria-required', 'true');
+            tournamentSelect.options[0].textContent = 'Choose a tournament';
+        }
+
+        editor = KBFEditor.create($('editorHost'), {
+            label: 'Text',
+            tools: ['bold', 'italic', 'h2', 'h3', 'list', 'olist', 'quote', 'link', 'photo'],
+            linkPlaceholder: 'https://...',
+            onPhoto: choosePhotoForText,
+            onWordCount: function (n) { $('wordCount').textContent = n.toLocaleString('en-GB') + (n === 1 ? ' word' : ' words'); },
+            onChange: function () { clearTextError(); }
+        });
+        editor.element.setAttribute('aria-describedby', 'textHelp');
+
+        tournamentsReady = loadTournamentPicker();
+
+        const params = new URLSearchParams(window.location.search);
+        const idRaw = params.get('id');
+        const tournamentRaw = params.get('tournament');
+        if (idRaw && /^\d+$/.test(idRaw)) {
+            loadPost(parseInt(idRaw, 10));
+        } else {
+            tournamentsReady.then(() => {
+                if (tournamentRaw && /^\d+$/.test(tournamentRaw)) {
+                    const value = String(parseInt(tournamentRaw, 10));
+                    if (Array.from(tournamentSelect.options).some(o => o.value === value)) tournamentSelect.value = value;
+                }
+                saved = currentState();
+                updateMode();
+                renderMain();
+                renderPhotos();
+                titleInput.focus();
+            });
+        }
+        setInterval(autosaveTick, AUTOSAVE_MS);
+    });
+
+    // Tournament picker: Approved or Completed tournaments; the person's own
+    // ones only without content.all_news_gallery
+    async function loadTournamentPicker() {
+        try {
+            const response = await authenticatedFetch(canAll ? '/api/tournaments.php' : '/api/tournaments.php?mine=1');
+            const data = await response.json();
+            const eligible = (data.success && Array.isArray(data.tournaments) ? data.tournaments : [])
+                .filter(t => t.Status === 'Approved' || t.Status === 'Completed');
+            while (tournamentSelect.options.length > 1) tournamentSelect.remove(1);
+            eligible.forEach(t => {
+                const option = document.createElement('option');
+                option.value = String(parseInt(t.TournamentId, 10));
+                option.textContent = `${t.Name} (${t.Status})`;
+                tournamentSelect.appendChild(option);
+            });
+            if (!canAll && !eligible.length && !new URLSearchParams(window.location.search).get('id')) {
+                showMessage('You can post news once one of your tournaments has been approved.', 'warn');
+            }
+        } catch (error) {
+            console.error('Error loading tournaments:', error);
+        }
+    }
+
+    // ============================================
+    // LOAD A POST (?id=)
+    // ============================================
+    async function loadPost(id) {
+        try {
+            const response = await authenticatedFetch('/api/announcements.php?edit=' + encodeURIComponent(String(id)));
+            const data = await response.json().catch(() => ({ success: false }));
+            if (!response.ok || !data.success || !data.post) {
+                $('editorGrid').classList.add('hidden');
+                showMessage(data.message || (response.status === 403 ? 'You cannot edit this news post.' : 'This news post could not be found.'), 'error', [['Back to all news', '/admin/announcements']]);
+                return;
+            }
+            await tournamentsReady;
+            const post = data.post;
+            postId = parseInt(post.id, 10) || id;
+            status = post.status || 'draft';
+            setHeading();
+
+            titleInput.value = post.title || '';
+            editor.setHtml(post.contentHtml || '');
+
+            const tid = post.tournamentId ? String(parseInt(post.tournamentId, 10)) : '';
+            if (tid && !Array.from(tournamentSelect.options).some(o => o.value === tid)) {
+                const option = document.createElement('option');
+                option.value = tid;
+                option.textContent = (post.tournamentName || 'Current tournament') + (post.tournamentStatus ? ' (' + post.tournamentStatus + ')' : '');
+                tournamentSelect.appendChild(option);
+            }
+            tournamentSelect.value = tid;
+
+            const mode = status === 'published' ? 'publish' : status === 'scheduled' ? 'schedule' : 'draft';
+            document.querySelector('input[name="mode"][value="' + mode + '"]').checked = true;
+            if (post.scheduledFor) {
+                const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/.exec(String(post.scheduledFor));
+                if (m) { $('scheduleDate').value = m[1]; $('scheduleTime').value = m[2]; }
+            }
+            $('pinPost').checked = !!post.isPinned;
+
+            mainImage = post.image || null;
+            photos = (Array.isArray(data.photos) ? data.photos : [])
+                .slice()
+                .sort((a, b) => (parseInt(a.sortOrder, 10) || 0) - (parseInt(b.sortOrder, 10) || 0))
+                .map(p => ({ id: parseInt(p.id, 10), url: p.url, caption: p.caption || '' }));
+
+            updateMode();
+            renderMain();
+            renderPhotos();
+            saved = currentState();
+
+            if (status === 'published' && post.isVisible === false) {
+                showMessage('This post is hidden from the public site. You can show it again from the News list.', 'warn', [['All news', '/admin/announcements?tab=hidden']]);
+            } else if (status === 'scheduled' && post.scheduledFor) {
+                showMessage('This post is scheduled for ' + KBF.formatDate(post.scheduledFor, { time: true }) + '.', 'ok');
+            }
+        } catch (error) {
+            console.error('Error loading post:', error);
+            $('editorGrid').classList.add('hidden');
+            showMessage('The news post could not be loaded. Please check your connection and try again.', 'error', [['Try again', window.location.href]]);
+        }
+    }
+
+    function setHeading() {
+        $('pageHeading').textContent = postId ? 'Edit post' : 'New post';
+        document.title = (postId ? 'Edit post' : 'New post') + ' - KBF-UK Admin';
+    }
+
+    // ============================================
+    // STATE AND CHANGES
+    // ============================================
+    function selectedMode() {
+        const r = document.querySelector('input[name="mode"]:checked');
+        return r ? r.value : 'publish';
+    }
+
+    function scheduleValue() {
+        const d = $('scheduleDate').value;
+        const t = $('scheduleTime').value;
+        return d && t ? d + 'T' + t.slice(0, 5) : '';
+    }
+
+    function currentState() {
+        return JSON.stringify({
+            t: titleInput.value,
+            c: editor ? editor.getHtml() : '',
+            tid: tournamentSelect.value,
+            m: selectedMode(),
+            s: scheduleValue(),
+            pin: canAll && $('pinPost').checked,
+            ph: photos.map(p => [p.id, p.caption])
+        });
+    }
+
+    function isDirty() {
+        return saved !== null && currentState() !== saved;
+    }
+
+    // Uploads and removals are saved straight away: record them as saved
+    // (new photos go to the end on the server; removed ones are gone)
+    function syncSavedPhotos() {
+        if (saved === null) return;
+        const s = JSON.parse(saved);
+        const ids = new Set(photos.map(p => p.id));
+        s.ph = (s.ph || []).filter(x => ids.has(x[0]));
+        photos.forEach(p => {
+            if (p._new) { s.ph.push([p.id, p.caption]); delete p._new; }
+        });
+        saved = JSON.stringify(s);
+    }
+
+    // A draft needs a title (and, for organisers, a tournament)
+    function draftReady() {
+        return titleInput.value.trim().length > 0 && (canAll || !!tournamentSelect.value);
+    }
+
+    function autosaveAllowed() {
+        return (!postId || status === 'draft') && draftReady();
+    }
+
+    // Checked before a file dialog opens: a picture needs a saved post
+    function canMakeDraft() {
+        if (postId) return true;
+        if (!titleInput.value.trim()) {
+            KBF.showFieldError(titleInput, 'Add a title first, so the draft can be saved.');
+            titleInput.focus();
+            return false;
+        }
+        if (!canAll && !tournamentSelect.value) {
+            KBF.showFieldError(tournamentSelect, 'Choose one of your tournaments first, so the draft can be saved.');
+            tournamentSelect.focus();
+            return false;
+        }
+        return true;
+    }
+
+    async function ensurePostId() {
+        if (postId) return true;
+        if (!canMakeDraft()) return false;
+        const result = await save('draft', false);
+        if (!result.success) {
+            showMessage(result.message || 'The draft could not be saved.', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    // ============================================
+    // SAVE
+    // ============================================
+    let saveChain = Promise.resolve();
+
+    // Saves run one after another, so a new post is never created twice
+    function save(mode, autosave) {
+        const run = () => doSave(mode, autosave, false);
+        const p = saveChain.then(run, run);
+        saveChain = p.catch(() => {});
+        return p;
+    }
+
+    async function doSave(mode, autosave, keepalive) {
+        const snapshot = currentState();
+        const body = {
+            postId: postId,
+            title: titleInput.value.trim(),
+            content: editor.getHtml(),
+            tournamentId: parseInt(tournamentSelect.value, 10) || 0,
+            mode: mode,
+            isPinned: canAll && $('pinPost').checked,
+            photos: photos.map(p => ({ id: p.id, caption: p.caption })),
+            autosave: !!autosave
+        };
+        if (mode === 'schedule') body.scheduledFor = scheduleValue();
+        const headers = { 'Content-Type': 'application/json' };
+        // The one-time request id means a repeat of a create never makes a second post
+        if (!postId) headers[KBF.REQUEST_ID_HEADER] = KBF.requestId('newPost');
+
+        inFlight++;
+        try {
+            const response = await authenticatedFetch('/api/announcements.php?action=save', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(body),
+                keepalive: !!keepalive
+            });
+            const result = await response.json().catch(() => ({ success: false }));
+            if (result.success) {
+                if (!postId && result.postId) {
+                    postId = parseInt(result.postId, 10) || 0;
+                    KBF.clearRequestId('newPost');
+                    setHeading();
+                    try { window.history.replaceState(null, '', window.location.pathname + '?id=' + encodeURIComponent(String(postId))); } catch (e) { /* ignore */ }
+                }
+                if (result.status) status = result.status;
+                saved = snapshot;
+                if (status === 'draft') showSaved(result.savedAt);
+                else $('savedLine').classList.add('hidden');
+            }
+            return result;
+        } catch (error) {
+            console.error('Error saving post:', error);
+            return { success: false, message: 'The post could not be saved. Please check your connection and try again.' };
+        } finally {
+            inFlight--;
+        }
+    }
+
+    function autosaveTick() {
+        if (inFlight || !editor || saved === null) return;
+        if (!autosaveAllowed() || !isDirty()) return;
+        save('draft', true).then(result => {
+            if (!result.success && !result.skipped) console.warn('Autosave failed:', result.message || '');
+        });
+    }
+
+    // Leaving the page (tab hidden, closed or another page): save a draft
+    function saveOnLeave() {
+        if (!editor || saved === null) return;
+        if (!autosaveAllowed() || !isDirty()) return;
+        const snap = currentState();
+        if (snap === lastLeaveSent) return;
+        lastLeaveSent = snap;
+        doSave('draft', true, true);
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') saveOnLeave();
+    });
+    window.addEventListener('pagehide', saveOnLeave);
+
+    // Published and scheduled posts (and drafts that cannot be saved yet): warn
+    window.addEventListener('beforeunload', e => {
+        if (!isDirty() || autosaveAllowed()) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    // ============================================
+    // PUBLISH PANEL
+    // ============================================
+    function updateMode() {
+        const mode = selectedMode();
+        $('scheduleFields').classList.toggle('hidden', mode !== 'schedule');
+        $('mainBtn').textContent = mode === 'schedule' ? 'Schedule post' : mode === 'draft' ? 'Save draft' : 'Publish post';
+        if (mode === 'schedule' && !$('scheduleDate').value) {
+            const d = new Date(Date.now() + 24 * 3600 * 1000);
+            $('scheduleDate').value = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+            if (!$('scheduleTime').value) $('scheduleTime').value = '09:00';
+        }
+        const today = new Date();
+        $('scheduleDate').min = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+    }
+    document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', updateMode));
+
+    function clearTextError() {
+        const err = $('textError');
+        if (!err.hidden) { err.hidden = true; err.textContent = ''; editor.element.removeAttribute('aria-invalid'); }
+    }
+
+    function showTextError(text) {
+        const err = $('textError');
+        err.textContent = text;
+        err.hidden = false;
+        editor.element.setAttribute('aria-invalid', 'true');
+        editor.element.setAttribute('aria-describedby', 'textError textHelp');
+        editor.focus();
+    }
+
+    // Returns true when the post can be saved in this mode
+    function validate(mode) {
+        KBF.clearFieldError(titleInput);
+        KBF.clearFieldError(tournamentSelect);
+        KBF.clearFieldError($('scheduleDate'));
+        clearTextError();
+        const title = titleInput.value.trim();
+        if (!canAll && !tournamentSelect.value) {
+            KBF.showFieldError(tournamentSelect, 'Please choose one of your tournaments.');
+            tournamentSelect.focus();
+            return false;
+        }
+        if (mode === 'draft') {
+            if (!title) {
+                KBF.showFieldError(titleInput, 'Add a title, so the draft can be saved.');
+                titleInput.focus();
+                return false;
+            }
+            return true;
+        }
+        if (title.length < 3 || title.length > 200) {
+            KBF.showFieldError(titleInput, 'The title must be 3 to 200 characters.');
+            titleInput.focus();
+            return false;
+        }
+        if (editor.getText().replace(/\s+/g, ' ').trim().length < 10) {
+            showTextError('The text must be at least 10 characters.');
+            return false;
+        }
+        if (mode === 'schedule') {
+            const when = scheduleValue();
+            const at = when ? new Date(when + ':00') : null;
+            if (!at || isNaN(at.getTime()) || at.getTime() <= Date.now()) {
+                KBF.showFieldError($('scheduleDate'), 'Pick a date and time in the future.');
+                $('scheduleDate').focus();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    $('mainBtn').addEventListener('click', async function () {
+        const btn = this;
+        if (KBF.isBusy(btn)) return;
+        const mode = selectedMode();
+        if (!validate(mode)) return;
+        if (mode === 'draft' && (status === 'published' || status === 'scheduled')) {
+            const ok = await KBFDialog.confirm({
+                title: 'Turn this post back into a draft?',
+                message: status === 'published' ? 'It will be taken off the News page until you publish it again.' : 'It will no longer be published at the scheduled time.',
+                confirmText: 'Save as draft',
+                opener: btn
+            });
+            if (!ok) return;
+        }
+        hideMessage();
+        await KBF.withBusy(btn, mode === 'draft' ? 'Saving...' : mode === 'schedule' ? 'Scheduling...' : 'Publishing...', async function () {
+            const result = await save(mode, false);
+            if (!result.success) {
+                showMessage(result.message || 'The post could not be saved.', 'error');
+                return;
+            }
+            const view = ['View post', '/post?id=' + encodeURIComponent(String(postId)) + (status === 'published' ? '' : '&preview=1'), true];
+            const back = ['All news', '/admin/announcements'];
+            if (status === 'published') {
+                showMessage(result.message || 'Post published.', 'ok', [view, back]);
+            } else if (status === 'scheduled') {
+                showMessage(result.message || ('Post scheduled for ' + KBF.formatDate(scheduleValue().replace('T', ' '), { time: true }) + '.'), 'ok', [view, back]);
+            } else {
+                toast('Draft saved.', true);
+            }
+        });
+    });
+
+    // Preview: save the draft first if needed, then open it in a new tab
+    $('previewBtn').addEventListener('click', async function () {
+        const btn = this;
+        if (KBF.isBusy(btn)) return;
+        if (!postId && !canMakeDraft()) return;
+        // Opened now (still inside the click) so the browser does not block it
+        const win = window.open('', '_blank');
+        await KBF.withBusy(btn, 'Saving...', async function () {
+            if (!postId || (status === 'draft' && isDirty())) {
+                const result = await save('draft', false);
+                if (!result.success) {
+                    if (win) win.close();
+                    showMessage(result.message || 'The draft could not be saved, so it cannot be previewed yet.', 'error');
+                    return;
+                }
+            } else if (isDirty()) {
+                toast('The preview shows the last saved version. Save to see your changes.', true);
+            }
+            const url = '/post?id=' + encodeURIComponent(String(postId)) + '&preview=1';
+            if (win) {
+                try { win.opener = null; } catch (e) { /* ignore */ }
+                win.location.href = url;
+            } else {
+                window.open(url, '_blank', 'noopener');
+            }
+        });
+    });
+
+    // ============================================
+    // UPLOADS
+    // ============================================
+    const TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+    async function uploadImage(kind, file) {
+        const limit = KBFShell.uploadLimitMb('news', 5);
+        if (TYPES.indexOf(file.type) === -1) {
+            return { success: false, message: '"' + file.name + '" is not a JPG, PNG or WebP picture.' };
+        }
+        if (file.size > limit * 1024 * 1024) {
+            return { success: false, message: '"' + file.name + '" is larger than ' + limit + ' MB.' };
+        }
+        const formData = new FormData();
+        formData.append('postId', String(postId));
+        formData.append('kind', kind);
+        formData.append('image', file);
+        try {
+            const response = await authenticatedFetch('/api/announcements.php?action=upload', { method: 'POST', body: formData });
+            return await response.json().catch(() => ({ success: false, message: 'The picture could not be uploaded.' }));
+        } catch (error) {
+            console.error('Upload error:', error);
+            return { success: false, message: 'The picture could not be uploaded. Please check your connection and try again.' };
+        }
+    }
+
+    // ---------- Photo in the text ----------
+    let pendingInsert = null;
+    function choosePhotoForText(insert) {
+        if (!canMakeDraft()) return;
+        pendingInsert = insert;
+        $('inlineFile').value = '';
+        $('inlineFile').click();
+    }
+
+    $('inlineFile').addEventListener('change', async function () {
+        const file = this.files[0];
+        const insert = pendingInsert;
+        pendingInsert = null;
+        if (!file || !insert) return;
+        const note = $('inlineStatus');
+        note.textContent = 'Uploading the photo...';
+        if (!(await ensurePostId())) { note.textContent = ''; return; }
+        const result = await uploadImage('inline', file);
+        if (result.success && result.url) {
+            insert(result.url, titleInput.value.trim());
+            note.textContent = 'Photo placed in the text.';
+        } else {
+            note.textContent = '';
+            showMessage(result.message || 'The photo could not be uploaded.', 'error');
+        }
+    });
+
+    // ---------- Main picture ----------
+    function renderMain() {
+        const has = !!mainImage;
+        $('mainDropWrap').classList.toggle('hidden', has);
+        $('mainCurrent').classList.toggle('hidden', !has);
+        if (has) KBF.setImageVariant($('mainImg'), KBF.safeUrl(mainImage), 'display');
+    }
+
+    async function uploadMain(file) {
+        if (!file) return;
+        const note = $('mainStatus');
+        note.textContent = 'Uploading the main picture...';
+        if (!(await ensurePostId())) { note.textContent = ''; return; }
+        const result = await uploadImage('main', file);
+        if (result.success && result.image) {
+            mainImage = result.image;
+            renderMain();
+            note.textContent = 'Main picture saved.';
+            $('mainReplace').focus();
+        } else {
+            note.textContent = '';
+            showMessage(result.message || 'The main picture could not be uploaded.', 'error');
+        }
+    }
+
+    $('mainDrop').addEventListener('click', e => { if (!canMakeDraft()) e.preventDefault(); });
+    $('mainFile').addEventListener('change', function () {
+        const file = this.files[0];
+        this.value = '';
+        uploadMain(file);
+    });
+    $('mainReplace').addEventListener('click', () => {
+        $('mainFile').value = '';
+        $('mainFile').click();
+    });
+    ['dragenter', 'dragover'].forEach(type => $('mainDrop').addEventListener(type, e => {
+        if (!e.dataTransfer || Array.from(e.dataTransfer.types || []).indexOf('Files') === -1) return;
+        e.preventDefault();
+        $('mainDrop').classList.add('is-over');
+    }));
+    ['dragleave', 'drop'].forEach(type => $('mainDrop').addEventListener(type, () => $('mainDrop').classList.remove('is-over')));
+    $('mainDrop').addEventListener('drop', e => {
+        if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+        e.preventDefault();
+        if (!canMakeDraft()) return;
+        uploadMain(e.dataTransfer.files[0]);
+    });
+
+    $('mainRemove').addEventListener('click', async function () {
+        const btn = this;
+        if (KBF.isBusy(btn)) return;
+        const ok = await KBFDialog.confirm({
+            title: 'Remove the main picture?',
+            message: 'The picture will be deleted from this post.',
+            confirmText: 'Remove',
+            danger: true,
+            opener: btn
+        });
+        if (!ok) return;
+        await KBF.withBusy(btn, 'Removing...', async function () {
+            try {
+                const response = await authenticatedFetch('/api/announcements.php?action=removeImage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ postId: postId })
+                });
+                const result = await response.json().catch(() => ({ success: false }));
+                if (result.success) {
+                    mainImage = null;
+                    renderMain();
+                    $('mainStatus').textContent = 'Main picture removed.';
+                    $('mainFile').focus();
+                } else {
+                    showMessage(result.message || 'The main picture could not be removed.', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('The main picture could not be removed. Please check your connection and try again.', 'error');
+            }
+        });
+    });
+
+    // ---------- More photos ----------
+    $('addPhotos').addEventListener('click', () => {
+        if (photos.length >= MAX_PHOTOS) return;
+        if (!canMakeDraft()) return;
+        $('photosFile').value = '';
+        $('photosFile').click();
+    });
+
+    $('photosFile').addEventListener('change', async function () {
+        const files = Array.from(this.files || []);
+        this.value = '';
+        if (!files.length) return;
+        const note = $('photoStatus');
+        const room = MAX_PHOTOS - photos.length;
+        const take = files.slice(0, Math.max(0, room));
+        const problems = [];
+        if (files.length > take.length) problems.push('Only ' + MAX_PHOTOS + ' photos can be added, so ' + (files.length - take.length) + ' were left out.');
+        if (!take.length) { showMessage(problems.join(' '), 'warn'); return; }
+        note.textContent = 'Uploading...';
+        if (!(await ensurePostId())) { note.textContent = ''; return; }
+        $('addPhotos').disabled = true;
+        let added = 0;
+        for (let i = 0; i < take.length; i++) {
+            note.textContent = 'Uploading photo ' + (i + 1) + ' of ' + take.length + '...';
+            const result = await uploadImage('photo', take[i]);
+            if (result.success && result.photo) {
+                photos.push({ id: parseInt(result.photo.id, 10), url: result.photo.url, caption: result.photo.caption || '', _new: true });
+                added++;
+                syncSavedPhotos();
+                renderPhotos();
+            } else {
+                problems.push(result.message || ('"' + take[i].name + '" could not be uploaded.'));
+                if (photos.length >= MAX_PHOTOS) break;
+            }
+        }
+        renderPhotos();
+        note.textContent = added ? (added === 1 ? '1 photo added.' : added + ' photos added.') : '';
+        if (problems.length) showMessage(problems.join(' '), 'error');
+    });
+
+    function renderPhotos() {
+        const list = $('photoList');
+        list.textContent = '';
+        photos.forEach((p, i) => list.appendChild(photoTile(p, i)));
+        $('photoCount').textContent = photos.length ? photos.length + ' of ' + MAX_PHOTOS : '';
+        $('addPhotos').disabled = photos.length >= MAX_PHOTOS;
+    }
+
+    function photoTile(p, i) {
+        const n = i + 1;
+        const li = el('li', 'pe-photo');
+        li.dataset.id = String(p.id);
+
+        const grip = el('span', 'pe-grip');
+        grip.title = 'Drag to reorder';
+        grip.appendChild(icon('grip', 'w-5 h-5'));
+        // Only the handle starts a drag, so text in the caption can still be selected
+        grip.addEventListener('mousedown', () => { li.draggable = true; });
+        grip.addEventListener('touchstart', () => { li.draggable = true; }, { passive: true });
+        li.appendChild(grip);
+
+        const imgBox = el('div', 'pe-photo-img');
+        const img = document.createElement('img');
+        img.alt = 'Photo ' + n;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        KBF.setImageVariant(img, KBF.safeUrl(p.url), 'thumb');
+        imgBox.appendChild(img);
+        li.appendChild(imgBox);
+
+        const cap = el('div', 'pe-photo-cap');
+        const capId = 'photoCaption' + p.id;
+        const label = el('label', 'sr-only', 'Caption for photo ' + n);
+        label.htmlFor = capId;
+        const input = el('input', 'field');
+        input.type = 'text';
+        input.id = capId;
+        input.maxLength = 200;
+        input.placeholder = 'Caption (optional)';
+        input.value = p.caption || '';
+        input.addEventListener('input', () => { p.caption = input.value; });
+        cap.appendChild(label);
+        cap.appendChild(input);
+        li.appendChild(cap);
+
+        const btns = el('div', 'pe-photo-btns');
+        const up = el('button', 'pe-icon-btn');
+        up.type = 'button';
+        up.setAttribute('aria-label', 'Move photo ' + n + ' up');
+        up.dataset.move = 'up';
+        up.disabled = i === 0;
+        up.appendChild(icon('up', 'w-4 h-4'));
+        up.addEventListener('click', () => movePhoto(i, -1, 'up'));
+        const down = el('button', 'pe-icon-btn');
+        down.type = 'button';
+        down.setAttribute('aria-label', 'Move photo ' + n + ' down');
+        down.dataset.move = 'down';
+        down.disabled = i === photos.length - 1;
+        down.appendChild(icon('down', 'w-4 h-4'));
+        down.addEventListener('click', () => movePhoto(i, 1, 'down'));
+        const del = el('button', 'pe-icon-btn is-danger');
+        del.type = 'button';
+        del.setAttribute('aria-label', 'Remove photo ' + n);
+        del.appendChild(icon('trash', 'w-4 h-4'));
+        del.addEventListener('click', () => removePhoto(p, del));
+        btns.appendChild(up);
+        btns.appendChild(down);
+        btns.appendChild(del);
+        li.appendChild(btns);
+
+        li.addEventListener('dragstart', e => {
+            dragId = p.id;
+            li.classList.add('is-dragging');
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'move';
+                try { e.dataTransfer.setData('text/plain', String(p.id)); } catch (err) { /* ignore */ }
+            }
+        });
+        li.addEventListener('dragend', () => {
+            li.draggable = false;
+            li.classList.remove('is-dragging');
+            if (dragId !== null) finishDrag();
+        });
+        return li;
+    }
+
+    function movePhoto(i, delta, dir) {
+        const j = i + delta;
+        if (j < 0 || j >= photos.length) return;
+        const moved = photos[i];
+        photos[i] = photos[j];
+        photos[j] = moved;
+        renderPhotos();
+        $('photoStatus').textContent = 'Photo moved to position ' + (j + 1) + ' of ' + photos.length + '.';
+        const tile = $('photoList').children[j];
+        if (tile) {
+            let btn = tile.querySelector('[data-move="' + dir + '"]');
+            if (!btn || btn.disabled) btn = tile.querySelector('[data-move="' + (dir === 'up' ? 'down' : 'up') + '"]');
+            if (btn && !btn.disabled) btn.focus();
+        }
+    }
+
+    // Drag to reorder: the tile moves while dragging; the order is kept on drop
+    let dragId = null;
+    $('photoList').addEventListener('dragover', e => {
+        if (dragId === null) return;
+        e.preventDefault();
+        const list = $('photoList');
+        const dragged = list.querySelector('[data-id="' + dragId + '"]');
+        const target = e.target.closest ? e.target.closest('.pe-photo') : null;
+        if (!dragged || !target || target === dragged) return;
+        const r = target.getBoundingClientRect();
+        const after = e.clientY > r.top + r.height / 2;
+        list.insertBefore(dragged, after ? target.nextSibling : target);
+    });
+    $('photoList').addEventListener('drop', e => {
+        if (dragId === null) return;
+        e.preventDefault();
+        finishDrag();
+    });
+
+    function finishDrag() {
+        const order = Array.from($('photoList').children).map(li => parseInt(li.dataset.id, 10));
+        dragId = null;
+        const byId = new Map(photos.map(p => [p.id, p]));
+        photos = order.map(id => byId.get(id)).filter(Boolean);
+        renderPhotos();
+        $('photoStatus').textContent = 'Photo order changed.';
+    }
+
+    async function removePhoto(p, btn) {
+        if (KBF.isBusy(btn)) return;
+        const ok = await KBFDialog.confirm({
+            title: 'Remove this photo?',
+            message: 'The photo will be deleted from this post.',
+            confirmText: 'Remove',
+            danger: true,
+            opener: btn
+        });
+        if (!ok) return;
+        const restore = KBF.setBusy(btn);
+        try {
+            const response = await authenticatedFetch('/api/announcements.php?action=removePhoto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId: postId, photoId: p.id })
+            });
+            const result = await response.json().catch(() => ({ success: false }));
+            if (result.success) {
+                const index = photos.indexOf(p);
+                photos = photos.filter(x => x !== p);
+                syncSavedPhotos();
+                renderPhotos();
+                $('photoStatus').textContent = 'Photo removed.';
+                const tiles = $('photoList').children;
+                const next = tiles[Math.min(index, tiles.length - 1)];
+                if (next) next.querySelector('input').focus();
+                else $('addPhotos').focus();
+            } else {
+                restore();
+                showMessage(result.message || 'The photo could not be removed.', 'error');
+            }
+        } catch (error) {
+            restore();
+            console.error('Error:', error);
+            showMessage('The photo could not be removed. Please check your connection and try again.', 'error');
+        }
+    }
+
+</script>
+<script src="/js/session-manager.js"></script>
+</body>
+</html>

@@ -50,6 +50,40 @@
         .pp-body a:hover { color: #fff; }
         .pp-body a:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
 
+        /* Formatted (HTML) posts: only the allowed elements are rebuilt into here */
+        .pp-body.pp-rich { white-space: normal; }
+        .pp-rich > :first-child { margin-top: 0; }
+        .pp-rich > :last-child { margin-bottom: 0; }
+        .pp-rich p { margin: 0 0 1.1em; }
+        .pp-rich h2 { margin: 1.6em 0 .6em; color: #fff; font-size: 24px; line-height: 1.2; font-weight: 900; text-transform: uppercase; }
+        .pp-rich h3 { margin: 1.4em 0 .5em; color: #fff; font-size: 19px; line-height: 1.25; font-weight: 900; text-transform: uppercase; }
+        @media (min-width: 640px) { .pp-rich h2 { font-size: 28px; } .pp-rich h3 { font-size: 21px; } }
+        .pp-rich strong, .pp-rich b { color: #fff; font-weight: 800; }
+        .pp-rich em, .pp-rich i { font-style: italic; }
+        .pp-rich ul, .pp-rich ol { margin: 0 0 1.1em; padding-left: 1.5em; }
+        .pp-rich ul { list-style: square; }
+        .pp-rich ol { list-style: decimal; }
+        .pp-rich li { margin: .3em 0; }
+        .pp-rich li::marker { color: var(--theme-primary); font-weight: 900; }
+        .pp-rich blockquote { margin: 0 0 1.1em; padding: 12px 18px; background: #0F172A; border-left: 4px solid var(--theme-primary); color: #E5E7EB; font-style: italic; }
+        .pp-rich img { display: block; max-width: 100%; height: auto; margin: 1.2em auto; border: 4px solid #374151; background: #0B1324; }
+
+        /* Preview banner (drafts, scheduled and hidden posts; staff only) */
+        .pp-preview { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 24px; padding: 14px 16px; background: #0F172A; border: 4px solid var(--theme-primary); box-shadow: 6px 6px 0 var(--theme-primary); color: #fff; font-size: 15px; line-height: 1.45; font-weight: 800; }
+        .pp-preview .pp-icon { width: 22px; height: 22px; margin-top: 1px; color: var(--theme-primary); }
+
+        /* Extra photos */
+        .pp-gallery { margin-top: 36px; }
+        .pp-gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+        @media (min-width: 640px) { .pp-gallery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .pp-gallery-item { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+        .pp-gallery-btn { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 4 / 3; padding: 0; background: #0B1324; border: 3px solid #374151; cursor: zoom-in; overflow: hidden; transition: border-color .2s ease; }
+        .pp-gallery-btn:hover { border-color: var(--theme-primary); }
+        .pp-gallery-btn:focus-visible { outline: 3px solid var(--theme-primary); outline-offset: 3px; }
+        .pp-gallery-btn img { display: block; width: 100%; height: 100%; object-fit: contain; }
+        .pp-gallery-btn .pp-icon { width: 36px; height: 36px; color: var(--theme-primary); }
+        .pp-gallery-cap { color: #9CA3AF; font-size: 14px; line-height: 1.45; font-weight: 600; overflow-wrap: anywhere; }
+
         /* Promotion card */
         .pp-promo { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; margin: 0 0 28px; padding: 24px; background: #0F172A; border: 4px solid #374151; box-shadow: 6px 6px 0 var(--theme-primary); }
         @media (min-width: 640px) { .pp-promo { flex-direction: row; text-align: left; padding: 28px; } }
@@ -323,6 +357,12 @@
         </div>
 
         <article id="postContent" hidden>
+            <!-- Drafts, scheduled and hidden posts (only staff can open these) -->
+            <div id="previewBanner" class="pp-preview" role="note" hidden>
+                <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg>
+                <span id="previewText"></span>
+            </div>
+
             <a href="/news" class="pp-back">
                 <svg class="pp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                 All news
@@ -352,6 +392,12 @@
             <section id="promoCard" class="pp-promo" aria-label="Promotion" hidden></section>
 
             <div id="postBody" class="pp-body"></div>
+
+            <!-- Extra photos (each opens larger in the photo viewer) -->
+            <section id="photosBox" class="pp-gallery" aria-labelledby="photosTitle" hidden>
+                <h2 id="photosTitle" class="pp-section-title">Photos</h2>
+                <ul id="photosGrid" class="pp-gallery-grid"></ul>
+            </section>
 
             <!-- Linked tournament -->
             <section id="tournamentBox" class="pp-tourney" aria-label="Tournament" hidden></section>
@@ -514,6 +560,9 @@
     <!-- Shared news and promotion helpers (also used by the home and News pages) -->
     <script src="/js/escape.js"></script>
     <script src="/js/news-helpers.js"></script>
+    <!-- Shared photo viewer for the extra photos -->
+    <script src="/js/kbf-dialog.js"></script>
+    <script src="/js/kbf-lightbox.js"></script>
     <script>
     // ============================================
     // GLOBAL VARIABLES
@@ -545,7 +594,8 @@
     }
 
     // Every value from a post goes in with textContent (KBFNews.el) or as a
-    // checked attribute; HTML from a post is never parsed.
+    // checked attribute. Formatted (HTML) posts are parsed in an inert
+    // document and only allowed elements are rebuilt (renderRichHtml).
     const N = window.KBFNews;
 
     // Only images on this site (a path) or https images are shown
@@ -654,6 +704,177 @@
         if (last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
     }
 
+    // ---------- formatted (HTML) posts ----------
+    // The server already cleans these; this is a second check. The HTML is
+    // parsed in an inert document (no scripts run, no images load there) and
+    // only these elements are rebuilt, with only the attributes below:
+    //   p br strong b em i h2 h3 ul ol li blockquote
+    //   a   href: http, https or mailto only
+    //   img src: an uploaded post image (/uploads/announcements/<file>), alt
+    // Any other element is left out but its text kept; script-like elements
+    // are dropped whole.
+    const RICH_TAGS = ['p', 'br', 'strong', 'b', 'em', 'i', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'a', 'img'];
+    const RICH_DROP = ['script', 'style', 'template', 'noscript', 'iframe', 'frame', 'frameset', 'object', 'embed',
+        'applet', 'svg', 'math', 'form', 'input', 'button', 'select', 'textarea', 'option', 'head', 'title',
+        'meta', 'link', 'base', 'audio', 'video', 'source', 'track', 'canvas', 'picture', 'map', 'area'];
+    const POST_IMAGE_PATTERN = /^\/uploads\/announcements\/[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.(?:jpe?g|png|webp|gif)$/i;
+
+    // An uploaded post image path, or null
+    function safePostImage(value) {
+        if (typeof value !== 'string') return null;
+        const src = value.trim();
+        return POST_IMAGE_PATTERN.test(src) && src.indexOf('..') === -1 ? src : null;
+    }
+
+    // http, https or mailto links only (spaces and control characters are
+    // removed before the scheme is read)
+    function safeRichHref(value) {
+        if (typeof value !== 'string') return null;
+        const href = value.trim();
+        const compact = href.replace(/[\u0000- \u007F- ​-‍  ﻿]/g, '');
+        if (/^https?:\/\/[^\s<>"'`]+$/i.test(href) && /^https?:\/\//i.test(compact)) return href;
+        if (/^mailto:[^\s<>"'`]+$/i.test(href) && /^mailto:/i.test(compact)) return href;
+        return null;
+    }
+
+    function isExternalHref(href) {
+        if (!/^https?:/i.test(href)) return false;
+        try { return new URL(href).host !== window.location.host; } catch (e) { return true; }
+    }
+
+    function buildRichNodes(source, target) {
+        source.childNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                target.appendChild(document.createTextNode(node.nodeValue));
+                return;
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) return; // comments and the rest
+            const tag = node.nodeName.toLowerCase();
+            if (RICH_DROP.indexOf(tag) !== -1) return;
+            if (RICH_TAGS.indexOf(tag) === -1) {
+                buildRichNodes(node, target); // not allowed: keep its text only
+                return;
+            }
+
+            if (tag === 'img') {
+                const src = safePostImage(node.getAttribute('src'));
+                if (!src) return;
+                const img = document.createElement('img');
+                img.alt = String(node.getAttribute('alt') || '').slice(0, 300);
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                setImageVariant(img, src, 'display');
+                // Hidden when even the original cannot be loaded
+                img.addEventListener('error', () => { img.hidden = true; });
+                target.appendChild(img);
+                return;
+            }
+
+            if (tag === 'a') {
+                const href = safeRichHref(node.getAttribute('href'));
+                if (!href) {
+                    buildRichNodes(node, target); // link not allowed: keep its text
+                    return;
+                }
+                const a = document.createElement('a');
+                a.href = href;
+                if (isExternalHref(href)) {
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                }
+                buildRichNodes(node, a);
+                target.appendChild(a);
+                return;
+            }
+
+            const el = document.createElement(tag);
+            if (tag !== 'br') buildRichNodes(node, el);
+            target.appendChild(el);
+        });
+    }
+
+    function renderRichHtml(container, html) {
+        container.textContent = '';
+        container.classList.add('pp-rich');
+        const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        if (doc.body) buildRichNodes(doc.body, container);
+    }
+
+    // ---------- extra photos ----------
+    function renderPhotos(photos, title) {
+        const list = (Array.isArray(photos) ? photos : [])
+            .map(p => ({
+                url: safePostImage(p && p.url),
+                caption: String((p && p.caption) || '').trim(),
+                order: Number(p && p.sortOrder) || 0
+            }))
+            .filter(p => p.url)
+            .sort((a, b) => a.order - b.order)
+            .slice(0, 12);
+        if (list.length === 0) return;
+
+        const grid = document.getElementById('photosGrid');
+        list.forEach((photo, index) => {
+            const li = N.el('li');
+            const figure = N.el('figure', 'pp-gallery-item');
+            const btn = N.el('button', 'pp-gallery-btn');
+            btn.type = 'button';
+            const label = 'Photo ' + (index + 1) + ' of ' + list.length + (photo.caption ? ': ' + photo.caption : '');
+            btn.setAttribute('aria-label', 'View ' + label + ', larger');
+            btn.title = 'View larger';
+
+            const img = document.createElement('img');
+            img.alt = '';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 320;
+            img.height = 240;
+            setImageVariant(img, photo.url, 'thumb');
+            img.addEventListener('error', () => {
+                btn.textContent = '';
+                btn.appendChild(N.icon('newspaper', 'pp-icon'));
+            });
+            btn.appendChild(img);
+            btn.addEventListener('click', () => {
+                KBFLightbox.open({ src: photo.url, name: photo.caption || title, opener: btn });
+            });
+            figure.appendChild(btn);
+            if (photo.caption) figure.appendChild(N.el('figcaption', 'pp-gallery-cap', photo.caption));
+            li.appendChild(figure);
+            grid.appendChild(li);
+        });
+        document.getElementById('photosBox').hidden = false;
+    }
+
+    // ---------- preview banner ----------
+    // "TUE 26 MAY 2026 at 14:30" from "2026-05-26 14:30:00"
+    function formatScheduled(value) {
+        const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+        if (!m) return '';
+        const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return N.formatDate(d) + (m[4] ? ' at ' + m[4] + ':' + m[5] : '');
+    }
+
+    function renderPreviewBanner(post) {
+        const status = String(post.PostStatus || '').toLowerCase();
+        const hidden = (post.IsVisible !== undefined && Number(post.IsVisible) === 0)
+            || (post.IsPublished !== undefined && Number(post.IsPublished) === 0);
+        const notPublished = status !== '' && status !== 'published';
+        if (urlParams.get('preview') !== '1' && !notPublished && !hidden) return;
+
+        let message = 'Preview: this post is not on the public News page yet.';
+        if (status === 'scheduled') {
+            const when = formatScheduled(post.ScheduledFor);
+            message += when ? ' It is scheduled to appear on ' + when + '.' : ' It is scheduled to appear later.';
+        } else if (status === 'draft') {
+            message += ' It is a draft.';
+        } else if (hidden) {
+            message += ' It is hidden.';
+        }
+        document.getElementById('previewText').textContent = message;
+        document.getElementById('previewBanner').hidden = false;
+    }
+
     // ============================================
     // INITIALIZATION
     // ============================================
@@ -743,13 +964,20 @@
 
         if (isPromotion) renderPromotion(post, data.promotionPlayer || null);
 
-        // Text: plain text, line breaks kept, web addresses as links
         const body = document.getElementById('postBody');
-        if (content.trim()) {
+        if (String(post.ContentFormat || '').toLowerCase() === 'html') {
+            // Formatted post: only allowed elements are rebuilt
+            renderRichHtml(body, String(post.Content || ''));
+            if (!body.textContent.trim() && !body.querySelector('img')) body.hidden = true;
+        } else if (content.trim()) {
+            // Text: plain text, line breaks kept, web addresses as links
             renderText(body, content.trim());
         } else {
             body.hidden = true;
         }
+
+        renderPhotos(data.photos, title);
+        renderPreviewBanner(post);
 
         if (data.tournament) renderTournament(data.tournament);
         renderRelated(Array.isArray(data.related) ? data.related : []);

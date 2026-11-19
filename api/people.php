@@ -916,6 +916,14 @@ if ($action === 'edit') {
 
         auditLog('player_details_edited', 'user', $id, pName($p['FirstName'], $p['LastName']) . ': ' . implode('; ', $changes));
 
+        // A new or removed photo remakes the link preview picture (share-page.php)
+        if (preg_grep('/^Photo /', $changes)) {
+            $stmt = $pdo->prepare("SELECT ProfilePhoto FROM Users WHERE UserId = ?");
+            $stmt->execute([$id]);
+            require_once __DIR__ . '/share-images.php';
+            kbfUpdateShareImage($pdo, 'player', $id, $stmt->fetchColumn() ?: null);
+        }
+
         sendJSON(['success' => true, 'message' => 'Details saved.', 'changed' => true]);
 
     } catch (PDOException $e) {
@@ -1099,6 +1107,10 @@ if ($action === 'remove') {
         }
 
         $pdo->commit();
+
+        // Their link preview picture (made from their photo) goes too
+        require_once __DIR__ . '/share-images.php';
+        kbfUpdateShareImage($pdo, 'player', $id, null);
 
         // Photo files go only after the database change is saved
         foreach (array_unique(array_filter($photos)) as $path) {

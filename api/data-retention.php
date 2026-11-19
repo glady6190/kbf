@@ -565,6 +565,7 @@ function kbfReferencedUploads(PDO $pdo) {
         ['Users', 'ProfilePhoto'], ['Users', 'ProfilePicture'],
         ['PlayerRegistrations', 'ProfilePhoto'],
         ['Announcements', 'FeaturedImage'], ['Announcements', 'Content'],
+        ['AnnouncementPhotos', 'FilePath'],
         ['EmailTemplates', 'BodyHtml'], ['EmailBroadcasts', 'BodyHtml'],
         ['EmailLog', 'BodyHtml'], ['EmailLog', 'BodyText'],
         ['NotificationDigest', 'BodyText'],

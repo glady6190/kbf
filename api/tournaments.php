@@ -1356,7 +1356,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 sendJSON(['success' => false, 'message' => 'Tournament not found'], 404);
             }
 
-            // OWNERSHIP: tournaments.manage_all edits any tournament;
+            // OWNERSHIP: tournaments.manage_all edits any tournament, whatever
+            // its status (Completed and Cancelled too);
             // tournaments.organise_own only their own, while Pending or Approved
             if (!hasPermission('tournaments.manage_all')) {
                 if (!hasPermission('tournaments.organise_own') || !isOwnTournamentRow($existing)) {
@@ -1413,6 +1414,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $oldPosterPath = $existing['PosterPath'];
             if (array_key_exists('PosterPath', $values) && $oldPosterPath && $oldPosterPath !== $values['PosterPath']) {
                 deleteTournamentPoster($oldPosterPath);
+            }
+            // A new or removed poster remakes the link preview picture
+            if (array_key_exists('PosterPath', $values)) {
+                require_once __DIR__ . '/share-images.php';
+                kbfUpdateShareImage($pdo, 'tournament', $tournamentId, $values['PosterPath']);
             }
 
             sendJSON([
@@ -1561,6 +1567,12 @@ $pdo->commit();
 
 auditLog('tournament_created', 'tournament', $newTournamentId,
     'Tournament: ' . $name . '; organiser: ' . $organiserName . '; status: ' . ($autoApprove ? 'Approved' : 'Pending'));
+
+// The link preview picture (share-page.php) from the poster
+if (!empty($posterPath)) {
+    require_once __DIR__ . '/share-images.php';
+    kbfUpdateShareImage($pdo, 'tournament', (int) $newTournamentId, $posterPath);
+}
 
 // Submitted for approval: tell the approvers (after the commit; a problem
 // never affects the new tournament)

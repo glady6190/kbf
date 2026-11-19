@@ -678,8 +678,8 @@
         if (has('tournaments.organise_own')) actions.push(['Create tournament', '/admin/tournaments?create=1', 'calendarPlus']);
         else if (has('tournaments.manage_all')) actions.push(['Create tournament', '/admin/tournaments', 'calendarPlus']);
         if (has('tournaments.organise_own')) actions.push(['Submit results', '/admin/tournaments?tab=due', 'upload']);
-        if (has('content.all_news_gallery')) actions.push(['Post news', '/admin/announcements', 'news']);
-        else if (has('content.own_news_gallery')) actions.push(['Post news', '/admin/announcements', 'news']);
+        if (has('content.all_news_gallery')) actions.push(['Post news', '/admin/post-editor', 'news']);
+        else if (has('content.own_news_gallery')) actions.push(['Post news', '/admin/post-editor', 'news']);
         if (has('content.broadcasts')) actions.push(['Send broadcast', '/admin/broadcasts', 'megaphone']);
         if (hasAny(['players.view_export', 'players.edit_details'])) actions.push(['Find a player', '/admin/people', 'search']);
         if (has('players.view_export')) actions.push(['Export the player list', '/admin/people', 'download']);

@@ -109,7 +109,8 @@ RewriteRule ^tailwind\.config\.js$ - [F,L]
 # No plugins (object-src), no other base address, forms only post to the
 # site, and only the site itself may show these pages in a frame.
 <IfModule mod_headers.c>
-    <FilesMatch "\.html$">
+    # (share-page.php sends post, tournament-details and player-profile)
+    <FilesMatch "\.html$|^share-page\.php$">
         Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https://cdn.jsdelivr.net https://www.gstatic.com; font-src 'self' data:; connect-src 'self'; frame-src https://www.google.com https://recaptcha.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
     </FilesMatch>
 </IfModule>
@@ -139,6 +140,16 @@ RewriteCond %{REQUEST_URI} !^/(login|two-step|change-password|forgot-password|re
 RewriteCond %{REQUEST_URI} !^/unsubscribe\.php$
 RewriteCond %{REQUEST_URI} !\.(css|js|png|jpe?g|webp|gif|svg|ico|woff2?|ttf)$ [NC]
 RewriteRule ^ - [R=503,L]
+
+# ============================================
+# LINK PREVIEWS
+# Sharing apps do not run JavaScript: these three pages go through
+# share-page.php, which sends the same HTML file with the og: and twitter:
+# preview tags filled in. A plain /post.html (no query) is first redirected
+# to /post by the rule further down, as before.
+# ============================================
+RewriteCond %{THE_REQUEST} !^[A-Z]{3,9}\ /[^?\ ]+\.html\ HTTP
+RewriteRule ^(post|tournament-details|player-profile)(\.html)?$ share-page.php?page=$1 [L,QSA]
 
 # ============================================
 # CLEAN URLs (Remove .html extension)
