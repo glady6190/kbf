@@ -95,33 +95,75 @@ function kbfEligibilityCounts($pdo, array $grades) {
     if (!$grades) {
         return $result;
     }
-    $topId = null;
-    $topOrder = PHP_INT_MAX;
-    foreach ($grades as $id => $g) {
-        if ($g['order'] < $topOrder) {
-            $topOrder = $g['order'];
-            $topId = $id;
-        }
-    }
     $stmt = $pdo->query("
         SELECT CategoryId, TotalPoints FROM Users
         WHERE IsActive = 1 AND IsRemoved = 0 AND CategoryId IS NOT NULL
     ");
     while ($row = $stmt->fetch()) {
         $id = (int) $row['CategoryId'];
-        if (!isset($grades[$id]) || $id === $topId) {
-            continue;
-        }
-        $threshold = (int) $grades[$id]['threshold'];
-        if ($threshold < 1) {
-            $threshold = KBF_DEFAULT_THRESHOLD;
-        }
-        if ((int) $row['TotalPoints'] >= $threshold) {
+        if (kbfIsEligibleForPromotion($row['TotalPoints'], $id, $grades)) {
             $result['total']++;
             $result['byGrade'][$id] = ($result['byGrade'][$id] ?? 0) + 1;
         }
     }
     return $result;
+}
+
+// ============================================
+// ELIGIBILITY FOR PROMOTION: the one rule
+// Used by calculatePlayerStats() (the stored flag), the Grading page counts,
+// the season reset preview and the season reset itself.
+// $grades: the active grades, [CategoryId => ['order' => n, 'threshold' => n]]
+// (kbfEligibilityGradeMap()). Eligible: in an active grade that is not the
+// top one, with season points at or above its threshold (a threshold below
+// 1 means KBF_DEFAULT_THRESHOLD).
+// ============================================
+function kbfIsEligibleForPromotion($points, $categoryId, array $grades) {
+    $categoryId = (int) $categoryId;
+    if (!isset($grades[$categoryId])) {
+        return false;
+    }
+    $topOrder = PHP_INT_MAX;
+    foreach ($grades as $g) {
+        $topOrder = min($topOrder, (int) $g['order']);
+    }
+    if ((int) $grades[$categoryId]['order'] <= $topOrder) {
+        return false;
+    }
+    $threshold = (int) $grades[$categoryId]['threshold'];
+    if ($threshold < 1) {
+        $threshold = KBF_DEFAULT_THRESHOLD;
+    }
+    return (int) $points >= $threshold;
+}
+
+// The active grades as they are now, in the shape kbfIsEligibleForPromotion() takes
+function kbfEligibilityGradeMap($pdo) {
+    $map = [];
+    $stmt = $pdo->query("SELECT CategoryId, DisplayOrder, PromotionThreshold FROM Categories WHERE " . kbfActiveGradeCondition($pdo));
+    foreach ($stmt->fetchAll() as $r) {
+        $map[(int) $r['CategoryId']] = ['order' => (int) $r['DisplayOrder'], 'threshold' => (int) $r['PromotionThreshold']];
+    }
+    return $map;
+}
+
+// Recalculate stats and eligibility now (after changes to thresholds, grade
+// order, points per placing or a move between grades). $userIds null: every
+// active player with a grade. Call outside a transaction.
+function kbfRecalculateEligibility($pdo, $userIds = null) {
+    require_once __DIR__ . '/player-stats-calculator.php';
+    if ($userIds === null) {
+        $userIds = $pdo->query("
+            SELECT UserId FROM Users
+            WHERE IsActive = 1 AND COALESCE(IsRemoved, 0) = 0 AND CategoryId IS NOT NULL
+        ")->fetchAll(PDO::FETCH_COLUMN);
+    }
+    foreach (array_unique(array_map('intval', $userIds)) as $id) {
+        calculatePlayerStats($pdo, $id);
+    }
+    if (function_exists('kbfNotifyFlush')) {
+        kbfNotifyFlush();
+    }
 }
 
 // ============================================
@@ -231,46 +273,18 @@ function kbfSeasonPlan($pdo, array $settings, $timestamp = null, $withPlayers = 
         $nextReset = $season['nextResetDate'];
     }
 
-    $trigger = (int) $settings['trigger'];
-    $value = (int) $settings['value'];
     $counts = ['floor' => 0, 'zero' => 0, 'skipped' => 0];
     $players = [];
 
     if ($withPlayers) {
-        $stmt = $pdo->query("
-            SELECT u.UserId, u.FirstName, u.LastName, u.PlayerId, u.TotalPoints,
-                   c.ShortName, c.DisplayOrder,
-                   COALESCE(pt.EligibleForPromotion, 0) AS EligibleForPromotion
-            FROM Users u
-            LEFT JOIN Categories c ON c.CategoryId = u.CategoryId
-            LEFT JOIN PlayerPerformanceTracker pt ON u.UserId = pt.PlayerId
-            WHERE u.IsActive = 1
-              AND u.IsRemoved = 0
-              AND u.CategoryId IS NOT NULL
-            ORDER BY c.DisplayOrder ASC, u.TotalPoints DESC, u.LastName ASC, u.FirstName ASC
-        ");
-        while ($row = $stmt->fetch()) {
-            $current = (int) $row['TotalPoints'];
-            if ((int) $row['EligibleForPromotion'] === 1) {
-                $outcome = 'skipped';
-                $after = $current;
-            } elseif ($current >= $trigger) {
-                $outcome = 'floor';
-                $after = $value;
-            } else {
-                $outcome = 'zero';
-                $after = 0;
-            }
-            $counts[$outcome]++;
-            $players[] = [
-                'userId' => (int) $row['UserId'],
-                'name' => trim(html_entity_decode($row['FirstName'] . ' ' . $row['LastName'], ENT_QUOTES, 'UTF-8')),
-                'kbfId' => (string) $row['PlayerId'],
-                'grade' => (string) $row['ShortName'],
-                'points' => $current,
-                'after' => $after,
-                'outcome' => $outcome,
-            ];
+        // The season the reset starts: the current one when it is due,
+        // otherwise the next one
+        $resetStart = $status === 'due'
+            ? sprintf('%04d-%02d-01', $season['startYear'], $season['startMonth'])
+            : $season['nextResetDate'];
+        $players = kbfSeasonResetRows($pdo, $settings, $resetStart, false);
+        foreach ($players as $p) {
+            $counts[$p['outcome']]++;
         }
     }
 
@@ -282,6 +296,147 @@ function kbfSeasonPlan($pdo, array $settings, $timestamp = null, $withPlayers = 
         'counts' => $counts,
         'players' => $players,
     ];
+}
+
+// What the season reset does to each active player with a grade, for a
+// season starting on $resetStart (Y-m-d). Used by the preview (kbfSeasonPlan)
+// and by the reset itself (kbfRunSeasonReset, with $forUpdate inside its
+// transaction), so both decide in exactly the same way:
+//   newSeason  counted awards from tournaments dated on or after $resetStart
+//              (already added before the reset ran): they stay
+//   old        TotalPoints without those
+//   skipped    eligible for promotion on old points (the shared rule):
+//              points and marks unchanged
+//   floor      old >= trigger: floor value + newSeason
+//   zero       otherwise: newSeason
+function kbfSeasonResetRows($pdo, array $settings, $resetStart, $forUpdate) {
+    require_once __DIR__ . '/points-rules.php';
+    $trigger = (int) $settings['trigger'];
+    $value = (int) $settings['value'];
+    $grades = kbfEligibilityGradeMap($pdo);
+
+    $newSeason = [];
+    if (kbfHasSeasonFlag($pdo)) {
+        $stmt = $pdo->prepare("
+            SELECT pph.PlayerId, SUM(pph.PointsAwarded) AS Points
+            FROM PlayerPointsHistory pph
+            JOIN Tournaments t ON t.TournamentId = pph.TournamentId
+            WHERE pph.CountsTowardSeason = 1 AND t.TournamentDate >= ?
+            GROUP BY pph.PlayerId
+        ");
+        $stmt->execute([$resetStart]);
+        foreach ($stmt->fetchAll() as $r) {
+            $newSeason[(int) $r['PlayerId']] = (int) $r['Points'];
+        }
+    }
+
+    $stmt = $pdo->query("
+        SELECT u.UserId, u.FirstName, u.LastName, u.PlayerId, u.TotalPoints, u.CategoryId,
+               c.ShortName, c.DisplayOrder
+        FROM Users u
+        LEFT JOIN Categories c ON c.CategoryId = u.CategoryId
+        WHERE u.IsActive = 1
+          AND u.IsRemoved = 0
+          AND u.CategoryId IS NOT NULL
+        ORDER BY c.DisplayOrder ASC, u.TotalPoints DESC, u.LastName ASC, u.FirstName ASC
+        " . ($forUpdate ? "FOR UPDATE" : "") . "
+    ");
+    $players = [];
+    while ($row = $stmt->fetch()) {
+        $userId = (int) $row['UserId'];
+        $current = max(0, (int) $row['TotalPoints']);
+        $new = min($current, $newSeason[$userId] ?? 0);
+        $old = $current - $new;
+        if (kbfIsEligibleForPromotion($old, $row['CategoryId'], $grades)) {
+            $outcome = 'skipped';
+            $after = $current;
+        } elseif ($old >= $trigger) {
+            $outcome = 'floor';
+            $after = $value + $new;
+        } else {
+            $outcome = 'zero';
+            $after = $new;
+        }
+        $players[] = [
+            'userId' => $userId,
+            'name' => trim(html_entity_decode($row['FirstName'] . ' ' . $row['LastName'], ENT_QUOTES, 'UTF-8')),
+            'kbfId' => (string) $row['PlayerId'],
+            'grade' => (string) $row['ShortName'],
+            'points' => $current,
+            'newSeasonPoints' => $new,
+            'after' => $after,
+            'outcome' => $outcome,
+        ];
+    }
+    return $players;
+}
+
+// The season reset, all in one transaction: lock last_term_reset and every
+// affected player, re-read their points, apply the floor rule, keep awards
+// from the new season (added back, still marked 1), mark every other counted
+// award of reset players 0, and save last_term_reset. A second run for the
+// same season changes nothing.
+// Returns ['status' => 'baseline'|'done'|'reset', 'key', 'counts', 'floorValue']
+function kbfRunSeasonReset($pdo, $timestamp = null) {
+    require_once __DIR__ . '/points-rules.php';
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("SELECT SettingValue FROM Settings WHERE SettingKey = 'last_term_reset' FOR UPDATE");
+        $stmt->execute();
+        $locked = $stmt->fetchColumn();
+
+        $settings = kbfSeasonSettings($pdo);
+        $settings['lastTermReset'] = $locked === false ? '' : (string) $locked;
+        $plan = kbfSeasonPlan($pdo, $settings, $timestamp, false);
+        $key = $plan['season']['key'];
+        $counts = ['floor' => 0, 'zero' => 0, 'skipped' => 0];
+
+        $saveKey = $pdo->prepare("
+            INSERT INTO Settings (SettingKey, SettingValue) VALUES ('last_term_reset', ?)
+            ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)
+        ");
+
+        if ($plan['status'] === 'done') {
+            $pdo->rollBack();
+            return ['status' => 'done', 'key' => $key, 'counts' => $counts, 'floorValue' => (int) $settings['value']];
+        }
+        if ($plan['status'] === 'baseline') {
+            $saveKey->execute([$key]);
+            $pdo->commit();
+            return ['status' => 'baseline', 'key' => $key, 'counts' => $counts, 'floorValue' => (int) $settings['value']];
+        }
+
+        $resetStart = sprintf('%04d-%02d-01', $plan['season']['startYear'], $plan['season']['startMonth']);
+        $rows = kbfSeasonResetRows($pdo, $settings, $resetStart, true);
+
+        $setPoints = $pdo->prepare("UPDATE Users SET TotalPoints = ? WHERE UserId = ?");
+        $endOld = kbfHasSeasonFlag($pdo) ? $pdo->prepare("
+            UPDATE PlayerPointsHistory pph
+            LEFT JOIN Tournaments t ON t.TournamentId = pph.TournamentId
+            SET pph.CountsTowardSeason = 0
+            WHERE pph.PlayerId = ? AND pph.CountsTowardSeason = 1
+              AND (t.TournamentDate IS NULL OR t.TournamentDate < ?)
+        ") : null;
+        foreach ($rows as $p) {
+            $counts[$p['outcome']]++;
+            if ($p['outcome'] === 'skipped') {
+                continue;
+            }
+            $setPoints->execute([$p['after'], $p['userId']]);
+            if ($endOld) {
+                $endOld->execute([$p['userId'], $resetStart]);
+            }
+        }
+
+        $saveKey->execute([$key]);
+        $pdo->commit();
+        return ['status' => 'reset', 'key' => $key, 'counts' => $counts, 'floorValue' => (int) $settings['value']];
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 // ============================================

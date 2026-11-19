@@ -18,12 +18,18 @@
  * again within the same season does nothing after the first reset. The very
  * first run (no last_term_reset yet) only records the current season.
  *
+ * The reset runs in one transaction (kbfRunSeasonReset): each player's
+ * points are locked and read again, awards from tournaments dated in the new
+ * season that were already added stay in season points (still counted), the
+ * player's other counted awards are marked as no longer counted, and
+ * last_term_reset is saved in the same transaction.
+ *
  * Usage (CLI only):
  *     php jobs/term-reset.php            # perform the reset
  *     php jobs/term-reset.php --dry-run  # show what WOULD change, write nothing
  *
- * Only Users.TotalPoints is ever modified. PlayerPointsHistory, CareerPoints
- * and CategoryId are never touched.
+ * Users.TotalPoints and PlayerPointsHistory.CountsTowardSeason are modified.
+ * Award rows, career points and CategoryId are never touched.
  */
 
 // ============================================
@@ -49,17 +55,6 @@ echo "Time: " . date('Y-m-d H:i:s') . "\n\n";
 // Record this run in JobRuns (dry runs write nothing)
 $runId = $dryRun ? 0 : kbfJobRunStart($pdo, 'term-reset');
 
-// Write last_term_reset; the row is created by database/grading-settings.sql,
-// and created here too if it is still missing
-function termResetSaveKey($pdo, $key) {
-    $stmt = $pdo->prepare("
-        INSERT INTO Settings (SettingKey, SettingValue) VALUES ('last_term_reset', ?)
-        ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)
-    ");
-    $stmt->execute([$key]);
-    return true;
-}
-
 try {
     // ============================================
     // 1. SETTINGS AND PLAN (shared rules)
@@ -83,7 +78,9 @@ try {
             echo "Completed at: " . date('Y-m-d H:i:s') . "\n";
             exit(0);
         }
-        termResetSaveKey($pdo, $currentTermKey);
+        // Saved inside the shared transaction (re-checked under a lock)
+        $result = kbfRunSeasonReset($pdo);
+        $currentTermKey = $result['key'];
         echo "Baseline established: {$currentTermKey}\n";
         echo "Completed at: " . date('Y-m-d H:i:s') . "\n";
         kbfJobRunFinish($pdo, $runId, 'ok', 'Baseline set to ' . $currentTermKey . ', nobody reset');
@@ -124,18 +121,23 @@ try {
         exit(0);
     }
 
-    // Real run: apply all point updates in a single transaction
-    $pdo->beginTransaction();
-    $updateStmt = $pdo->prepare("UPDATE Users SET TotalPoints = ? WHERE UserId = ?");
-    foreach ($plan['players'] as $p) {
-        if ($p['outcome'] !== 'skipped') {
-            $updateStmt->execute([$p['after'], $p['userId']]);
-        }
+    // Real run: everything in one transaction (api/grading.php
+    // kbfRunSeasonReset): last_term_reset and every player locked and read
+    // again, the floor rule applied, new-season awards kept, other counted
+    // awards marked 0 and last_term_reset saved, all committed together.
+    // If another run got there first, nothing changes.
+    $result = kbfRunSeasonReset($pdo);
+    if ($result['status'] !== 'reset') {
+        echo "Nothing to do (" . $result['status'] . " for {$result['key']}).\n";
+        echo "Completed at: " . date('Y-m-d H:i:s') . "\n";
+        kbfJobRunFinish($pdo, $runId, 'ok', 'Nothing to do (' . $result['status'] . ' for ' . $result['key'] . ')');
+        exit(0);
     }
-    $pdo->commit();
-
-    // Record the term just processed so it is not reset again
-    termResetSaveKey($pdo, $currentTermKey);
+    $currentTermKey = $result['key'];
+    $flooredCount = $result['counts']['floor'];
+    $zeroedCount = $result['counts']['zero'];
+    $skippedCount = $result['counts']['skipped'];
+    $floorValue = $result['floorValue'];
 
     echo "\n=== Term Reset Complete ===\n";
     echo "Term: {$currentTermKey}\n";

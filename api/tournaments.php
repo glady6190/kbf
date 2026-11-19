@@ -1493,38 +1493,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         sendJSON(['success' => false, 'message' => 'Invalid tournament ID'], 400);
     }
 
+    // The old "approve" and "status" writes are gone: approving or rejecting
+    // goes through api/approvals.php and status changes through the
+    // changeStatus action (adminChangeStatus), which keep every rule
+    if (isset($data['approve']) || isset($data['status'])) {
+        sendJSON(['success' => false, 'message' => 'This action is no longer available. Use the Approvals page or Change status.'], 410);
+    }
+
     try {
-        // Approving or rejecting: tournaments.approve
-        if (isset($data['approve'])) {
-            requirePermission('tournaments.approve');
-
-            $status = $data['approve'] ? 'Approved' : 'Rejected';
-
-            $stmt = $pdo->prepare("
-                UPDATE Tournaments
-                SET Status = ?, ApprovedByAdminId = ?, ApprovedDate = NOW()
-                WHERE TournamentId = ?
-            ");
-            $stmt->execute([$status, $_SESSION['user_id'], $tournamentId]);
-
-            if ($stmt->rowCount() === 0) {
-                sendJSON(['success' => false, 'message' => 'Tournament not found or no changes made'], 404);
-            }
-
-            auditLog($status === 'Approved' ? 'tournament_approved' : 'tournament_rejected', 'tournament', $tournamentId, 'Status set to ' . $status);
-
-            sendJSON(['success' => true, 'message' => "Tournament $status"]);
-
-        } else {
-            // Core fields need tournaments.manage_all; status needs tournaments.approve
+        {
+            // Core fields need tournaments.manage_all
             $coreFields = ['name', 'tournamentDate', 'venue', 'location', 'postCode', 'categoriesOffered', 'organiserName'];
             foreach ($coreFields as $field) {
                 if (isset($data[$field]) && !hasPermission('tournaments.manage_all')) {
                     sendJSON(['success' => false, 'message' => 'Insufficient permissions'], 403);
                 }
-            }
-            if (isset($data['status']) && !hasPermission('tournaments.approve')) {
-                sendJSON(['success' => false, 'message' => 'Insufficient permissions'], 403);
             }
 
             // Update tournament details
@@ -1588,16 +1571,17 @@ if (isset($data['organiserName'])) {
     $params[] = $organiserName;
 }
 
-            if (isset($data['status'])) {
-                if (!in_array($data['status'], ['Pending', 'Approved', 'Rejected', 'Completed'])) {
-                    sendJSON(['success' => false, 'message' => 'Invalid status'], 400);
-                }
-                $updates[] = "Status = ?";
-                $params[] = $data['status'];
-            }
-
             if (empty($updates)) {
                 sendJSON(['success' => false, 'message' => 'No fields to update'], 400);
+            }
+
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT Name, Status, TournamentDate FROM Tournaments WHERE TournamentId = ? FOR UPDATE");
+            $stmt->execute([$tournamentId]);
+            $before = $stmt->fetch();
+            if (!$before) {
+                $pdo->rollBack();
+                sendJSON(['success' => false, 'message' => 'Tournament not found or no changes made'], 404);
             }
 
             $params[] = $tournamentId;
@@ -1607,24 +1591,46 @@ if (isset($data['organiserName'])) {
             $stmt->execute($params);
 
             if ($stmt->rowCount() === 0) {
+                $pdo->rollBack();
                 sendJSON(['success' => false, 'message' => 'Tournament not found or no changes made'], 404);
             }
+
+            // Date of an approved or completed tournament changed: check each
+            // award again against the career-only rule for the new date and
+            // move points into or out of season points (api/points-rules.php)
+            $recheck = null;
+            $dateChanged = isset($data['tournamentDate'])
+                && substr((string) $before['TournamentDate'], 0, 10) !== $data['tournamentDate'];
+            if ($dateChanged && in_array($before['Status'], ['Approved', 'Completed'], true)) {
+                require_once __DIR__ . '/points-rules.php';
+                $recheck = kbfRecheckTournamentAwards($pdo, $tournamentId);
+            }
+
+            $pdo->commit();
 
             $changed = [];
             foreach ($updates as $statement) {
                 $changed[] = trim(explode('=', $statement)[0]);
             }
-            if (isset($data['status'])) {
-                auditLog('tournament_status_changed', 'tournament', $tournamentId, 'Status set to ' . $data['status']);
+            if (!empty($changed)) {
+                auditLog('tournament_edited', 'tournament', $tournamentId, 'Fields: ' . implode(', ', $changed));
             }
-            $editedFields = array_values(array_diff($changed, ['Status']));
-            if (!empty($editedFields)) {
-                auditLog('tournament_edited', 'tournament', $tournamentId, 'Fields: ' . implode(', ', $editedFields));
+            if ($recheck !== null) {
+                auditLog('tournament_points_rechecked', 'tournament', $tournamentId,
+                    'Date ' . substr((string) $before['TournamentDate'], 0, 10) . ' -> ' . $data['tournamentDate']
+                    . ' for ' . $before['Name'] . ': ' . $recheck['in'] . ' award(s) moved into season points, '
+                    . $recheck['out'] . ' moved to career points only');
+                if ($recheck['players']) {
+                    kbfRecalculateEligibility($pdo, $recheck['players']);
+                }
             }
 
             sendJSON(['success' => true, 'message' => 'Tournament updated successfully']);
         }
     } catch(PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log('Tournament update error: ' . $e->getMessage());
         sendJSON(['success' => false, 'message' => 'Database error occurred'], 500);
     }

@@ -570,6 +570,16 @@ if ($method === 'POST') {
             foreach ($audit as $a) {
                 auditLog($a[0], $a[1], $a[2], $a[3]);
             }
+
+            // Thresholds, grade order or points per placing changed:
+            // eligibility for every player straight away, not only at night
+            $eligibilityKeys = ['grade_changed_settings', 'grades_reordered', 'placing_points_changed'];
+            foreach ($audit as $a) {
+                if (in_array($a[0], $eligibilityKeys, true)) {
+                    kbfRecalculateEligibility($pdo, null);
+                    break;
+                }
+            }
             sendJSON(['success' => true, 'message' => 'Changes saved', 'changes' => $changes]);
         }
 
@@ -729,7 +739,7 @@ if ($method === 'POST') {
                 $pdo->rollBack();
                 fail('The number of players has just changed. Please check and try again.');
             }
-            $moveUser = $pdo->prepare("UPDATE Users SET CategoryId = ?, TotalPoints = 0 WHERE UserId = ?");
+            require_once __DIR__ . '/points-rules.php';
             $history = $pdo->prepare("
                 INSERT INTO PlayerRankingHistory
                 (PlayerId, OldCategoryId, NewCategoryId, Reason, IsAutomatic, ChangedByAdminId, Notes)
@@ -741,13 +751,17 @@ if ($method === 'POST') {
                 WHERE PlayerId = ?
             ");
             foreach ($userIds as $uid) {
-                $moveUser->execute([$toId, (int) $uid]);
+                // New grade, season points 0, counted awards marked 0 (shared rule)
+                kbfApplyGradeChangePoints($pdo, (int) $uid, $toId);
                 $history->execute([(int) $uid, $fromId, $toId, $reason, (int) $_SESSION['user_id']]);
                 $tracker->execute([$toId, (int) $uid]);
             }
             $pdo->commit();
 
             auditLog('grade_players_moved', 'grade', $fromId, $count . ' players moved from ' . $from['shortName'] . ' to ' . $to['shortName']);
+
+            // Eligibility for the moved players straight away
+            kbfRecalculateEligibility($pdo, array_map('intval', $userIds));
             sendJSON(['success' => true, 'message' => $count . ' player' . ($count === 1 ? '' : 's') . ' moved to ' . $to['shortName']]);
         }
 

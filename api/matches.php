@@ -50,12 +50,39 @@ if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'])) {
 // ============================================
     // HELPER: resolve a player slot
     // ============================================
+    // A slot is one of:
+    //   {"userId": 12}   an explicitly chosen registered player
+    //   {"guest": "12"}  a guest, stored as a name whatever its text
+    //   12 (a JSON whole number, not a string): a chosen player (older pages)
+    //   "Priya" (any JSON string, including "12"): a guest name
+    // Only the first and third ever become a player id.
     function resolvePlayerSlot($slot) {
         if (is_null($slot)) {
             return ['id' => null, 'guestName' => null];
         }
-        if (is_numeric($slot) && (int)$slot > 0) {
-            return ['id' => (int)$slot, 'guestName' => null];
+        if (is_array($slot)) {
+            if (array_key_exists('userId', $slot) && $slot['userId'] !== null) {
+                $id = $slot['userId'];
+                if (!is_int($id) || $id < 1) {
+                    sendJSON(['success' => false, 'message' => 'Invalid player'], 400);
+                }
+                return ['id' => $id, 'guestName' => null];
+            }
+            $slot = $slot['guest'] ?? null;
+            if ($slot === null) {
+                return ['id' => null, 'guestName' => null];
+            }
+            if (!is_string($slot) && !is_int($slot) && !is_float($slot)) {
+                sendJSON(['success' => false, 'message' => 'Invalid guest name'], 400);
+            }
+            $slot = (string) $slot;
+        } elseif (is_int($slot)) {
+            if ($slot < 1) {
+                return ['id' => null, 'guestName' => null];
+            }
+            return ['id' => $slot, 'guestName' => null];
+        } elseif (!is_string($slot)) {
+            sendJSON(['success' => false, 'message' => 'Invalid player'], 400);
         }
         $guestName = trim((string)$slot);
         if (strlen($guestName) === 0) {
@@ -272,7 +299,46 @@ function resultsReadMatches(PDO $pdo, $matches, array $alreadyIn = []) {
 // kbfAwardPoints() (api/points-rules.php: career only when the tournament
 // was before the player's latest grade change or before this season).
 // Returns the user ids that received points.
-function resultsInsertMatches(PDO $pdo, $tournamentId, array $rows, $categoryName, $approved, array $validPlayers) {
+// A player's placing in a match: "Round|Winner" or "Round|Loser".
+// $slotIndex 0-1 is team 1, 2-3 is team 2. Rounds before the final have no
+// winner (0): both teams get the winner's points, as when awarding.
+function resultsPlacing($round, $winnerTeam, $slotIndex) {
+    $team = $slotIndex < 2 ? 1 : 2;
+    $outcome = ((int) $winnerTeam === 0 || (int) $winnerTeam === $team) ? 'Winner' : 'Loser';
+    return $round . '|' . $outcome;
+}
+
+// Each registered player's entry in these (old) matches:
+// [userId => ['placing' => ..., 'matchId' => n]]
+function resultsOldEntries(PDO $pdo, array $matchIds) {
+    if (!$matchIds) {
+        return [];
+    }
+    $placeholders = implode(',', array_fill(0, count($matchIds), '?'));
+    $stmt = $pdo->prepare("
+        SELECT MatchId, RoundType, WinnerTeam, Player1Id, Partner1Id, Player2Id, Partner2Id
+        FROM Matches WHERE MatchId IN ($placeholders)
+    ");
+    $stmt->execute(array_values($matchIds));
+    $entries = [];
+    foreach ($stmt->fetchAll() as $m) {
+        foreach (['Player1Id', 'Partner1Id', 'Player2Id', 'Partner2Id'] as $i => $col) {
+            if (!empty($m[$col])) {
+                $entries[(int) $m[$col]] = [
+                    'placing' => resultsPlacing($m['RoundType'], $m['WinnerTeam'], $i),
+                    'matchId' => (int) $m['MatchId'],
+                ];
+            }
+        }
+    }
+    return $entries;
+}
+
+// $keep (editing approved results): [userId => ['placing', 'matchId']] from
+// the results being replaced. A player whose placing is unchanged keeps the
+// existing award row and its points untouched (the row is only linked to the
+// new match); nobody is awarded twice. Returns [awarded ids, kept ids].
+function resultsInsertMatches(PDO $pdo, $tournamentId, array $rows, $categoryName, $approved, array $validPlayers, array $keep = []) {
     require_once __DIR__ . '/points-rules.php';
     $insertStmt = $pdo->prepare("
         INSERT INTO Matches (TournamentId, CategoryId,
@@ -286,6 +352,8 @@ function resultsInsertMatches(PDO $pdo, $tournamentId, array $rows, $categoryNam
     ");
     $roundPointsMap = getRoundPointsMap($pdo);
     $awarded = [];
+    $kept = [];
+    $relink = $pdo->prepare("UPDATE PlayerPointsHistory SET MatchId = ? WHERE MatchId = ? AND PlayerId = ?");
 
     foreach ($rows as $row) {
         list($p1, $p2, $p3, $p4) = $row['slots'];
@@ -333,14 +401,24 @@ function resultsInsertMatches(PDO $pdo, $tournamentId, array $rows, $categoryNam
             [$p2, $team1Points, $team1Reason],
             [$p3, $team2Points, $team2Reason],
             [$p4, $team2Points, $team2Reason],
-        ] as [$slot, $points, $reason]) {
-            if ($slot['id'] !== null && $points > 0) {
+        ] as $index => [$slot, $points, $reason]) {
+            if ($slot['id'] === null) {
+                continue;
+            }
+            // Unchanged entry: the existing award stays as it is
+            $old = $keep[$slot['id']] ?? null;
+            if ($old !== null && $old['placing'] === resultsPlacing($row['round'], $winnerTeam, $index)) {
+                $relink->execute([$matchId, $old['matchId'], $slot['id']]);
+                $kept[] = $slot['id'];
+                continue;
+            }
+            if ($points > 0) {
                 kbfAwardPoints($pdo, $slot['id'], $tournamentId, $matchId, $points, $reason);
                 $awarded[] = $slot['id'];
             }
         }
     }
-    return $awarded;
+    return [$awarded, $kept];
 }
 
 // Make sure a waiting row exists in the approvals queue
@@ -670,7 +748,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJSON(['success' => false, 'message' => 'Results for ' . $categoryName . ' have already been submitted. Choose it from the categories to see or change them.'], 409);
         }
 
-        $registeredPlayerIds = resultsInsertMatches($pdo, $tournamentId, $rows, $categoryName, $autoApprove, $validPlayers);
+        list($registeredPlayerIds) = resultsInsertMatches($pdo, $tournamentId, $rows, $categoryName, $autoApprove, $validPlayers);
 
         // Recalculate stats only if auto-approved
         if ($autoApprove) {
@@ -818,25 +896,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // that counted toward the season come off them; career points are
         // worked out again from what is left.
         // -----------------------------------------------
+        // Shared reversal: only awards still counted (CountsTowardSeason = 1)
+        // come off season points, never below 0
         require_once __DIR__ . '/points-rules.php';
-        $stmt = $pdo->prepare("
-            SELECT pph.PlayerId, " . kbfSeasonPointsSumSql($pdo, 'pph') . " AS TotalAwarded
-            FROM PlayerPointsHistory pph
-            WHERE pph.MatchId = ?
-            GROUP BY pph.PlayerId
-        ");
-        $stmt->execute([$matchId]);
-        $reversedPoints = $stmt->fetchAll();
-
-        $deductStmt = $pdo->prepare("
-            UPDATE Users SET TotalPoints = TotalPoints - ? WHERE UserId = ?
-        ");
-        foreach ($reversedPoints as $row) {
-            $deductStmt->execute([$row['TotalAwarded'], $row['PlayerId']]);
-        }
-
-        $stmt = $pdo->prepare("DELETE FROM PlayerPointsHistory WHERE MatchId = ?");
-        $stmt->execute([$matchId]);
+        $reversedPlayers = kbfReverseMatchAwards($pdo, [$matchId]);
 
         $stmt = $pdo->prepare("DELETE FROM Matches WHERE MatchId = ?");
         $stmt->execute([$matchId]);
@@ -845,8 +908,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // deletion that drops someone below the promotion threshold clears their
         // eligibility flag immediately rather than waiting for the nightly job.
         require_once __DIR__ . '/player-stats-calculator.php';
-        foreach ($reversedPoints as $row) {
-            calculatePlayerStats($pdo, $row['PlayerId']);
+        foreach ($reversedPlayers as $playerId) {
+            calculatePlayerStats($pdo, $playerId);
         }
 
         $pdo->commit();
@@ -866,8 +929,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
 // ============================================
 // PUT - Replace one category's results
-// tournaments.manage_all: any results. Approved results have their points
-// reversed and worked out again, as before.
+// tournaments.manage_all: any results. Approved results are compared per
+// player and placing: unchanged entries keep their awards, removed entries
+// are reversed and new or changed entries are awarded.
 // Organisers: their own tournament's results while waiting for approval.
 // ============================================
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
@@ -924,53 +988,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         }
         list($rows, $validPlayers) = resultsReadMatches($pdo, $data['matches'], array_values(array_unique($alreadyIn)));
 
-        // -----------------------------------------------
-        // STEP A: Reverse the points these results gave, exactly as given:
-        // season points lose only the awards that counted toward the season;
-        // career points are worked out again from what is left
-        // -----------------------------------------------
         require_once __DIR__ . '/points-rules.php';
-        $stmt = $pdo->prepare("
-            SELECT pph.PlayerId, " . kbfSeasonPointsSumSql($pdo, 'pph') . " as TotalAwarded
-            FROM PlayerPointsHistory pph
-            WHERE pph.MatchId IN ($placeholders)
-            GROUP BY pph.PlayerId
-        ");
-        $stmt->execute($matchIds);
-        $existingPoints = $stmt->fetchAll();
-
-        $deductStmt = $pdo->prepare("
-            UPDATE Users SET TotalPoints = TotalPoints - ? WHERE UserId = ?
-        ");
-        foreach ($existingPoints as $row) {
-            $deductStmt->execute([$row['TotalAwarded'], $row['PlayerId']]);
-        }
-
-        $stmt = $pdo->prepare("DELETE FROM PlayerPointsHistory WHERE MatchId IN ($placeholders)");
-        $stmt->execute($matchIds);
 
         // -----------------------------------------------
-        // STEP B: Delete this category's matches
+        // STEP A: Each player's entry (placing) in the approved results
+        // being replaced
         // -----------------------------------------------
+        $oldEntries = $approved ? resultsOldEntries($pdo, $matchIds) : [];
+
+        // -----------------------------------------------
+        // STEP B: Insert the new matches. Approved results: an unchanged
+        // entry (same player, same placing) keeps its award row and points
+        // untouched; new or changed entries are awarded at the current points
+        // per placing under the current career-only rule.
+        // -----------------------------------------------
+        list($awardedIds, $keptIds) = resultsInsertMatches($pdo, $tournamentId, $rows, $categoryName, $approved, $validPlayers, $oldEntries);
+
+        // -----------------------------------------------
+        // STEP C: Reverse what is left on the old matches (removed or changed
+        // entries only): only awards still counted come off season points,
+        // never below 0. Then delete the old matches.
+        // -----------------------------------------------
+        $reversedIds = kbfReverseMatchAwards($pdo, $matchIds);
         $stmt = $pdo->prepare("DELETE FROM Matches WHERE MatchId IN ($placeholders)");
         $stmt->execute($matchIds);
 
-        // -----------------------------------------------
-        // STEP C: Insert the new matches (and award points when approved)
-        // -----------------------------------------------
-        $registeredPlayerIds = resultsInsertMatches($pdo, $tournamentId, $rows, $categoryName, $approved, $validPlayers);
-
         if ($approved) {
-            // Recalculate stats for all involved players
+            // Recalculate stats for every player whose points changed
             require_once __DIR__ . '/player-stats-calculator.php';
-            foreach (array_unique($registeredPlayerIds) as $playerId) {
+            foreach (array_unique(array_merge($awardedIds, $reversedIds)) as $playerId) {
                 calculatePlayerStats($pdo, $playerId);
-            }
-            // Also recalculate for players who lost points (were in old results but not new)
-            foreach ($existingPoints as $row) {
-                if (!in_array($row['PlayerId'], $registeredPlayerIds)) {
-                    calculatePlayerStats($pdo, $row['PlayerId']);
-                }
             }
         } else {
             resultsQueueForApproval($pdo, $tournamentId);
@@ -980,7 +1027,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 
         auditLog('results_edited', 'tournament', $tournamentId,
             'Results replaced for: ' . $tournament['Name'] . '; category: ' . ($categoryName === '' ? '(none)' : $categoryName)
-            . '; matches: ' . count($rows) . ($approved ? '; points worked out again' : '; still waiting for approval'));
+            . '; matches: ' . count($rows) . ($approved
+                ? '; points: ' . count(array_unique($keptIds)) . ' unchanged, ' . count(array_unique($awardedIds)) . ' awarded, '
+                    . count(array_diff(array_unique($reversedIds), $awardedIds)) . ' reversed'
+                : '; still waiting for approval'));
         kbfNotifyFlush();
 
         sendJSON(['success' => true, 'message' => $approved ? 'Results updated and points worked out again.' : 'Results updated. They are still waiting for approval.']);

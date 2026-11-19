@@ -169,6 +169,7 @@ const KBF_ACTION_NAMES = [
     'logout' => 'Signed out',
     'password_changed' => 'Changed their password',
     'signed_out_everywhere' => 'Signed out everywhere',
+    'tournament_points_rechecked' => 'Rechecked points after a date change',
     'gallery_photos_uploaded' => 'Uploaded gallery photos',
     'gallery_photo_deleted' => 'Deleted a gallery photo',
     'password_change_forced' => 'Changed a temporary password',

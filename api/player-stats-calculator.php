@@ -50,15 +50,19 @@ function calculatePlayerStats($pdo, $playerId) {
         $stmt->execute([$playerId, $playerId, $playerId, $playerId, $sixMonthsAgo]);
         $finalsReached = $stmt->fetch()['FinalsCount'];
         
-        // Get category start date
-        $stmt = $pdo->prepare("
-            SELECT COALESCE(MAX(ChangeDate), u.CreatedDate) as CategoryStartDate
-            FROM PlayerRankingHistory prh
-            RIGHT JOIN Users u ON u.UserId = ?
-            WHERE prh.PlayerId = ? OR prh.PlayerId IS NULL
-        ");
-        $stmt->execute([$playerId, $playerId]);
-        $categoryStartDate = $stmt->fetch()['CategoryStartDate'];
+        // Start of the current grade: the player's latest grade change, or
+        // when there is none, the date their account was created
+        $stmt = $pdo->prepare("SELECT MAX(ChangeDate) FROM PlayerRankingHistory WHERE PlayerId = ?");
+        $stmt->execute([$playerId]);
+        $categoryStartDate = $stmt->fetchColumn();
+        if ($categoryStartDate === false || $categoryStartDate === null) {
+            $stmt = $pdo->prepare("SELECT CreatedDate FROM Users WHERE UserId = ?");
+            $stmt->execute([$playerId]);
+            $categoryStartDate = $stmt->fetchColumn();
+            if ($categoryStartDate === false || $categoryStartDate === null) {
+                $categoryStartDate = '1970-01-01';
+            }
+        }
         
         // Count finals in current category. A final whose points went to
         // career points only (api/points-rules.php) does not count here.
@@ -107,24 +111,10 @@ $stmt = $pdo->prepare("
 $stmt->execute([$playerId, $playerId, $playerId, $playerId, $sixMonthsAgo]);
 $quarterFinalsReached = $stmt->fetch()['QuartersCount'];
         
-        // Count group stage failures (still stored on the tracker for stats display;
-        // no longer drives any decision now that demotion flagging is retired)
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as FailCount
-            FROM Matches m
-            JOIN Tournaments t ON m.TournamentId = t.TournamentId
-            WHERE (m.Player1Id = ? OR m.Partner1Id = ? OR m.Player2Id = ? OR m.Partner2Id = ?)
-            AND m.RoundType = 'GroupStage'
-            AND ((m.Player1Id = ? OR m.Partner1Id = ?) AND m.WinnerTeam = 2)
-               OR ((m.Player2Id = ? OR m.Partner2Id = ?) AND m.WinnerTeam = 1)
-            AND t.TournamentDate >= ?
-        ");
-        $stmt->execute([
-            $playerId, $playerId, $playerId, $playerId,
-            $playerId, $playerId, $playerId, $playerId,
-            $sixMonthsAgo
-        ]);
-        $groupStageFailures = $stmt->fetch()['FailCount'];
+        // Group stage failures are no longer calculated: group-stage matches
+        // are not entered any more, the figure is not shown anywhere and no
+        // decision uses it. The column is kept and stored as 0.
+        $groupStageFailures = 0;
         
         // Calculate 6-month points
         $stmt = $pdo->prepare("
@@ -168,13 +158,9 @@ $quarterFinalsReached = $stmt->fetch()['QuartersCount'];
         $totalTournaments = $tournamentData['TournamentCount'];
         $lastTournament = $tournamentData['LastTournament'];
         
-        // Check promotion eligibility — data-driven: live points (Users.TotalPoints)
-        // vs the category's threshold, unless already in the top grade.
-        $threshold = $promotionThreshold ?? 300;
-        $eligibleForPromotion = 0;
-        if ($totalPoints >= $threshold && $playerDisplayOrder > $topOrder) {
-            $eligibleForPromotion = 1;
-        }
+        // Check promotion eligibility: the one shared rule (api/grading.php),
+        // also used by the Grading page and the season reset and its preview
+        $eligibleForPromotion = kbfIsEligibleForPromotion($totalPoints, $categoryId, kbfEligibilityGradeMap($pdo)) ? 1 : 0;
         
         // Demotion flagging is RETIRED. We no longer compute it (the old rules
         // were GroupStageFailures >= 3 and >12 months inactivity). The

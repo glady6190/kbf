@@ -210,9 +210,11 @@ function apResultsTeams(PDO $pdo, $tournamentId) {
         $category = trim(apText($m['GroupName'] ?? ''));
         $key = strtolower($category);
         if (!isset($categories[$key])) {
-            $categories[$key] = ['name' => $category, 'teams' => []];
+            $categories[$key] = ['name' => $category, 'teams' => [], 'matchIds' => []];
             $counter[$key] = [];
         }
+        // The matches shown for review: only these are approved or rejected
+        $categories[$key]['matchIds'][] = (int) $m['MatchId'];
         $rp = $map[$m['RoundType']] ?? [];
         $w = (int) $m['WinnerTeam'];
         foreach ([1, 2] as $team) {
@@ -258,7 +260,9 @@ function apResultsTeams(PDO $pdo, $tournamentId) {
 // Returns ['success', 'message', 'code', 'emailStatus'].
 // $reasonKey and $message: rejection reason; $message fills {reason}.
 // ============================================
-function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $message) {
+// $matchIds (results only): the waiting matches shown on the review page.
+// Only those are approved or rejected; anything submitted since stays waiting.
+function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $message, $matchIds = null) {
     $fail = function ($text, $code) use ($pdo) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -541,6 +545,31 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                 return $fail('Results not found or already processed', 404);
             }
 
+            // The reviewed matches: still waiting, in this tournament
+            $reviewed = [];
+            foreach (is_array($matchIds) ? $matchIds : [] as $raw) {
+                $mid = filter_var($raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($mid) {
+                    $reviewed[(int) $mid] = (int) $mid;
+                }
+            }
+            if (!$reviewed) {
+                return $fail('Please reload the page to see the results waiting, then decide again.', 409);
+            }
+            $reviewed = array_values($reviewed);
+            $reviewedIn = implode(',', array_fill(0, count($reviewed), '?'));
+            $stmt = $pdo->prepare("
+                SELECT MatchId FROM Matches
+                WHERE TournamentId = ? AND IsApproved = 0 AND MatchId IN ($reviewedIn)
+                FOR UPDATE
+            ");
+            $stmt->execute(array_merge([$result['TournamentId']], $reviewed));
+            $reviewed = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+            if (!$reviewed) {
+                return $fail('These results have changed since the page was opened. Please reload and check them again.', 409);
+            }
+            $reviewedIn = implode(',', array_fill(0, count($reviewed), '?'));
+
             $stmt = $pdo->prepare("
                 UPDATE ResultsApprovalQueue
                 SET Status = ?, ReviewedByAdminId = ?, ReviewedDate = NOW(), ReviewComments = ?
@@ -570,17 +599,17 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                     SELECT MatchId, Player1Id, Partner1Id, Player2Id, Partner2Id,
                            WinnerTeam, RoundType
                     FROM Matches
-                    WHERE TournamentId = ? AND IsApproved = 0
+                    WHERE TournamentId = ? AND IsApproved = 0 AND MatchId IN ($reviewedIn)
                     FOR UPDATE
                 ");
-                $stmt->execute([$result['TournamentId']]);
+                $stmt->execute(array_merge([$result['TournamentId']], $reviewed));
                 $matches = $stmt->fetchAll();
 
-                // Mark them as approved
+                // Mark them as approved (only the reviewed ones)
                 $stmt = $pdo->prepare("
-                    UPDATE Matches SET IsApproved = 1 WHERE TournamentId = ? AND IsApproved = 0
+                    UPDATE Matches SET IsApproved = 1 WHERE TournamentId = ? AND IsApproved = 0 AND MatchId IN ($reviewedIn)
                 ");
-                $stmt->execute([$result['TournamentId']]);
+                $stmt->execute(array_merge([$result['TournamentId']], $reviewed));
 
                 // Points through the shared rule (api/points-rules.php): career
                 // only when the tournament was before the player's latest grade
@@ -628,9 +657,21 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                 $stmt = $pdo->prepare("UPDATE Tournaments SET Status = 'Completed' WHERE TournamentId = ?");
                 $stmt->execute([$result['TournamentId']]);
             } else {
-                // Rejected - delete the pending matches so they don't show publicly
-                $stmt = $pdo->prepare("DELETE FROM Matches WHERE TournamentId = ? AND IsApproved = 0");
-                $stmt->execute([$result['TournamentId']]);
+                // Rejected - delete the reviewed pending matches so they don't show publicly
+                $stmt = $pdo->prepare("DELETE FROM Matches WHERE TournamentId = ? AND IsApproved = 0 AND MatchId IN ($reviewedIn)");
+                $stmt->execute(array_merge([$result['TournamentId']], $reviewed));
+            }
+
+            // Results submitted after the review page was opened stay waiting
+            // under a new queue row
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Matches WHERE TournamentId = ? AND IsApproved = 0");
+            $stmt->execute([$result['TournamentId']]);
+            if ((int) $stmt->fetchColumn() > 0) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO ResultsApprovalQueue (TournamentId, SubmittedByAdminId, SubmittedDate)
+                    VALUES (?, ?, NOW())
+                ");
+                $stmt->execute([$result['TournamentId'], $result['SubmittedByAdminId']]);
             }
 
             $logDetails = "Tournament: {$result['TournamentName']}, Date: " . date('d M Y', strtotime($result['TournamentDate']));
@@ -1339,7 +1380,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_array($data)) {
         sendJSON(['success' => false, 'message' => 'Invalid request'], 400);
     }
-    kbfRequireScalarFields($data, ['ids']);
+    kbfRequireScalarFields($data, ['ids', 'matchIds']);
 
     // ---------- approve selected registrations ----------
     if (($data['action'] ?? '') === 'approveSelected') {
@@ -1457,7 +1498,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         sendJSON(['success' => false, 'message' => 'The message must be 1,000 characters or fewer'], 400);
     }
 
-    $result = apDecide($pdo, $type, (int) $id, $action, $data['categoryId'] ?? null, $reasonKey, $message);
+    $result = apDecide($pdo, $type, (int) $id, $action, $data['categoryId'] ?? null, $reasonKey, $message,
+        $type === 'results' && is_array($data['matchIds'] ?? null) ? $data['matchIds'] : null);
     if (!$result['success']) {
         sendJSON(['success' => false, 'message' => $result['message']], $result['code']);
     }

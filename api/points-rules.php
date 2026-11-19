@@ -199,4 +199,126 @@ function kbfAwardPoints($pdo, $userId, $tournamentId, $matchId, $points, $reason
 function kbfSeasonPointsSumSql($pdo, $alias) {
     return "SUM(CASE WHEN " . kbfSeasonAwardSql($pdo, $alias) . " THEN $alias.PointsAwarded ELSE 0 END)";
 }
+
+// ============================================
+// THE RULE KEPT EVERYWHERE TotalPoints CHANGES
+// PlayerPointsHistory.CountsTowardSeason = 1 means "these points are still
+// included in Users.TotalPoints right now". Every function below keeps that
+// true. Callers run them inside their own transaction.
+// ============================================
+
+// Take points off season points without ever going below 0
+function kbfSubtractSeasonPoints($pdo, $userId, $points) {
+    $points = (int) $points;
+    if ($points <= 0) {
+        return;
+    }
+    $stmt = $pdo->prepare("UPDATE Users SET TotalPoints = TotalPoints - LEAST(TotalPoints, ?) WHERE UserId = ?");
+    $stmt->execute([$points, (int) $userId]);
+}
+
+// Season points were set back (grade change, move between grades): none of
+// the player's earlier awards are inside TotalPoints any more
+function kbfEndSeasonAwards($pdo, $userId) {
+    if (!kbfHasSeasonFlag($pdo)) {
+        return;
+    }
+    $stmt = $pdo->prepare("UPDATE PlayerPointsHistory SET CountsTowardSeason = 0 WHERE PlayerId = ? AND CountsTowardSeason = 1");
+    $stmt->execute([(int) $userId]);
+}
+
+// A grade change: new grade, season points back to 0, and every award that
+// was counted marked as no longer counted (same transaction as the caller)
+function kbfApplyGradeChangePoints($pdo, $userId, $newCategoryId) {
+    $stmt = $pdo->prepare("UPDATE Users SET CategoryId = ?, TotalPoints = 0 WHERE UserId = ?");
+    $stmt->execute([(int) $newCategoryId, (int) $userId]);
+    kbfEndSeasonAwards($pdo, $userId);
+}
+
+// Reverse the awards of these matches (optionally only for some players):
+// only awards still counted (CountsTowardSeason = 1) come off season points,
+// never below 0; the award rows are deleted (career points are worked out
+// again from what is left). Returns the player ids that had awards.
+function kbfReverseMatchAwards($pdo, array $matchIds, $onlyPlayerIds = null) {
+    $matchIds = array_values(array_unique(array_filter(array_map('intval', $matchIds))));
+    if (!$matchIds) {
+        return [];
+    }
+    $where = 'pph.MatchId IN (' . implode(',', array_fill(0, count($matchIds), '?')) . ')';
+    $params = $matchIds;
+    if ($onlyPlayerIds !== null) {
+        $onlyPlayerIds = array_values(array_unique(array_filter(array_map('intval', $onlyPlayerIds))));
+        if (!$onlyPlayerIds) {
+            return [];
+        }
+        $where .= ' AND pph.PlayerId IN (' . implode(',', array_fill(0, count($onlyPlayerIds), '?')) . ')';
+        $params = array_merge($params, $onlyPlayerIds);
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT pph.PlayerId, " . kbfSeasonPointsSumSql($pdo, 'pph') . " AS Counted
+        FROM PlayerPointsHistory pph
+        WHERE $where
+        GROUP BY pph.PlayerId
+    ");
+    $stmt->execute($params);
+    $players = [];
+    foreach ($stmt->fetchAll() as $row) {
+        kbfSubtractSeasonPoints($pdo, $row['PlayerId'], $row['Counted']);
+        $players[] = (int) $row['PlayerId'];
+    }
+
+    $stmt = $pdo->prepare("DELETE pph FROM PlayerPointsHistory pph WHERE $where");
+    $stmt->execute($params);
+    return $players;
+}
+
+// A tournament's date changed: check each of its awards again against the
+// career-only rule for the new date and move points into or out of season
+// points. Returns ['in' => n, 'out' => n, 'players' => [ids]].
+function kbfRecheckTournamentAwards($pdo, $tournamentId) {
+    $result = ['in' => 0, 'out' => 0, 'players' => []];
+    if (!kbfHasSeasonFlag($pdo)) {
+        return $result;
+    }
+    $stmt = $pdo->prepare("SELECT TournamentDate FROM Tournaments WHERE TournamentId = ?");
+    $stmt->execute([(int) $tournamentId]);
+    $date = $stmt->fetchColumn();
+    if ($date === false) {
+        return $result;
+    }
+    $stmt = $pdo->prepare("
+        SELECT PlayerId, MatchId, PointsAwarded, CountsTowardSeason
+        FROM PlayerPointsHistory WHERE TournamentId = ?
+        FOR UPDATE
+    ");
+    $stmt->execute([(int) $tournamentId]);
+    $awards = $stmt->fetchAll();
+    if (!$awards) {
+        return $result;
+    }
+    $changes = kbfLastGradeChanges($pdo, array_column($awards, 'PlayerId'));
+    $seasonStart = kbfCurrentSeasonStart($pdo);
+    $setFlag = $pdo->prepare("UPDATE PlayerPointsHistory SET CountsTowardSeason = ? WHERE TournamentId = ? AND MatchId <=> ? AND PlayerId = ?");
+    $add = $pdo->prepare("UPDATE Users SET TotalPoints = TotalPoints + ? WHERE UserId = ?");
+    foreach ($awards as $a) {
+        $playerId = (int) $a['PlayerId'];
+        $shouldCount = kbfCareerOnlyReason($date, $changes[$playerId] ?? null, $seasonStart) === null;
+        $counts = (int) $a['CountsTowardSeason'] === 1;
+        if ($shouldCount === $counts) {
+            continue;
+        }
+        if ($shouldCount) {
+            $add->execute([(int) $a['PointsAwarded'], $playerId]);
+            $result['in']++;
+        } else {
+            kbfSubtractSeasonPoints($pdo, $playerId, $a['PointsAwarded']);
+            $result['out']++;
+        }
+        $setFlag->execute([$shouldCount ? 1 : 0, (int) $tournamentId, $a['MatchId'], $playerId]);
+        $result['players'][$playerId] = $playerId;
+    }
+    $result['players'] = array_values($result['players']);
+    return $result;
+}
 ?>

@@ -71,10 +71,10 @@ RewriteRule (^|/)\.env - [F,L]
 # ============================================
 # HTTPS ENFORCEMENT
 # ============================================
-# Always to the site's own address (the Website address in Site settings),
-# never to the request's Host header
+# Plain http goes to https on the same host. (Links and redirects built in
+# PHP use the Website address in Site settings instead.)
 RewriteCond %{HTTPS} off
-RewriteRule ^ https://kbf-uk.org%{REQUEST_URI} [L,R=301]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # ============================================
 # MAINTENANCE MODE (Site settings, Super Admin only)

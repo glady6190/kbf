@@ -1487,9 +1487,13 @@
         // ============================================
         // SAVING
         // ============================================
+        // Guests are sent as { guest: name } (stored as a name whatever its
+        // text, numbers included); only a chosen player is sent as { userId }
         function slotValue(v) {
             if (!v) return null;
-            return v.kind === 'guest' ? v.name : v.id;
+            if (v.kind === 'guest') return { guest: String(v.name) };
+            var id = parseInt(v.id, 10);
+            return id > 0 ? { userId: id } : null;
         }
 
         function match(round, a, b, w) {

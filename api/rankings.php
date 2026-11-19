@@ -451,9 +451,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Season points start again from 0 in the new grade; awards from
         // tournaments on or before today count toward career points only
-        // (api/points-rules.php)
-        $stmt = $pdo->prepare("UPDATE Users SET CategoryId = ?, TotalPoints = 0 WHERE UserId = ?");
-        $stmt->execute([$newCategoryId, $userId]);
+        // (api/points-rules.php). Every award that was counted is marked as
+        // no longer counted, in this transaction.
+        require_once __DIR__ . '/points-rules.php';
+        kbfApplyGradeChangePoints($pdo, $userId, $newCategoryId);
 
         $stmt = $pdo->prepare("
             INSERT INTO PlayerRankingHistory

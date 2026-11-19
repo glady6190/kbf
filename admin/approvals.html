@@ -1279,8 +1279,12 @@
             main.appendChild(section);
         });
         body.appendChild(main);
-        footer(body, 'Approve results', btn => approve('results', r.id, {}, btn, r.name),
-            btn => openReject('results', r.id, r.name, btn), 'Then opens the next results');
+        // Only the results shown here are approved or rejected; anything
+        // submitted since stays waiting
+        const shownMatchIds = [];
+        (r.categories || []).forEach(cat => (cat.matchIds || []).forEach(m => shownMatchIds.push(Number(m))));
+        footer(body, 'Approve results', btn => approve('results', r.id, { matchIds: shownMatchIds }, btn, r.name),
+            btn => openReject('results', r.id, r.name, btn, { matchIds: shownMatchIds }), 'Then opens the next results');
     }
 
     // ============================================
@@ -1288,8 +1292,8 @@
     // ============================================
     let rejecting = null;
 
-    function openReject(type, id, name, btn) {
-        rejecting = { type: type, id: id, name: name };
+    function openReject(type, id, name, btn, extra) {
+        rejecting = { type: type, id: id, name: name, extra: extra || {} };
         document.getElementById('rejectTitle').textContent = 'Reject ' + name + '?';
         const reasons = (meta.reasons || {})[type === 'registration' ? 'registration' : 'tournament'] || [];
         const box = document.getElementById('rejectReasons');
@@ -1334,7 +1338,7 @@
         this.disabled = true;
         const item = rejecting;
         try {
-            const result = await postJson({ type: item.type, id: item.id, action: 'reject', reasonKey: reason.value, message: message });
+            const result = await postJson(Object.assign({ type: item.type, id: item.id, action: 'reject', reasonKey: reason.value, message: message }, item.extra || {}));
             if (!result.success) {
                 error.textContent = result.message || 'This could not be rejected.';
                 error.classList.remove('hidden');
