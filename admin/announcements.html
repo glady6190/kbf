@@ -67,7 +67,7 @@
         .nw-menu-item:hover, .nw-menu-item:focus { background: #1e293b; color: #fff; outline: none; }
         .nw-menu-item.is-danger { color: #fca5a5; }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -151,10 +151,11 @@
     <!-- Row menu (one, shared by every row) -->
     <div id="rowMenu" class="nw-menu hidden" role="menu" aria-label="Post actions"></div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
   <script>
     // News list (staff). Data: GET /api/announcements.php?staff=1 with tab,
     // q, tournament, author and page; 50 posts a page. The API decides what
@@ -653,7 +654,7 @@
             });
             const result = await response.json().catch(() => ({ success: false }));
             if (result.success) {
-                toast(visible ? 'News post shown on the public site.' : 'News post hidden from the public site.', true);
+                toast('"' + (p.title || 'News post') + '" ' + (visible ? 'is shown on the public site again.' : 'is now hidden from the public site.'), true);
                 loadPosts();
             } else {
                 toast(result.message || 'The news post could not be changed.', false);
@@ -677,7 +678,7 @@
             const response = await authenticatedFetch('/api/announcements.php?id=' + idParam(p.id), { method: 'DELETE' });
             const result = await response.json().catch(() => ({ success: false }));
             if (result.success) {
-                toast('News post deleted.', true);
+                toast('"' + (p.title || 'News post') + '" deleted.', true);
                 loadPosts();
             } else {
                 toast(result.message || 'The news post could not be deleted.', false);
@@ -688,6 +689,6 @@
         }
     }
 </script>
-<script src="/js/session-manager.js?v=2611191418"></script>
+<script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

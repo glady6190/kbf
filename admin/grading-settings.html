@@ -46,7 +46,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -195,10 +195,11 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.grading
@@ -298,6 +299,11 @@
         box.className = 'p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (ok
             ? 'border-green-500 bg-green-500/20 text-green-400'
             : 'border-red-500 bg-red-500/20 text-red-400');
+    }
+
+    // Result of an action: a toast with the server's plain words
+    function toastDone(text) {
+        KBF.toast(String(text).trim().replace(/\.?$/, '.'));
     }
 
     function hideSave() {
@@ -774,7 +780,7 @@
             if (!data.success) { dialogError(data.message || 'That did not work.'); return; }
             closeDialog();
             await load();
-            showSave(data.message || 'Done', true);
+            toastDone(data.message || 'Done');
         });
     }
 
@@ -814,7 +820,7 @@
             if (!data.success) { dialogError(data.message || 'The grade could not be added.'); return; }
             closeDialog();
             await load();
-            showSave(data.message || 'Grade added', true);
+            toastDone(data.message || 'Grade added');
         });
     });
 
@@ -873,7 +879,7 @@
             if (!data.success) { dialogError(data.message || 'The players could not be moved.'); return; }
             closeDialog();
             await load();
-            showSave(data.message || 'Players moved', true);
+            toastDone(data.message || 'Players moved');
         });
     }
 
@@ -934,7 +940,7 @@
                 return;
             }
             if (!check.changes.length) {
-                showSave('Nothing to change.', true);
+                KBF.toast('Nothing to change.', 'info');
                 return;
             }
             const node = el('div', 'space-y-3');
@@ -949,11 +955,11 @@
                 if (!data.success) { dialogError(data.message || 'Could not save the changes.'); return; }
                 closeDialog();
                 await load();
-                showSave(data.message || 'Changes saved', true);
+                KBF.toast('Grading and season settings saved.');
             });
         } catch (e) {
             console.error('Save grading error:', e);
-            showSave('Could not save the changes. Please try again.', false);
+            KBF.toast('Could not save the changes. Please try again.', 'error');
         } finally {
             this.disabled = !canEdit;
         }
@@ -970,6 +976,6 @@
         }).then(yes => { if (yes) load(); });
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

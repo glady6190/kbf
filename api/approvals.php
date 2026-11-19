@@ -1647,6 +1647,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $approved = 0;
         $skipped = [];
         $failed = [];
+        $emails = ['sent' => 0, 'waiting' => 0, 'failed' => 0];
         $nameStmt = $pdo->prepare("SELECT FirstName, LastName, Status, Email FROM PlayerRegistrations WHERE RegistrationId = ?");
         foreach ($clean as $id) {
             try {
@@ -1687,6 +1688,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = apDecide($pdo, 'registration', $id, 'approve', null, null, null);
             if ($result['success']) {
                 $approved++;
+                // What happened to each approval email, for the page's message
+                $emailState = (string) ($result['emailStatus'] ?? '');
+                if (isset($emails[$emailState])) {
+                    $emails[$emailState]++;
+                }
             } else {
                 $failed[] = ['id' => $id, 'name' => $name, 'message' => $result['message']];
             }
@@ -1705,6 +1711,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'approved' => $approved,
             'skipped' => $skipped,
             'failed' => $failed,
+            'emails' => $emails,
         ]);
     }
 

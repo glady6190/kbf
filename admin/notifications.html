@@ -33,7 +33,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -96,10 +96,11 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.notifications
@@ -131,15 +132,6 @@
         if (token) options.headers['X-CSRF-Token'] = token;
         options.credentials = 'include';
         return fetch(url, options);
-    }
-
-    function showMessage(text, ok) {
-        const box = document.getElementById('saveMessage');
-        box.textContent = text;
-        box.setAttribute('role', ok ? 'status' : 'alert');
-        box.className = 'p-3 sm:p-4 border-2 sm:border-4 font-bold uppercase text-xs sm:text-sm ' + (ok
-            ? 'border-green-500 bg-green-500/20 text-green-400'
-            : 'border-red-500 bg-red-500/20 text-red-400');
     }
 
     // ============================================
@@ -262,15 +254,21 @@
                 body: JSON.stringify({ action: 'saveSwitches', switches: switches })
             });
             const data = await res.json();
-            showMessage(data.message || (data.success ? 'Changes saved' : 'Could not save changes'), !!data.success);
+            if (!data.success) {
+                KBF.toast(data.message || 'Could not save the notification switches.', 'error');
+            } else {
+                const n = Number(data.changed) || 0;
+                KBF.toast(n === 0 ? 'No switches were changed.'
+                    : 'Notification switches saved (' + n + ' change' + (n === 1 ? '' : 's') + ').', n === 0 ? 'info' : 'success');
+            }
         } catch (e) {
             console.error('Save notifications error:', e);
-            showMessage('Could not save changes. Please try again.', false);
+            KBF.toast('Could not save the notification switches. Please try again.', 'error');
         } finally {
             btn.disabled = false;
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

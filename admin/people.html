@@ -101,7 +101,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -654,13 +654,14 @@
         </form>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191418"></script>
-    <script src="/js/kbf-cropper.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
-    <script src="/js/grade-change.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191751"></script>
+    <script src="/js/kbf-cropper.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
+    <script src="/js/grade-change.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.view_export, players.edit_details
@@ -858,6 +859,33 @@
         box.classList.add(kind === 'error' ? 'msg-error' : (kind === 'warn' ? 'msg-warn' : 'msg-ok'));
         // Errors are announced straight away; other messages politely
         box.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    }
+
+    // Result of an action: a toast (js/kbf-toast.js). type: success, info,
+    // warning or error. reply: the server's reply, for its emailStatus.
+    function toast(text, type, reply) {
+        if (!window.KBF || typeof KBF.toast !== 'function') return;
+        if (reply) KBF.toast.fromReply(text, reply, type);
+        else KBF.toast(text, type);
+    }
+
+    // "Chris Roch's", "James'"
+    function possessive(name) {
+        const n = String(name || 'Their').trim();
+        return /s$/i.test(n) ? n + "'" : n + "'s";
+    }
+
+    // A server error: clear the box beside the form and show an error toast
+    function failToast(boxId, text) {
+        if (boxId) showMsg(boxId, '');
+        toast(text, 'error');
+    }
+
+    // Full name of the person on the Access tab
+    function accessName() {
+        if (person && person.name) return person.name;
+        const a = accessData || (accessDraft && (accessDraft.member || accessDraft.person)) || {};
+        return ((a.firstName || '') + ' ' + (a.lastName || '')).trim() || 'this person';
     }
 
     function firstNameOf() {
@@ -1544,10 +1572,11 @@
             if (!file || !person || personId !== forPerson) return;
             showMsg('ppMessage', 'Uploading the photo...', 'ok');
             pendingPhoto = await uploadPhoto(file);
-            showMsg('ppMessage', 'Photo uploaded. Press Save to keep it.', 'ok');
+            showMsg('ppMessage', '');
+            toast('Photo uploaded. Press Save to keep it.', 'info');
             renderDetails();
         } catch (e) {
-            showMsg('ppMessage', e.message || 'The photo could not be uploaded.', 'error');
+            failToast('ppMessage', e.message || 'The photo could not be uploaded.');
         }
     }
 
@@ -1588,7 +1617,7 @@
         }
         if (pendingPhoto !== undefined) payload.photo = pendingPhoto;
         if (Object.keys(payload).length === 2) {
-            showMsg('ppMessage', 'Nothing has changed.', 'ok');
+            toast('Nothing has changed for ' + p.name + '.', 'info');
             return;
         }
         // Names: letters in any language, spaces, apostrophes and hyphens
@@ -1614,16 +1643,18 @@
         try {
             const data = await postPeople(payload);
             if (!data.success) {
-                showMsg('ppMessage', data.message || 'The details could not be saved.', 'error');
+                failToast('ppMessage', data.message || 'The details could not be saved.');
                 return;
             }
             pendingPhoto = undefined;
             await reloadPerson('details');
-            showMsg('ppMessage', data.message || 'Details saved.', 'ok');
+            showMsg('ppMessage', '');
+            if (data.changed === false) toast('Nothing has changed for ' + p.name + '.', 'info');
+            else toast(possessive(p.name) + ' details saved.');
             loadList(true);
         } catch (e) {
             console.error('Save details error:', e);
-            showMsg('ppMessage', 'The details could not be saved. Please check your connection and try again.', 'error');
+            failToast('ppMessage', 'The details could not be saved. Please check your connection and try again.');
         } finally {
             restoreBtn();
         }
@@ -1654,14 +1685,17 @@
         try {
             const data = await postPeople({ action: 'setActive', id: person.id, active: !deactivate });
             if (!data.success) {
-                showMsg('ppMessage', data.message || 'This could not be changed.', 'error');
+                failToast('ppMessage', data.message || 'This could not be changed.');
                 return;
             }
+            const who = person ? person.name : 'This person';
             await reloadPerson('details');
-            showMsg('ppMessage', data.message || 'Saved.', 'ok');
+            showMsg('ppMessage', '');
+            if (data.changed === false) toast(who + ' was already ' + (deactivate ? 'deactivated.' : 'active.'), 'info');
+            else toast(who + (deactivate ? ' deactivated.' : ' reactivated.'));
             loadList(true);
         } catch (e) {
-            showMsg('ppMessage', 'This could not be changed.', 'error');
+            failToast('ppMessage', 'This could not be changed.');
         } finally {
             this.disabled = false;
         }
@@ -1688,16 +1722,17 @@
         try {
             const data = await postPeople({ action: 'remove', id: person.id, confirm: true });
             if (!data.success) {
-                showMsg('removeMessage', data.message || 'The player could not be removed.', 'error');
+                failToast('removeMessage', data.message || 'The player could not be removed.');
                 btn.disabled = false;
                 return;
             }
+            const removedName = person.name;
             closeDialog('removeDialog');
             closePerson(false);
-            showMsg('pageMessage', data.message || 'The player was removed.', 'ok');
+            toast(removedName + ' was removed at their request.');
             loadList(true);
         } catch (err) {
-            showMsg('removeMessage', 'The player could not be removed.', 'error');
+            failToast('removeMessage', 'The player could not be removed.');
             btn.disabled = false;
         }
     });
@@ -1709,7 +1744,7 @@
             userId: person.id,
             onDone: async function (result) {
                 await reloadPerson('details');
-                showMsg('ppMessage', result.message || 'Grade changed.', result.emailStatus === 'failed' ? 'warn' : 'ok');
+                showMsg('ppMessage', '');
                 loadList(true);
             }
         });
@@ -2082,7 +2117,7 @@
         try {
             const data = await postStaff(payload);
             if (!data.success) {
-                showMsg('accessMessage', data.message || 'Access could not be saved.', 'error');
+                failToast('accessMessage', data.message || 'Access could not be saved.');
                 return;
             }
             if (accessMode !== 'edit') {
@@ -2096,17 +2131,17 @@
                 document.querySelectorAll('#ppTabs .pp-ptab').forEach(t => t.classList.remove('hidden'));
                 await reloadPerson('access');
                 if (data.temporaryPassword) showTemporaryPassword(data.temporaryPassword);
-                showMsg('accessMessage', data.message || 'Access saved.', 'ok');
+                toast((payload.action === 'create' ? 'Staff member ' + accessName() + ' added.' : 'Access given to ' + accessName() + '.'), 'success', data);
                 loadList(true);
                 return;
             }
             await reloadPerson('access');
             if (data.temporaryPassword) showTemporaryPassword(data.temporaryPassword);
-            showMsg('accessMessage', data.message || 'Access saved.', 'ok');
+            toast((payload.action === 'grant' ? 'Access given to ' : 'Access saved for ') + accessName() + '.', 'success', data);
             loadList(true);
         } catch (e) {
             console.error('Save access error:', e);
-            showMsg('accessMessage', 'Access could not be saved.', 'error');
+            failToast('accessMessage', 'Access could not be saved.');
         } finally {
             restoreSave();
         }
@@ -2126,24 +2161,24 @@
             if (accessData.isSuperAdmin) {
                 const s = await postStaff({ action: 'setSuperAdmin', userId: accessData.userId, superAdmin: false });
                 if (!s.success) {
-                    showMsg('accessMessage', s.message || 'Super Admin could not be removed.', 'error');
+                    failToast('accessMessage', s.message || 'Super Admin could not be removed.');
                     return;
                 }
             }
             const data = await postStaff({ action: 'update', userId: accessData.userId, labels: [], permissions: [] });
             if (!data.success) {
-                showMsg('accessMessage', data.message || 'Access could not be removed.', 'error');
+                failToast('accessMessage', data.message || 'Access could not be removed.');
                 return;
             }
             loadList(true);
             const playsNow = !!accessData.grade;
             const fullName = person ? person.name : name;
             await reloadPerson('access');
-            showMsg('accessMessage', playsNow
-                ? 'All access removed.'
-                : fullName + ' no longer has access and does not play. Give them access again or deactivate them.', playsNow ? 'ok' : 'warn');
+            toast(playsNow
+                ? 'All access removed for ' + fullName + '.'
+                : fullName + ' no longer has access and does not play. Give them access again or deactivate them.', playsNow ? 'success' : 'warning', data);
         } catch (e) {
-            showMsg('accessMessage', 'Access could not be removed.', 'error');
+            failToast('accessMessage', 'Access could not be removed.');
         } finally {
             this.disabled = false;
         }
@@ -2156,14 +2191,15 @@
             const data = await postStaff({ action: 'setLogin', userId: accessData.userId, enabled: enabled });
             if (!data.success) {
                 this.checked = !enabled;
-                showMsg('accessMessage', data.message || 'Sign-in could not be changed.', 'error');
+                failToast('accessMessage', data.message || 'Sign-in could not be changed.');
                 return;
             }
+            const who = accessName();
             await loadAccess();
-            showMsg('accessMessage', data.message || 'Saved.', 'ok');
+            toast('Sign-in turned ' + (enabled ? 'on' : 'off') + ' for ' + who + '.');
         } catch (e) {
             this.checked = !enabled;
-            showMsg('accessMessage', 'Sign-in could not be changed.', 'error');
+            failToast('accessMessage', 'Sign-in could not be changed.');
         } finally {
             this.disabled = isOwnAccount() && accessData && accessData.loginEnabled;
         }
@@ -2176,14 +2212,15 @@
             const data = await postStaff({ action: 'setTwoStepRequired', userId: accessData.userId, required: required });
             if (!data.success) {
                 this.checked = !required;
-                showMsg('accessMessage', data.message || 'This setting could not be changed.', 'error');
+                failToast('accessMessage', data.message || 'This setting could not be changed.');
                 return;
             }
+            const who = accessName();
             await loadAccess();
-            showMsg('accessMessage', data.message || 'Saved.', 'ok');
+            toast('2-step verification ' + (required ? 'is now required' : 'is no longer required') + ' for ' + who + '.');
         } catch (e) {
             this.checked = !required;
-            showMsg('accessMessage', 'This setting could not be changed.', 'error');
+            failToast('accessMessage', 'This setting could not be changed.');
         } finally {
             this.disabled = false;
         }
@@ -2195,11 +2232,13 @@
             'Reset', true);
         if (!ok) return;
         try {
+            const who = accessName();
             const data = await postStaff({ action: 'resetTwoStep', userId: accessData.userId });
             await loadAccess();
-            showMsg('accessMessage', data.message || (data.success ? '2-step verification reset.' : '2-step could not be reset.'), data.success ? 'ok' : 'error');
+            if (data.success) toast('2-step verification reset for ' + who + '.');
+            else failToast('accessMessage', data.message || '2-step could not be reset.');
         } catch (e) {
-            showMsg('accessMessage', '2-step could not be reset.', 'error');
+            failToast('accessMessage', '2-step could not be reset.');
         }
     });
 
@@ -2214,14 +2253,18 @@
         try {
             const data = await postStaff({ action: 'passwordHelp', userId: accessData.userId });
             if (!data.success) {
-                showMsg('accessMessage', data.message || 'The password could not be helped with.', 'error');
+                failToast('accessMessage', data.message || 'The password could not be helped with.');
                 return;
             }
+            const who = accessName();
             if (data.temporaryPassword) showTemporaryPassword(data.temporaryPassword);
             await loadAccess();
-            showMsg('accessMessage', data.message || 'Done.', 'ok');
+            // The server fails the request when the reset email is not sent
+            toast(data.mode === 'email'
+                ? 'Password reset email sent to ' + who + '.'
+                : 'Temporary password set for ' + who + '. They have been signed out everywhere.');
         } catch (e) {
-            showMsg('accessMessage', 'The password could not be helped with.', 'error');
+            failToast('accessMessage', 'The password could not be helped with.');
         } finally {
             this.disabled = !(accessData && accessData.isActive);
         }
@@ -2238,12 +2281,14 @@
         try {
             const data = await postStaff({ action: 'signOutEverywhere', userId: accessData.userId });
             if (data.success && data.signedOut) {
+                if (window.KBF && KBF.toast) KBF.toast.next('You have been signed out on every device.');
                 window.location.href = '/login';
                 return;
             }
-            showMsg('accessMessage', data.message || (data.success ? 'Signed out everywhere.' : 'Could not sign out everywhere.'), data.success ? 'ok' : 'error');
+            if (data.success) toast(accessName() + ' has been signed out on every device.');
+            else failToast('accessMessage', data.message || 'Could not sign out everywhere.');
         } catch (e) {
-            showMsg('accessMessage', 'Could not sign out everywhere.', 'error');
+            failToast('accessMessage', 'Could not sign out everywhere.');
         } finally {
             this.disabled = false;
         }
@@ -2260,15 +2305,16 @@
         try {
             const data = await postStaff({ action: 'setSuperAdmin', userId: accessData.userId, superAdmin: makeSuper });
             if (!data.success) {
-                showMsg('accessMessage', data.message || 'Super Admin could not be changed.', 'error');
+                failToast('accessMessage', data.message || 'Super Admin could not be changed.');
                 this.disabled = false;
                 return;
             }
+            const who = accessName();
             await reloadPerson('access');
-            showMsg('accessMessage', data.message || 'Saved.', 'ok');
+            toast(makeSuper ? who + ' is now a Super Admin.' : who + ' is no longer a Super Admin.');
             loadList(true);
         } catch (e) {
-            showMsg('accessMessage', 'Super Admin could not be changed.', 'error');
+            failToast('accessMessage', 'Super Admin could not be changed.');
             this.disabled = false;
         }
     });
@@ -2508,7 +2554,7 @@
             fillAvatar(document.getElementById('aPhotoPreview'), addPhoto, '');
             showMsg('addMessage', '');
         } catch (e) {
-            showMsg('addMessage', e.message || 'The photo could not be uploaded.', 'error');
+            failToast('addMessage', e.message || 'The photo could not be uploaded.');
         }
     });
 
@@ -2566,17 +2612,21 @@
                 return;
             }
             if (!data.success) {
-                Object.keys(data.errors || {}).forEach(k => showAddError(k, data.errors[k]));
-                showMsg('addMessage', data.message || 'The player could not be added.', 'error');
+                const fieldErrors = Object.keys(data.errors || {});
+                fieldErrors.forEach(k => showAddError(k, data.errors[k]));
+                // Field problems stay beside the fields; anything else is a toast
+                if (fieldErrors.length) showMsg('addMessage', data.message || 'Check the highlighted fields.', 'error');
+                else failToast('addMessage', data.message || 'The player could not be added.');
                 return;
             }
             closeAddPlayer();
-            showMsg('pageMessage', data.message || 'Player added.', 'ok');
+            const addedName = ((payload.firstName || '') + ' ' + (payload.lastName || '')).trim() || 'The player';
+            toast(addedName + ' added' + (data.kbfId ? ' with KBF ID ' + data.kbfId : '') + '.', 'success', data);
             loadList(true);
             if (data.id) openPerson(Number(data.id), 'details', { returnFocus: document.getElementById('addPlayerBtn') });
         } catch (e) {
             console.error('Add player error:', e);
-            showMsg('addMessage', 'The player could not be added. Please check your connection and try again.', 'error');
+            failToast('addMessage', 'The player could not be added. Please check your connection and try again.');
         } finally {
             restoreSubmit();
             restoreOther();
@@ -2709,15 +2759,16 @@
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            showMsg('exportMessage', 'Downloaded.', 'ok');
+            showMsg('exportMessage', '');
+            toast('Player list exported as ' + (format === 'csv' ? 'CSV' : 'a printable page') + ' for ' + locations.length + ' location' + (locations.length === 1 ? '' : 's') + '.');
         } catch (err) {
             console.error('Export error:', err);
-            showMsg('exportMessage', 'The download could not be made.', 'error');
+            failToast('exportMessage', 'The download could not be made.');
         } finally {
             btn.disabled = false;
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

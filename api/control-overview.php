@@ -44,8 +44,10 @@ $can = [
 ];
 
 // Scheduled jobs: name => [label, description, overdue after (seconds)]
+// The email sender runs every 5 minutes: overdue after three missed runs
+// plus some slack (20 minutes), so one slow or skipped run is not flagged.
 const OVERVIEW_JOBS = [
-    'broadcast-sender' => ['Email sender', 'Sends waiting emails and broadcasts, every minute.', 1800],
+    'broadcast-sender' => ['Email sender', 'Sends waiting emails and broadcasts, every 5 minutes.', 20 * 60],
     'ranking-calculator' => ['Nightly recalculation', 'Recalculates player stats, sends daily summaries and tidies the logs.', 26 * 3600],
     'term-reset' => ['Season reset', 'Checks daily and resets season points when a new season starts.', 26 * 3600],
 ];
@@ -272,7 +274,7 @@ try {
             $overdue = !$run || $startedTs === false || (time() - $startedTs) > $info[2];
             $error = $run && $run['Status'] === 'error';
             if ($name === 'broadcast-sender') {
-                $nextRun = $startedTs ? date('c', $startedTs + 60) : null;
+                $nextRun = $startedTs ? date('c', $startedTs + 300) : null;
             } else {
                 $nextRun = $startedTs ? date('c', $startedTs + 86400) : null;
             }

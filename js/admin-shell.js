@@ -664,10 +664,15 @@
             if (data && data.success) {
                 var url = (typeof data.redirectUrl === 'string' && /^\/admin\/[A-Za-z0-9\-]+(\?id=\d+)?$/.test(data.redirectUrl))
                     ? data.redirectUrl : '/admin/people?tab=staff';
+                var imp = window.KBFShell.user && window.KBFShell.user.impersonation;
+                toastNext(imp && imp.targetName
+                    ? 'You stopped viewing as ' + imp.targetName + ' and are back in your own account.'
+                    : 'You are back in your own account.');
                 go(url);
                 return;
             }
             // Session already returned to the Super Admin (e.g. after 30 minutes)
+            toastNext('You are back in your own account.', 'info');
             go('/admin/dashboard');
         }, function () {
             throw 'Could not return to your account. Please try again.';
@@ -782,6 +787,7 @@
                 return res.json().catch(function () { return { success: false }; });
             }).then(function (data) {
                 if (data && data.success) {
+                    toastNext('You are now viewing the site as ' + (person.name || 'this person') + '.');
                     go('/admin/dashboard');
                     return;
                 }
@@ -836,8 +842,20 @@
         ask.then(function (yes) { if (yes) doSignOutEverywhere(); });
     }
 
+    // Result of an action: the shared toast (js/kbf-toast.js)
+    function toast(text, type) {
+        if (window.KBF && typeof window.KBF.toast === 'function') return window.KBF.toast(text, type);
+        if (window.KBFDialog) return window.KBFDialog.toast(text, type);
+    }
+
+    // Show text on the next page, after go()
+    function toastNext(text, type) {
+        if (window.KBF && window.KBF.toast && typeof window.KBF.toast.next === 'function') window.KBF.toast.next(text, type);
+    }
+
     function failNotice(text) {
-        if (window.KBFDialog) window.KBFDialog.notice({ title: 'Something went wrong', message: text });
+        if (window.KBF && typeof window.KBF.toast === 'function') window.KBF.toast(text, 'error');
+        else if (window.KBFDialog) window.KBFDialog.notice({ title: 'Something went wrong', message: text });
         else window.alert(text);
     }
 
@@ -853,6 +871,7 @@
             if (data && data.success) {
                 tellOtherTabs();
                 try { sessionStorage.removeItem('csrf_token'); } catch (e) { /* ignore */ }
+                toastNext('You have been signed out on every device.');
                 go('/login');
                 return;
             }
@@ -947,8 +966,8 @@
             }).then(function (data) {
                 if (data && data.success) {
                     form.reset();
-                    show('Your password has been changed.', true);
-                    setTimeout(close, 1500);
+                    close();
+                    toast('Your password has been changed.');
                 } else {
                     show((data && data.message) ? String(data.message) : 'Your password could not be changed.', false);
                 }
@@ -1006,6 +1025,8 @@
                     applyTheme(saved);
 
                     document.documentElement.style.visibility = 'visible';
+                    // Toasts sit below the header now that it is drawn
+                    if (window.KBF && window.KBF.toast && typeof window.KBF.toast.place === 'function') window.KBF.toast.place();
                     resolve(user);
                 })
                 .catch(function () {

@@ -73,7 +73,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -280,11 +280,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
-    <script src="/js/kbf-editor.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
+    <script src="/js/kbf-editor.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): content.broadcasts
@@ -352,6 +353,20 @@
         box.textContent = text;
         box.className = 'msg ' + (kind === 'ok' ? 'msg-ok' : (kind === 'warn' ? 'msg-warn' : 'msg-error')) + (id === 'pageMessage' ? ' mb-5' : '');
         box.classList.remove('hidden');
+    }
+
+    // Result of an action (js/kbf-toast.js); type: success, info, warning, error
+    function toast(text, type) {
+        if (window.KBF && typeof KBF.toast === 'function') KBF.toast(text, type || 'success');
+        else showMsg('pageMessage', text, type === 'error' ? 'error' : 'ok');
+    }
+
+    // 'Broadcast "Subject": ' for messages; the subject from the list or the form
+    let lastList = [];
+    function broadcastName(id) {
+        const b = lastList.find(x => Number(x.id) === id);
+        const s = b ? b.subject : document.getElementById('subjectInput').value.trim();
+        return s ? 'Broadcast "' + (s.length > 60 ? s.slice(0, 57) + '...' : s) + '"' : 'Broadcast';
     }
 
     // Shared date format from /js/escape.js
@@ -606,10 +621,11 @@
         return form;
     }
 
+    // Server errors: an error toast; a problem with the subject also shows by the field
     function failMessage(data, fallback) {
-        showMsg('composeMessage', (data && data.message) || fallback, 'error');
+        showMsg('composeMessage', '');
+        toast((data && data.message) || fallback, 'error');
         if (data && data.field === 'subject') KBF.showFieldError('subjectInput', (data && data.message) || fallback);
-        document.getElementById('composeMessage').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     const BUSY_TEXT = { previewBtn: 'Loading preview...', testBtn: 'Sending...', draftBtn: 'Saving...' };
@@ -644,7 +660,9 @@
             try {
                 const data = await postForm(buildForm('test'));
                 if (!data.success) { failMessage(data, 'The test could not be sent.'); return; }
-                showMsg('composeMessage', data.message, 'ok');
+                showMsg('composeMessage', '');
+                // The reply says whether it went or is waiting; never claim more
+                toast(data.message, /^Test sent/.test(data.message || '') ? 'success' : 'info');
             } catch (e) {
                 failMessage(null, 'The test could not be sent.');
             }
@@ -657,8 +675,10 @@
             try {
                 const data = await postForm(buildForm('saveDraft'));
                 if (!data.success) { failMessage(data, 'The draft could not be saved.'); return; }
+                const name = broadcastName(-1);
                 await loadForEdit(data.id, true);
-                showMsg('composeMessage', data.message || 'Draft saved.', 'ok');
+                showMsg('composeMessage', '');
+                toast(name + ' saved as a draft.');
                 loadList();
             } catch (e) {
                 failMessage(null, 'The draft could not be saved.');
@@ -700,8 +720,10 @@
     });
 
     function afterSend(message) {
+        const name = broadcastName(-1);
         resetCompose();
-        showMsg('pageMessage', message, 'ok');
+        showMsg('composeMessage', '');
+        toast(name + ': ' + message);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         loadList();
     }
@@ -729,7 +751,7 @@
     async function loadForEdit(id, quiet) {
         const data = await getJson(API + '?action=get&id=' + encodeURIComponent(id));
         if (!data.success) {
-            showMsg('pageMessage', data.message || 'The broadcast could not be opened.', 'error');
+            toast(data.message || 'The broadcast could not be opened.', 'error');
             return false;
         }
         const b = data.broadcast;
@@ -777,7 +799,8 @@
             if (!data.schemaReady) {
                 showMsg('pageMessage', 'Drafts and scheduling need database/grading-broadcasts.sql to be run first.', 'warn');
             }
-            renderList(data.broadcasts || []);
+            lastList = data.broadcasts || [];
+            renderList(lastList);
             applyReadOnly();
             clearTimeout(pollTimer);
             document.getElementById('refreshNote').classList.toggle('hidden', !data.anySending);
@@ -859,19 +882,21 @@
                 const data = await postJson({ action: 'cancel', id: id });
                 if (!data.success) { confirmError(data.message || 'The broadcast could not be cancelled.'); return false; }
                 if (editingId === id) resetCompose();
-                showMsg('pageMessage', data.message, 'ok');
+                toast(broadcastName(id) + ' cancelled. Nothing more is sent.');
                 loadList();
                 return true;
             });
             return;
         }
         btn.disabled = true;
+        const name = broadcastName(id);
         postJson({ action: action, id: id }).then(data => {
-            showMsg('pageMessage', data.message || (data.success ? 'Done.' : 'That did not work.'), data.success ? 'ok' : 'error');
+            if (data.success) toast(name + ': ' + (data.message || 'Done.'));
+            else toast(data.message || 'That did not work.', 'error');
             loadList();
             if (data.success && action === 'duplicate' && data.id) loadForEdit(data.id);
         }).catch(() => {
-            showMsg('pageMessage', 'That did not work. Please try again.', 'error');
+            toast('That did not work. Please try again.', 'error');
             btn.disabled = false;
         });
     });
@@ -926,6 +951,6 @@
         document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) closeDialog(id); });
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

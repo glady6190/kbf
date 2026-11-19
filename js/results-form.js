@@ -334,6 +334,13 @@
         var body = el('div', 'hidden space-y-6');
         root.appendChild(body);
 
+        // Result of an action: the shared toast (js/kbf-toast.js); the box
+        // above the form keeps problems to fix and the page's own notes
+        function toast(text, type) {
+            if (window.KBF && typeof window.KBF.toast === 'function') { window.KBF.toast(text, type); return; }
+            showMsg(text, type === 'error' ? 'error' : 'ok');
+        }
+
         function showMsg(text, kind) {
             if (!text) { pageMsg.classList.add('hidden'); return; }
             pageMsg.textContent = text;
@@ -1653,9 +1660,9 @@
                 if (res.success && !isEdit && forms) forms.clearRequestId(requestKey);
                 if (!res.success) {
                     if (res._status === 401) {
-                        showMsg('Your session has expired. Log in again in a new tab, then press the button again. Your results are still here.', 'error');
+                        toast('Your session has expired. Log in again in a new tab, then press the button again. Your results are still here.', 'error');
                     } else {
-                        showMsg(res.message || 'The results could not be saved.', 'error');
+                        toast(res.message || 'The results could not be saved.', 'error');
                     }
                     refresh();
                     return;
@@ -1663,6 +1670,9 @@
                 if (!isEdit) removeDraft();
                 dirty = false;
                 var message = res.message || 'Results saved.';
+                // Name the category and tournament the results belong to
+                if (isEdit) message = message.replace(/^Results updated/, 'Results for ' + savedCategory.name + ' updated');
+                if (data && data.tournament && data.tournament.name) message = message.replace(/^(Results for [^.]+?) (published|submitted|updated)/, '$1 at ' + data.tournament.name + ' $2');
                 return load(savedCategory.key, false).then(function (okLoad) {
                     if (!okLoad) return;
                     if (!isEdit) {
@@ -1672,14 +1682,13 @@
                             message += ' Now entering ' + next.name + '.';
                         }
                     }
-                    showMsg(message, 'ok');
-                    pageMsg.scrollIntoView({ block: 'nearest' });
+                    toast(message);
                 });
             }).catch(function () {
                 busy = false;
                 mainBtn.removeAttribute('aria-busy');
                 renderActions();
-                showMsg('The results could not be saved. Please check your connection and try again.', 'error');
+                toast('The results could not be saved. Please check your connection and try again.', 'error');
                 refresh();
             });
         }
@@ -1694,16 +1703,16 @@
                 request(API + '?tournamentId=' + encodeURIComponent(String(tid)) + '&category=' + encodeURIComponent(cat.name), { method: 'DELETE' }).then(function (res) {
                     busy = false;
                     if (!res.success) {
-                        showMsg(res.message || 'The results could not be deleted.', 'error');
+                        toast(res.message || 'The results could not be deleted.', 'error');
                         return;
                     }
                     dirty = false;
                     return load(cat.key, false).then(function () {
-                        showMsg(res.message || 'The results were deleted.', 'ok');
+                        toast('Results for ' + (cat.name || 'this category') + ' deleted.');
                     });
                 }).catch(function () {
                     busy = false;
-                    showMsg('The results could not be deleted.', 'error');
+                    toast('The results could not be deleted.', 'error');
                 });
             });
         });

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2-step verification - KBF-UK</title>
-    <link rel="stylesheet" href="/assets/css/auth.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/auth.css?v=2611191751">
 </head>
 <body class="auth-body" data-theme="emerald">
     <div class="auth-shell">
@@ -85,8 +85,9 @@
         </main>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/code-input.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/code-input.js?v=2611191751"></script>
     <script>
     (function () {
         'use strict';
@@ -225,11 +226,12 @@
                         var text = backupCodesLine(data.backupCodesRemaining);
                         var few = isFinite(remaining) && remaining <= 3;
                         if (few) text += ' Make new ones from 2-step verification in the account menu.';
-                        showMessage(text, few ? 'warning' : 'success');
+                        // Shown on the next page, where it stays long enough to read
+                        KBF.toast.next(text, few ? 'warning' : 'success');
                         verifyButton.textContent = 'Signing in...';
-                        setTimeout(function () { go(target); }, few ? 5000 : 3000);
+                        go(target);
                     } else {
-                        showMessage('Code accepted. Signing in...', 'success');
+                        KBF.toast.next('You are signed in.');
                         verifyButton.textContent = 'Signing in...';
                         go(target);
                     }

@@ -50,7 +50,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -124,10 +124,11 @@
         </form>
     </main>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -316,7 +317,7 @@
                 // Buttons stay busy until the results form opens
                 KBF.clearRequestId(form);
                 hideDuplicates();
-                showMsg('Tournament created. Opening the results form...', 'ok');
+                KBF.toast.next('Tournament "' + fields.name.value.trim() + '" created. Enter its results below.');
                 const url = typeof result.redirectUrl === 'string' && /^\/admin\/[A-Za-z0-9\-.]+\?id=\d+$/.test(result.redirectUrl)
                     ? result.redirectUrl
                     : '/admin/submit-tournament-results?id=' + encodeURIComponent(String(parseInt(result.tournamentId, 10) || 0));
@@ -328,11 +329,11 @@
                 setBusy(false);
                 return;
             }
-            showMsg(result.message || 'The tournament could not be created.', 'error');
+            KBF.toast(result.message || 'The tournament could not be created.', 'error');
             setBusy(false);
         } catch (e) {
             console.error('Create tournament error:', e);
-            showMsg('The tournament could not be created. Please try again.', 'error');
+            KBF.toast('The tournament could not be created. Please try again.', 'error');
             setBusy(false);
         }
     }
@@ -394,6 +395,6 @@
     });
     document.getElementById('createAnyway').addEventListener('click', () => create(true));
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

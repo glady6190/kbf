@@ -82,7 +82,7 @@
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
         .msg a { color: var(--theme-primary); text-decoration: underline; }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -237,11 +237,12 @@
         </div>
     </main>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/kbf-editor.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/kbf-editor.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
   <script>
     // News post editor (create and edit).
     //   ?id=N          edit post N
@@ -334,8 +335,17 @@
         $('pageMessage').classList.add('hidden');
     }
 
+    // Result of an action (js/kbf-toast.js). ok: true, false (error) or a type
     function toast(text, ok) {
-        if (window.KBFDialog) KBFDialog.toast(text, ok ? 'success' : 'error');
+        const type = ok === true ? 'success' : ok === false ? 'error' : ok;
+        if (window.KBF && typeof KBF.toast === 'function') KBF.toast(text, type);
+        else if (window.KBFDialog) KBFDialog.toast(text, type);
+    }
+
+    // "the post "Title"" for messages
+    function postName() {
+        const t = titleInput.value.trim();
+        return t ? '"' + (t.length > 60 ? t.slice(0, 57) + '...' : t) + '"' : 'The post';
     }
 
     function showSaved(savedAt) {
@@ -552,7 +562,7 @@
         if (!canMakeDraft()) return false;
         const result = await save('draft', false);
         if (!result.success) {
-            showMessage(result.message || 'The draft could not be saved.', 'error');
+            toast(result.message || 'The draft could not be saved.', false);
             return false;
         }
         return true;
@@ -737,17 +747,16 @@
         await KBF.withBusy(btn, mode === 'draft' ? 'Saving...' : mode === 'schedule' ? 'Scheduling...' : 'Publishing...', async function () {
             const result = await save(mode, false);
             if (!result.success) {
-                showMessage(result.message || 'The post could not be saved.', 'error');
+                toast(result.message || 'The post could not be saved.', false);
                 return;
             }
-            const view = ['View post', '/post?id=' + encodeURIComponent(String(postId)) + (status === 'published' ? '' : '&preview=1'), true];
-            const back = ['All news', '/admin/announcements'];
             if (status === 'published') {
-                showMessage(result.message || 'Post published.', 'ok', [view, back]);
+                toast(postName() + ' published.', true);
             } else if (status === 'scheduled') {
-                showMessage(result.message || ('Post scheduled for ' + KBF.formatDate(scheduleValue().replace('T', ' '), { time: true }) + '.'), 'ok', [view, back]);
+                const when = KBF.formatDate(scheduleValue().replace('T', ' '), { weekday: true, year: false, time: true });
+                toast(postName() + ' scheduled for ' + when + '.', true);
             } else {
-                toast('Draft saved.', true);
+                toast(postName() + ' saved as a draft.', true);
             }
         });
     });
@@ -764,11 +773,11 @@
                 const result = await save('draft', false);
                 if (!result.success) {
                     if (win) win.close();
-                    showMessage(result.message || 'The draft could not be saved, so it cannot be previewed yet.', 'error');
+                    toast(result.message || 'The draft could not be saved, so it cannot be previewed yet.', false);
                     return;
                 }
             } else if (isDirty()) {
-                toast('The preview shows the last saved version. Save to see your changes.', true);
+                toast('The preview shows the last saved version. Save to see your changes.', 'info');
             }
             const url = '/post?id=' + encodeURIComponent(String(postId)) + '&preview=1';
             if (win) {
@@ -826,10 +835,11 @@
         const result = await uploadImage('inline', file);
         if (result.success && result.url) {
             insert(result.url, titleInput.value.trim());
-            note.textContent = 'Photo placed in the text.';
+            note.textContent = '';
+            toast('Photo placed in the text.', true);
         } else {
             note.textContent = '';
-            showMessage(result.message || 'The photo could not be uploaded.', 'error');
+            toast(result.message || 'The photo could not be uploaded.', false);
         }
     });
 
@@ -850,11 +860,12 @@
         if (result.success && result.image) {
             mainImage = result.image;
             renderMain();
-            note.textContent = 'Main picture saved.';
+            note.textContent = '';
+            toast('Main picture saved for ' + postName().replace(/^The post$/, 'the post') + '.', true);
             $('mainReplace').focus();
         } else {
             note.textContent = '';
-            showMessage(result.message || 'The main picture could not be uploaded.', 'error');
+            toast(result.message || 'The main picture could not be uploaded.', false);
         }
     }
 
@@ -903,14 +914,15 @@
                 if (result.success) {
                     mainImage = null;
                     renderMain();
-                    $('mainStatus').textContent = 'Main picture removed.';
+                    $('mainStatus').textContent = '';
+                    toast('Main picture removed from ' + postName().replace(/^The post$/, 'the post') + '.', true);
                     $('mainFile').focus();
                 } else {
-                    showMessage(result.message || 'The main picture could not be removed.', 'error');
+                    toast(result.message || 'The main picture could not be removed.', false);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showMessage('The main picture could not be removed. Please check your connection and try again.', 'error');
+                toast('The main picture could not be removed. Please check your connection and try again.', false);
             }
         });
     });
@@ -932,7 +944,7 @@
         const take = files.slice(0, Math.max(0, room));
         const problems = [];
         if (files.length > take.length) problems.push('Only ' + MAX_PHOTOS + ' photos can be added, so ' + (files.length - take.length) + ' were left out.');
-        if (!take.length) { showMessage(problems.join(' '), 'warn'); return; }
+        if (!take.length) { toast(problems.join(' '), 'warning'); return; }
         note.textContent = 'Uploading...';
         if (!(await ensurePostId())) { note.textContent = ''; return; }
         $('addPhotos').disabled = true;
@@ -951,8 +963,9 @@
             }
         }
         renderPhotos();
-        note.textContent = added ? (added === 1 ? '1 photo added.' : added + ' photos added.') : '';
-        if (problems.length) showMessage(problems.join(' '), 'error');
+        note.textContent = '';
+        if (added) toast((added === 1 ? '1 photo added.' : added + ' photos added.') + (problems.length ? ' ' + problems.join(' ') : ''), problems.length ? 'warning' : true);
+        else if (problems.length) toast(problems.join(' '), false);
     });
 
     function renderPhotos() {
@@ -1108,23 +1121,24 @@
                 photos = photos.filter(x => x !== p);
                 syncSavedPhotos();
                 renderPhotos();
-                $('photoStatus').textContent = 'Photo removed.';
+                $('photoStatus').textContent = '';
+                toast('Photo removed.', true);
                 const tiles = $('photoList').children;
                 const next = tiles[Math.min(index, tiles.length - 1)];
                 if (next) next.querySelector('input').focus();
                 else $('addPhotos').focus();
             } else {
                 restore();
-                showMessage(result.message || 'The photo could not be removed.', 'error');
+                toast(result.message || 'The photo could not be removed.', false);
             }
         } catch (error) {
             restore();
             console.error('Error:', error);
-            showMessage('The photo could not be removed. Please check your connection and try again.', 'error');
+            toast('The photo could not be removed. Please check your connection and try again.', false);
         }
     }
 
 </script>
-<script src="/js/session-manager.js?v=2611191418"></script>
+<script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

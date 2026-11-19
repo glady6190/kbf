@@ -195,7 +195,8 @@ function signInRulesNow() {
 }
 
 // staff_access_changed notification after a change of labels or permissions
-// (sent after the commit; never includes passwords)
+// (sent after the commit; never includes passwords). Returns the person's
+// email status ('sent', 'waiting', 'failed', ...) or null.
 function notifyStaffAccessChanged($pdo, $userId, array $labels, array $keys) {
     try {
         require_once __DIR__ . '/notify.php';
@@ -210,14 +211,16 @@ function notifyStaffAccessChanged($pdo, $userId, array $labels, array $keys) {
             $stmt->execute(array_values($keys));
             $names = array_merge($names, $stmt->fetchAll(PDO::FETCH_COLUMN));
         }
-        notify('staff_access_changed', [
+        $results = notify('staff_access_changed', [
             'person' => (int) $userId,
             'values' => ['access_list' => $names ? implode(', ', $names) : 'No admin access'],
             'relatedType' => 'user',
             'relatedId' => (int) $userId,
         ]);
+        return $results['person'] ?? null;
     } catch (\Throwable $e) {
         error_log('staff.php: access notification error: ' . $e->getMessage());
+        return null;
     }
 }
 
@@ -568,13 +571,14 @@ if ($method === 'POST') {
                 describeAccessChange([], $labels, [], $keys)
                 . ($temporaryPassword !== null ? '; temporary password set' : ''));
 
-            notifyStaffAccessChanged($pdo, $userId, $labels, $keys);
+            $emailStatus = notifyStaffAccessChanged($pdo, $userId, $labels, $keys);
 
             sendJSON([
                 'success' => true,
                 'message' => 'Access granted',
                 'userId' => (int) $userId,
                 'temporaryPassword' => $temporaryPassword,
+                'emailStatus' => $emailStatus,
             ]);
         }
 
@@ -647,13 +651,14 @@ if ($method === 'POST') {
                 'Created ' . $firstName . ' ' . $lastName . ' (does not play); '
                 . describeAccessChange([], $labels, [], $keys) . '; temporary password set');
 
-            notifyStaffAccessChanged($pdo, $userId, $labels, $keys);
+            $emailStatus = notifyStaffAccessChanged($pdo, $userId, $labels, $keys);
 
             sendJSON([
                 'success' => true,
                 'message' => 'Staff member created',
                 'userId' => $userId,
                 'temporaryPassword' => $temporaryPassword,
+                'emailStatus' => $emailStatus,
             ]);
         }
 
@@ -817,13 +822,14 @@ if ($method === 'POST') {
 
             $pdo->commit();
 
+            $emailStatus = null;
             if ($beforeLabels != $labels || $beforeKeys != $keys) {
                 auditLog('access_updated', 'user', $userId,
                     describeAccessChange($beforeLabels, $labels, $beforeKeys, $keys));
-                notifyStaffAccessChanged($pdo, $userId, $labels, $keys);
+                $emailStatus = notifyStaffAccessChanged($pdo, $userId, $labels, $keys);
             }
 
-            sendJSON(['success' => true, 'message' => 'Access saved']);
+            sendJSON(['success' => true, 'message' => 'Access saved', 'emailStatus' => $emailStatus]);
         }
 
         // ---------- SIGN-IN ON OR OFF ----------

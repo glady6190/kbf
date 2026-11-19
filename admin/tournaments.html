@@ -113,7 +113,7 @@
         .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -376,11 +376,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/tournament-form.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/tournament-form.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -1460,23 +1461,24 @@
                 core.tournamentId = id;
                 const coreResult = await sendJson(API, 'PUT', core);
                 if (!coreResult.success) {
-                    showMsg('detailsMessage', coreResult.message || 'The details could not be saved.', 'error');
+                    KBF.toast(coreResult.message || 'The details could not be saved.', 'error');
                     return;
                 }
             }
             const res = await authenticatedFetch(API, { method: 'POST', body: tf.buildFormData() });
             const result = await res.json().catch(() => ({ success: false }));
             if (!result.success) {
-                showMsg('detailsMessage', (Object.keys(core).length ? 'The name, date, venue and organiser were saved, but the other details were not: ' : '') + (result.message || 'The details could not be saved.'), 'error');
+                KBF.toast((Object.keys(core).length ? 'The name, date, venue and organiser were saved, but the other details were not: ' : '') + (result.message || 'The details could not be saved.'), 'error');
                 return;
             }
             if (openId !== id) return;
             await loadPanel(id);
-            showMsg('detailsMessage', 'Details saved. The status has not changed.', 'ok');
+            const savedName = (detail && detail.tournament && detail.tournament.name) || '';
+            KBF.toast((savedName ? 'Tournament "' + savedName + '" saved.' : 'Tournament saved.') + ' The status has not changed.');
             loadList(true);
         } catch (err) {
             console.error('Save details error:', err);
-            showMsg('detailsMessage', 'The details could not be saved. Please try again.', 'error');
+            KBF.toast('The details could not be saved. Please try again.', 'error');
         } finally {
             restoreSave();
         }
@@ -1675,14 +1677,17 @@
     // ============================================
     // ACTIONS
     // ============================================
-    function afterChange(message, kind) {
-        if (openId) {
-            showMsg('tpMessage', message, kind);
-            if (kind !== 'error') loadPanel(openId);
-        } else {
-            showMsg('pageMessage', message, kind);
+    // Result of an action: a toast (js/kbf-toast.js). reply: the server's
+    // reply, for the sentence about any email it sent.
+    function afterChange(message, kind, reply, who) {
+        if (kind === 'error') {
+            KBF.toast(message, 'error');
+            return;
         }
-        if (kind !== 'error') loadList(true);
+        if (reply) KBF.toast.fromReply(message, reply, 'success', who);
+        else KBF.toast(message, kind === 'warning' ? 'warning' : 'success');
+        if (openId) loadPanel(openId);
+        loadList(true);
     }
 
     async function approveTournament(t, btn) {
@@ -1691,7 +1696,8 @@
         if (btn) btn.disabled = true;
         try {
             const result = await sendJson('/api/approvals.php', 'POST', { type: 'tournament', id: t.id, action: 'approve' });
-            afterChange(result.message || (result.success ? 'Tournament approved.' : 'The tournament could not be approved.'), result.success ? 'ok' : 'error');
+            if (result.success) afterChange('Tournament "' + t.name + '" approved.', 'ok', result, "The organiser's email");
+            else afterChange(result.message || 'The tournament could not be approved.', 'error');
         } catch (e) {
             console.error('Approve error:', e);
             afterChange('The tournament could not be approved.', 'error');
@@ -1720,18 +1726,14 @@
                 comments: document.getElementById('rejectReason').value.trim()
             });
             if (!result.success) {
-                const box = document.getElementById('rejectMessage');
-                box.textContent = result.message || 'The tournament could not be rejected.';
-                box.classList.remove('hidden');
+                KBF.toast(result.message || 'The tournament could not be rejected.', 'error');
                 return;
             }
             closeDialog('rejectDialog');
-            afterChange(result.message || 'Tournament rejected.', 'ok');
+            afterChange('Tournament "' + t.name + '" rejected.', 'ok', result, "The organiser's email");
         } catch (e) {
             console.error('Reject error:', e);
-            const box = document.getElementById('rejectMessage');
-            box.textContent = 'The tournament could not be rejected. Please check your connection and try again.';
-            box.classList.remove('hidden');
+            KBF.toast('The tournament could not be rejected. Please check your connection and try again.', 'error');
         } finally {
             this.disabled = false;
         }
@@ -1741,7 +1743,8 @@
         if (btn) btn.disabled = true;
         try {
             const result = await sendJson(API, 'POST', { action: 'remindOrganiser', tournamentId: t.id });
-            afterChange(result.message || (result.success ? 'The reminder has been sent.' : 'The reminder could not be sent.'), result.success ? 'ok' : 'error');
+            if (result.success) afterChange('Organiser of "' + t.name + '" reminded about the results.', 'ok', result, 'The reminder');
+            else afterChange(result.message || 'The reminder could not be sent.', 'error');
         } catch (e) {
             console.error('Remind error:', e);
             afterChange('The reminder could not be sent.', 'error');
@@ -1844,16 +1847,16 @@
             if (result.success) {
                 photos.existing = photos.existing.filter(x => x !== p);
                 renderExistingPhotos();
-                if (window.KBFDialog) KBFDialog.toast('Photo deleted.', 'success');
+                KBF.toast('Photo deleted from the gallery' + (photos.t && photos.t.name ? ' of "' + photos.t.name + '"' : '') + '.');
                 const next = document.querySelector('#photosExisting .tt-photo-del') || document.getElementById('photoInput');
                 if (next) next.focus();
             } else {
-                photosMsg(result.message || 'The photo could not be deleted.', 'error');
+                KBF.toast(result.message || 'The photo could not be deleted.', 'error');
                 btn.disabled = false;
             }
         } catch (e) {
             console.error('Photo delete error:', e);
-            photosMsg('The photo could not be deleted. Please check your connection and try again.', 'error');
+            KBF.toast('The photo could not be deleted. Please check your connection and try again.', 'error');
             btn.disabled = false;
         }
     }
@@ -1965,14 +1968,14 @@
                 setPhotosProgress(100);
                 photos.chosen = [];
                 renderChosenPhotos();
-                if (window.KBFDialog) KBFDialog.toast(result.message || 'Photos uploaded.', 'success');
+                KBF.toast((result.message || 'Photos uploaded.') + (t && t.name ? ' (' + t.name + ')' : ''));
                 if (photos.t === t) loadPhotos();
             } else {
-                photosMsg(result.message || 'Upload failed.', 'error');
+                KBF.toast(result.message || 'Upload failed.', 'error');
             }
         } catch (err) {
             console.error('Photo upload error:', err);
-            photosMsg('Upload failed. Please check your connection and try again.', 'error');
+            KBF.toast('Upload failed. Please check your connection and try again.', 'error');
         } finally {
             photos.busy = false;
             restore();
@@ -2031,16 +2034,14 @@
         try {
             const result = await sendJson(API, 'POST', { action: 'changeStatus', tournamentId: statusTarget.id, status: status, reason: reason });
             if (!result.success) {
-                box.textContent = result.message || 'The status could not be changed.';
-                box.classList.remove('hidden');
+                KBF.toast(result.message || 'The status could not be changed.', 'error');
                 return;
             }
             closeDialog('statusDialog');
-            afterChange(result.message || 'Status changed.', 'ok');
+            afterChange('Tournament "' + statusTarget.name + '" is now ' + status + '.', 'ok');
         } catch (e) {
             console.error('Change status error:', e);
-            box.textContent = 'The status could not be changed. Please check your connection and try again.';
-            box.classList.remove('hidden');
+            KBF.toast('The status could not be changed. Please check your connection and try again.', 'error');
         } finally {
             this.disabled = false;
         }
@@ -2058,7 +2059,7 @@
                 return;
             }
             if (openId === t.id) closeTournament(false);
-            showMsg('pageMessage', 'Tournament deleted.', 'ok');
+            KBF.toast('Tournament "' + t.name + '" deleted.');
             loadList(true);
         } catch (e) {
             console.error('Delete error:', e);
@@ -2174,24 +2175,24 @@
             });
             const result = await res.json().catch(() => ({ success: false }));
             if (!result.success) {
-                showMsg('createMessage', result.message || 'The tournament could not be created.', 'error');
+                KBF.toast(result.message || 'The tournament could not be created.', 'error');
                 restoreSubmit();
                 return;
             }
+            const createdName = String(formData.get('name') || '').trim();
             KBF.clearRequestId(createForm);
             restoreSubmit();
             closeCreate();
-            showMsg('pageMessage', result.status === 'Approved'
-                ? 'Tournament created and approved.'
-                : 'Tournament created. It is waiting approval.', 'ok');
+            KBF.toast((createdName ? 'Tournament "' + createdName + '" created' : 'Tournament created')
+                + (result.status === 'Approved' ? ' and approved.' : '. It is waiting for approval.'));
             loadList(true);
         } catch (err) {
             console.error('Create tournament error:', err);
-            showMsg('createMessage', 'The tournament could not be created. Please try again.', 'error');
+            KBF.toast('The tournament could not be created. Please try again.', 'error');
             restoreSubmit();
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

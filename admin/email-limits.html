@@ -41,7 +41,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -182,10 +182,11 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.email
@@ -435,15 +436,15 @@
                 if (data.field && fieldIds[data.field]) {
                     markInvalid(fieldIds[data.field], data.message || 'Please check this value.');
                 } else {
-                    showSettingsMessage(data.message || 'Could not save changes', false);
+                    KBF.toast(data.message || 'Could not save the email limits.', 'error');
                 }
                 return;
             }
-            showSettingsMessage(data.message || 'Changes saved', true);
+            KBF.toast('Email limits saved: ' + limit.toLocaleString('en-GB') + ' emails per 24 hours.');
             await loadSummary(false);
         } catch (err) {
             console.error('Save email settings error:', err);
-            showSettingsMessage('Could not save changes. Please try again.', false);
+            KBF.toast('Could not save the email limits. Please try again.', 'error');
         } finally {
             btn.disabled = !canEdit;
         }
@@ -537,13 +538,13 @@
             btn.className = 'px-3 py-1.5 bg-slate-800 border-2 border-gray-700 text-gray-200 font-black uppercase text-xs hover:border-gray-500 transition disabled:opacity-40';
             btn.textContent = 'Resend';
             btn.disabled = !canEdit;
-            btn.addEventListener('click', () => resend(email.id, btn));
+            btn.addEventListener('click', () => resend(email.id, btn, email.toName || email.toEmail));
             tr.lastElementChild.appendChild(btn);
         }
         return tr;
     }
 
-    async function resend(id, btn) {
+    async function resend(id, btn, who) {
         if (!canEdit) return;
         btn.disabled = true;
         try {
@@ -554,16 +555,17 @@
             });
             const data = await res.json();
             if (!data.success) {
-                showLogMessage(data.message || 'Could not resend the email', false);
+                KBF.toast(data.message || 'Could not resend the email.', 'error');
                 btn.disabled = false;
                 return;
             }
-            showLogMessage(data.message || 'The email is waiting and will be sent on the next run', true);
+            // The server puts it back in the queue; the sender sends it on its next run
+            KBF.toast('Email to ' + (who || 'this person') + ' queued again. It will go out shortly.');
             await loadLog(true);
             loadSummary(false);
         } catch (e) {
             console.error('Resend error:', e);
-            showLogMessage('Could not resend the email. Please try again.', false);
+            KBF.toast('Could not resend the email. Please try again.', 'error');
             btn.disabled = false;
         }
     }
@@ -579,7 +581,7 @@
             if (!res.ok || type.indexOf('text/csv') === -1) {
                 let message = 'Could not download the email log';
                 try { const data = await res.json(); if (data && data.message) message = data.message; } catch (e) { /* ignore */ }
-                showLogMessage(message, false);
+                KBF.toast(message, 'error');
                 return;
             }
             const blob = await res.blob();
@@ -591,14 +593,15 @@
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+            KBF.toast('Email log exported as a CSV file.');
         } catch (e) {
             console.error('CSV download error:', e);
-            showLogMessage('Could not download the email log', false);
+            KBF.toast('Could not download the email log.', 'error');
         } finally {
             btn.disabled = false;
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

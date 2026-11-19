@@ -63,7 +63,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -182,11 +182,12 @@
         </section>
     </main>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
-    <script src="/js/grade-change.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
+    <script src="/js/grade-change.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.change_grades
@@ -398,8 +399,9 @@
         });
     });
 
-    function afterChange(result) {
-        showMsg(result.message || 'Grade changed.', result.emailStatus === 'failed' ? 'warn' : 'ok');
+    // The dialog (js/grade-change.js) shows the result as a toast
+    function afterChange() {
+        showMsg('');
         loadSummary();
         historyLoaded = false;
         if (activeTab === 'history') loadHistory(1);
@@ -475,6 +477,6 @@
     document.getElementById('prevPage').addEventListener('click', () => loadHistory(Math.max(1, historyPage - 1)));
     document.getElementById('nextPage').addEventListener('click', () => loadHistory(historyPage + 1));
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

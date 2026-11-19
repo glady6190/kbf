@@ -39,7 +39,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -211,12 +211,13 @@
         </section>
     </main>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
-    <script src="/js/code-input.js?v=2611191418"></script>
-    <script src="/js/vendor/qrcode-generator-1.4.4.min.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
+    <script src="/js/code-input.js?v=2611191751"></script>
+    <script src="/js/vendor/qrcode-generator-1.4.4.min.js?v=2611191751"></script>
     <script>
     (function () {
         'use strict';
@@ -621,7 +622,7 @@
                 if (!yes) return;
                 runAction('disable', disableInput, $('disableError'), $('disableButton'), function () {
                     loadStatus();
-                    pageMessage('2-step verification is off.', true);
+                    KBF.toast('2-step verification is off. Signing in now needs only your password.');
                 });
             });
         });
@@ -695,9 +696,10 @@
             $('codesList').innerHTML = '';
             if (codesAfter === 'status') {
                 loadStatus();
-                pageMessage('New backup codes saved.', true);
+                KBF.toast('New backup codes saved. The old ones no longer work.');
                 return;
             }
+            KBF.toast.next('2-step verification is on. You will need a code from your app each time you sign in.');
             go('/admin/dashboard');
         });
 

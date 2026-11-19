@@ -494,6 +494,16 @@
         renderSave();
     }
 
+    // A server error: an error toast (the dialog stays open to try again)
+    function failToast(text) {
+        if (window.KBF && typeof window.KBF.toast === 'function') {
+            showError('');
+            window.KBF.toast(text, 'error');
+        } else {
+            showError(text);
+        }
+    }
+
     function showError(text) {
         var m = $('kgcMessage');
         if (!text) { m.classList.add('hidden'); return; }
@@ -538,14 +548,24 @@
             body: JSON.stringify(payload)
         }).then(function (data) {
             state.saving = false;
-            if (!data.success) { showError(data.message || 'The grade could not be changed.'); renderSave(); return; }
+            if (!data.success) { failToast(data.message || 'The grade could not be changed.'); renderSave(); return; }
             var done = state.onDone;
             var player = state.player;
+            var to = grade(state.newGradeId);
+            var gradeText = to ? (to.shortName || to.name) : 'the new grade';
+            var name = player.name || 'The player';
+            var text = data.isPromotion
+                ? name + ' promoted to grade ' + gradeText + '.'
+                : 'Grade changed to ' + gradeText + ' for ' + name + '.';
             closeDialog();
-            if (typeof done === 'function') done({ message: data.message, emailStatus: data.emailStatus, isPromotion: data.isPromotion, player: player });
+            // The result: a toast with what happened to their email
+            if (window.KBF && window.KBF.toast) {
+                window.KBF.toast.fromReply(text, data, 'success', data.isPromotion ? 'Their promotion email' : 'Their email');
+            }
+            if (typeof done === 'function') done({ message: data.message, text: text, emailStatus: data.emailStatus, isPromotion: data.isPromotion, player: player });
         }).catch(function () {
             state.saving = false;
-            showError('The grade could not be changed. Please try again.');
+            failToast('The grade could not be changed. Please try again.');
             renderSave();
         });
     }

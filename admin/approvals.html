@@ -59,6 +59,17 @@
         .ap-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .75rem; border-bottom: 2px solid #1e293b; transition: background-color .15s; }
         .ap-row:hover { background: #1e293b; }
         .ap-row.is-open { background: #1e293b; box-shadow: inset 4px 0 0 var(--theme-primary); }
+        /* After a decision: the row fades out, the next item's panel flashes */
+        .ap-row.is-leaving { opacity: 0; transform: translateX(-.75rem); transition: opacity .3s ease, transform .3s ease; pointer-events: none; }
+        .ap-review.is-flash { animation: ap-flash 1.2s ease-out; }
+        @keyframes ap-flash {
+            0%, 25% { border-color: var(--theme-primary); box-shadow: 0 0 0 4px var(--theme-primary); }
+            100% { border-color: #374151; box-shadow: 0 0 0 0 transparent; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .ap-row.is-leaving { transition: none; transform: none; }
+            .ap-review.is-flash { animation: none; border-color: var(--theme-primary); }
+        }
         .ap-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem; text-align: left; }
         .ap-avatar { border-radius: 9999px; border: 2px solid var(--theme-primary); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: #e5e7eb; font-weight: 900; }
         .ap-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
@@ -95,7 +106,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -279,11 +290,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-lightbox.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -303,7 +315,7 @@
     let me = null;
     let meta = null;
     const state = { tab: 'registrations', q: '', sort: 'oldest', grade: '', openId: null };
-    const queue = { items: [], total: 0, seq: 0 };
+    const queue = { items: [], total: 0, seq: 0, waiting: null };
     let detail = null;            // the item open in the review panel
     const selected = new Set();   // registrations ticked for "Approve selected"
     const hist = { entries: [], total: 0, seq: 0, ready: false };
@@ -468,12 +480,23 @@
         return box;
     }
 
+    // Results of actions and errors: the shared toasts (js/kbf-toast.js)
     function showMsg(text, kind) {
-        const box = document.getElementById('pageMessage');
-        if (!text) { box.classList.add('hidden'); return; }
-        box.textContent = text;
-        box.className = 'msg mb-5 ' + (kind === 'error' ? 'msg-error' : (kind === 'warn' ? 'msg-warn' : 'msg-ok'));
-        box.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+        if (!text) return;
+        KBF.toast(text, kind === 'error' ? 'error' : (kind === 'warn' ? 'warning' : (kind === 'info' ? 'info' : 'success')));
+    }
+
+    function reducedMotion() {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+    }
+
+    function plural(n, one, many) {
+        return Number(n).toLocaleString('en-GB') + ' ' + (n === 1 ? one : many);
+    }
+
+    // Whose email goes out with a decision on this tab
+    function emailWho(type) {
+        return type === 'registration' ? 'Their email' : 'The organiser’s email';
     }
 
     function gradeLabel(id) {
@@ -739,7 +762,8 @@
         setCounts(data.counts);
         queue.items = reset ? data.items : queue.items.concat(data.items);
         queue.total = Number(data.total) || 0;
-        renderWaiting(tab === 'registrations' ? data.waiting : null);
+        queue.waiting = tab === 'registrations' ? (data.waiting || null) : null;
+        renderWaiting(queue.waiting);
         renderQueue();
         document.getElementById('moreBtn').classList.toggle('hidden', queue.items.length >= queue.total);
         return queue.items;
@@ -778,12 +802,48 @@
         }
         const ticks = tab === 'registrations' && meta.can.approveSelected;
         queue.items.forEach(item => list.appendChild(queueRow(item, ticks)));
+        updateQueueCount();
+        updateSelection();
+        markOpen();
+    }
+
+    function updateQueueCount() {
         const n = queue.items.length;
         document.getElementById('queueCount').textContent = n
             ? 'Showing 1 to ' + n.toLocaleString('en-GB') + ' of ' + queue.total.toLocaleString('en-GB')
             : 'Showing 0';
-        updateSelection();
-        markOpen();
+    }
+
+    // A decided item leaves the queue: the counts and the waiting-time bar
+    // change straight away (the reload that follows confirms them) and its
+    // row fades out. Resolves once the row has gone.
+    function removeFromQueue(id) {
+        id = Number(id);
+        const item = queue.items.find(i => i.id === id);
+        if (item) {
+            queue.items = queue.items.filter(i => i !== item);
+            queue.total = Math.max(0, queue.total - 1);
+            const badge = document.querySelector(`[data-count="${state.tab}"]`);
+            if (badge) {
+                const n = parseInt(String(badge.textContent).replace(/[^0-9]/g, ''), 10) || 0;
+                badge.textContent = Math.max(0, n - 1).toLocaleString('en-GB');
+            }
+            if (queue.waiting) {
+                const w = Object.assign({}, queue.waiting);
+                const days = Number(item.days) || 0;
+                const key = days > 30 ? 'over30' : (days >= 7 ? 'from7to30' : 'under7');
+                w[key] = Math.max(0, (Number(w[key]) || 0) - 1);
+                queue.waiting = w;
+                renderWaiting(w.under7 + w.from7to30 + w.over30 > 0 ? w : null);
+            }
+            updateQueueCount();
+        }
+        if (selected.delete(id)) updateSelection();
+        const row = document.querySelector(`#queueList .ap-row[data-id="${id}"]`);
+        if (!row) return Promise.resolve();
+        if (reducedMotion()) { row.remove(); return Promise.resolve(); }
+        row.classList.add('is-leaving');
+        return new Promise(resolve => setTimeout(() => { row.remove(); resolve(); }, 300));
     }
 
     function queueRow(item, ticks) {
@@ -869,16 +929,37 @@
                 showMsg(result.message || 'The registrations could not be approved.', 'error');
                 return;
             }
-            let text = result.approved + ' registration' + (result.approved === 1 ? '' : 's') + ' approved.';
-            const skipped = (result.skipped || []).filter(s => s.reason === 'needs individual review');
-            const other = (result.skipped || []).filter(s => s.reason !== 'needs individual review');
-            if (skipped.length) text += ' Needs individual review: ' + skipped.map(s => s.name).join(', ') + '.';
-            if (other.length) text += ' Already decided: ' + other.map(s => s.name).join(', ') + '.';
-            if ((result.failed || []).length) text += ' Could not be approved: ' + result.failed.map(f => f.name + ' (' + f.message + ')').join(', ') + '.';
-            showMsg(text, skipped.length || (result.failed || []).length ? 'warn' : 'ok');
+            // One summary: "5 registrations approved. 1 needs individual review."
+            const approved = Number(result.approved) || 0;
+            const review = (result.skipped || []).filter(s => s.reason === 'needs individual review');
+            const decided = (result.skipped || []).filter(s => s.reason === 'already decided');
+            const member = (result.skipped || []).filter(s => s.reason !== 'needs individual review' && s.reason !== 'already decided');
+            const failed = result.failed || [];
+            let text = plural(approved, 'registration', 'registrations') + ' approved.';
+            if (review.length) text += ' ' + review.length + ' need' + (review.length === 1 ? 's' : '') + ' individual review.';
+            if (member.length) text += ' ' + member.length + (member.length === 1 ? ' belongs' : ' belong') + ' to a deactivated member (reactivate them instead).';
+            if (decided.length) text += ' ' + decided.length + (decided.length === 1 ? ' was' : ' were') + ' already decided.';
+            if (failed.length) text += ' ' + failed.length + ' could not be approved: ' + failed.map(f => f.name + ' (' + f.message + ')').join(', ') + '.';
+            // What really happened to the approval emails
+            const mail = result.emails || {};
+            const mailSent = Number(mail.sent) || 0, mailWaiting = Number(mail.waiting) || 0, mailFailed = Number(mail.failed) || 0;
+            if (approved && mailSent === approved) text += approved === 1 ? ' Their email has been sent.' : ' Their emails have been sent.';
+            else if (approved && (mailSent || mailWaiting || mailFailed)) {
+                const parts = [];
+                if (mailSent) parts.push(plural(mailSent, 'email has', 'emails have') + ' been sent');
+                if (mailWaiting) parts.push(plural(mailWaiting, 'email', 'emails') + ' will go out shortly');
+                if (mailFailed) parts.push(plural(mailFailed, 'email', 'emails') + ' could not be sent; you can resend ' + (mailFailed === 1 ? 'it' : 'them') + ' from the email log');
+                text += ' ' + parts.join(', ') + '.';
+            }
+            showMsg(text, failed.length || mailFailed ? 'warn' : (approved ? 'ok' : 'info'));
+            const done = ids.filter(id => !review.some(s => s.id === id) && !member.some(s => s.id === id) && !failed.some(f => f.id === id));
             selected.clear();
+            updateSelection();
+            document.querySelectorAll('#queueList .ap-check').forEach(b => { b.checked = false; });
+            await Promise.all(done.map(id => removeFromQueue(id)));
+            const openGone = state.openId && done.includes(state.openId);
             await loadQueue(true);
-            if (state.openId && !queue.items.some(i => i.id === state.openId)) clearReview();
+            if (openGone || (state.openId && !queue.items.some(i => i.id === state.openId))) await openNextOrDone(null);
         } catch (e) {
             console.error('Approve selected error:', e);
             showMsg('The registrations could not be approved.', 'error');
@@ -1008,19 +1089,65 @@
         container.appendChild(el('div', 'msg msg-ok mx-4 sm:mx-5 mb-4', 'This has already been ' + String(status || 'decided').toLowerCase() + '. Nothing is waiting here.'));
     }
 
-    // After a decision: reload the list, then open the next item
-    async function afterDecision(message, decidedId) {
-        showMsg(message, 'ok');
+    // After a decision: a toast says what happened (and what happened to the
+    // email), the decided row fades out of the queue, the counts update and
+    // the next item opens in the review panel, which flashes briefly so it
+    // is clear someone new is shown.
+    async function afterDecision(text, decidedId, reply, type) {
+        KBF.toast.fromReply(text, reply, 'success', emailWho(type));
+        const tab = state.tab;
         const next = nextAfter(decidedId);
+        await removeFromQueue(decidedId);
+        if (tab !== state.tab) return;
         await loadQueue(true);
-        const stillThere = next && queue.items.some(i => i.id === next.id);
-        if (stillThere) openItem(next.id, { push: false, replace: true });
-        else if (queue.items.length) openItem(queue.items[0].id, {});
-        else backToList();
+        if (tab !== state.tab) return;
+        await openNextOrDone(next && queue.items.some(i => i.id === next.id) ? next.id : null);
+    }
+
+    // Opens preferId (or the first in the queue) with the flash, or says
+    // "All done" in the panel when nothing is left
+    async function openNextOrDone(preferId) {
+        const id = preferId || (queue.items.length ? queue.items[0].id : null);
+        if (id) {
+            await openItem(id, {});
+            flashReview();
+        } else {
+            showAllDone();
+        }
         writeUrl(false);
     }
 
-    async function approve(type, id, extra, btn, name) {
+    function flashReview() {
+        reviewEl.classList.remove('is-flash');
+        void reviewEl.offsetWidth; // restart the animation
+        reviewEl.classList.add('is-flash');
+        setTimeout(() => reviewEl.classList.remove('is-flash'), 1300);
+    }
+
+    function showAllDone() {
+        state.openId = null;
+        detail = null;
+        markOpen();
+        const what = { registrations: 'registrations', tournaments: 'tournaments', results: 'results' }[state.tab] || 'items';
+        const filtered = state.q || (state.tab === 'registrations' && state.grade);
+        const body = document.getElementById('reviewBody');
+        body.textContent = '';
+        panelTop(body);
+        const box = el('div', 'px-6 py-12 text-center');
+        box.appendChild(icon('check', 'w-10 h-10 mx-auto mb-3 theme-primary-text'));
+        const heading = el('h2', 'text-lg font-black uppercase text-white', 'All done.');
+        box.appendChild(heading);
+        box.appendChild(el('p', 'text-sm font-bold text-gray-400 mt-1',
+            filtered ? 'Nothing else matching this search is waiting.' : 'No ' + what + ' are waiting.'));
+        body.appendChild(box);
+        body.classList.remove('hidden');
+        document.getElementById('reviewEmpty').classList.add('hidden');
+        heading.tabIndex = -1;
+        heading.focus();
+        flashReview();
+    }
+
+    async function approve(type, id, extra, btn, name, doneText) {
         if (btn) btn.disabled = true;
         try {
             const result = await postJson(Object.assign({ type: type, id: id, action: 'approve' }, extra || {}));
@@ -1028,7 +1155,7 @@
                 showMsg(result.message || 'This could not be approved.', 'error');
                 return;
             }
-            await afterDecision(result.message || (name + ' approved.'), id);
+            await afterDecision(doneText || (name + ' approved.'), id, result, type);
         } catch (e) {
             console.error('Approve error:', e);
             showMsg('This could not be approved.', 'error');
@@ -1189,7 +1316,7 @@
                         showMsg(result.message || 'The member could not be reactivated.', 'error');
                         return;
                     }
-                    await afterDecision(result.message || (dm.name + ' reactivated.'), r.id);
+                    await afterDecision(dm.name + ' reactivated. Their grade, points and history are kept.', r.id, result, 'registration');
                 } catch (e) {
                     console.error('Reactivate error:', e);
                     showMsg('The member could not be reactivated.', 'error');
@@ -1203,7 +1330,8 @@
         const f = footer(body, 'Approve as ' + (r.grade || 'chosen grade'), btn => {
             const extra = {};
             if (gradeSelect) extra.categoryId = parseInt(gradeSelect.value, 10);
-            approve('registration', r.id, extra, btn, r.name);
+            const grade = (gradeSelect && gradeLabel(gradeSelect.value)) || r.grade || '';
+            approve('registration', r.id, extra, btn, r.name, r.name + (grade ? ' approved as grade ' + grade + '.' : ' approved.'));
         }, btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
         if (gradeSelect) {
             gradeSelect.addEventListener('change', () => {
@@ -1284,7 +1412,7 @@
             main.appendChild(about);
         }
         body.appendChild(main);
-        footer(body, 'Approve tournament', btn => approve('tournament', t.id, {}, btn, t.name),
+        footer(body, 'Approve tournament', btn => approve('tournament', t.id, {}, btn, t.name, 'Tournament ' + t.name + ' approved.'),
             btn => openReject('tournament', t.id, t.name, btn), 'Then opens the next tournament');
     }
 
@@ -1356,7 +1484,7 @@
         // submitted since stays waiting
         const shownMatchIds = [];
         (r.categories || []).forEach(cat => (cat.matchIds || []).forEach(m => shownMatchIds.push(Number(m))));
-        footer(body, 'Approve results', btn => approve('results', r.id, { matchIds: shownMatchIds }, btn, r.name),
+        footer(body, 'Approve results', btn => approve('results', r.id, { matchIds: shownMatchIds }, btn, r.name, 'Results for ' + r.name + ' approved.'),
             btn => openReject('results', r.id, r.name, btn, { matchIds: shownMatchIds }), 'Then opens the next results');
     }
 
@@ -1418,7 +1546,9 @@
                 return;
             }
             closeDialog('rejectDialog');
-            await afterDecision(result.message || (item.name + ' rejected.'), item.id);
+            await afterDecision(item.type === 'registration' ? 'Registration from ' + item.name + ' rejected.'
+                : (item.type === 'tournament' ? 'Tournament ' + item.name + ' rejected.' : 'Results for ' + item.name + ' rejected.'),
+                item.id, result, item.type);
         } catch (e) {
             console.error('Reject error:', e);
             error.textContent = 'This could not be rejected.';
@@ -1533,6 +1663,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

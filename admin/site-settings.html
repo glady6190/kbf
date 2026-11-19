@@ -46,7 +46,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -208,10 +208,11 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.site_settings
@@ -249,15 +250,6 @@
         if (token) options.headers['X-CSRF-Token'] = token;
         options.credentials = 'include';
         return fetch(url, options);
-    }
-
-    function showMessage(text, ok) {
-        const box = document.getElementById('saveMessage');
-        box.textContent = text;
-        box.setAttribute('role', ok ? 'status' : 'alert');
-        box.className = 'p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm ' + (ok
-            ? 'border-green-500 bg-green-500/20 text-green-400'
-            : 'border-red-500 bg-red-500/20 text-red-400');
     }
 
     function setSwitch(id, on) {
@@ -426,27 +418,34 @@
             });
             const data = await res.json();
             if (!data.success) {
+                let shown = false;
                 if (data.field) {
                     const el = document.getElementById(data.field);
-                    // The problem is also shown next to the field
-                    if (el) { KBF.showFieldError(el, data.message || 'Check this value'); el.focus(); }
+                    // The problem is shown next to the field
+                    if (el) { KBF.showFieldError(el, data.message || 'Check this value'); el.focus(); shown = true; }
                 }
-                showMessage(data.message || 'Could not save the changes', false);
+                if (!shown) KBF.toast(data.message || 'Could not save the changes.', 'error');
                 return;
             }
-            showMessage(data.message || 'Changes saved', true);
+            const wasOn = String(saved.settings.maintenance_mode) === '1';
+            KBF.toast('Site settings saved.');
+            if (isSuper && settings.maintenance_mode === '1' && !wasOn) {
+                KBF.toast('Maintenance mode is on: visitors now see the back-soon page.', 'warning');
+            } else if (isSuper && settings.maintenance_mode === '0' && wasOn) {
+                KBF.toast('Maintenance mode is off: the site is open to visitors again.');
+            }
             // Reload so the page shows exactly what was stored
             const fresh = await (await authenticatedFetch(API)).json();
             if (fresh.success) { saved = fresh; fill(fresh.settings); }
         } catch (err) {
             console.error('Save site settings error:', err);
-            showMessage('Could not save the changes. Please try again.', false);
+            KBF.toast('Could not save the changes. Please try again.', 'error');
         } finally {
             restoreBtn();
             btn.disabled = !canEdit;
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

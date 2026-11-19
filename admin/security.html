@@ -35,7 +35,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -241,10 +241,11 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): Super Admins only
@@ -340,15 +341,6 @@
         });
     }
 
-    function showRetentionMessage(text, ok) {
-        const box = document.getElementById('retentionMessage');
-        box.textContent = text;
-        box.setAttribute('role', ok ? 'status' : 'alert');
-        box.className = ok
-            ? 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
-            : 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
-    }
-
     async function saveRetention() {
         const retention = {};
         RETENTION_FIELDS.forEach(f => {
@@ -379,18 +371,17 @@
             });
             const data = await res.json();
             if (!data.success) {
-                if (data.field) {
-                    const input = document.getElementById('ret-' + data.field);
-                    if (input) { KBF.showFieldError(input, data.message || 'Check this value'); input.focus(); }
-                }
-                showRetentionMessage(data.message || 'Could not save data retention', false);
+                const input = data.field ? document.getElementById('ret-' + data.field) : null;
+                if (input) { KBF.showFieldError(input, data.message || 'Check this value'); input.focus(); }
+                else KBF.toast(data.message || 'Could not save data retention.', 'error');
                 return;
             }
             renderRetention(data.retention || {});
-            showRetentionMessage(data.message || 'Data retention saved', true);
+            document.getElementById('retentionMessage').classList.add('hidden');
+            KBF.toast('Data retention saved.');
         } catch (e) {
             console.error('Save data retention error:', e);
-            showRetentionMessage('Could not save data retention. Please try again.', false);
+            KBF.toast('Could not save data retention. Please try again.', 'error');
         } finally {
             restoreBtn();
         }
@@ -407,15 +398,6 @@
             input.value = rules[f] != null ? rules[f] : '';
             KBF.clearFieldError(input);
         });
-    }
-
-    function showRulesMessage(text, ok) {
-        const box = document.getElementById('rulesMessage');
-        box.textContent = text;
-        box.setAttribute('role', ok ? 'status' : 'alert');
-        box.className = ok
-            ? 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-green-500 bg-green-500/20 text-green-400 font-bold uppercase text-xs sm:text-sm'
-            : 'mt-5 p-3 sm:p-4 border-2 sm:border-4 border-red-500 bg-red-500/20 text-red-400 font-bold uppercase text-xs sm:text-sm';
     }
 
     async function saveRules() {
@@ -441,18 +423,17 @@
             });
             const data = await res.json();
             if (!data.success) {
-                if (data.field) {
-                    const input = document.getElementById('rule-' + data.field);
-                    if (input) { KBF.showFieldError(input, data.message || 'Check this value'); input.focus(); }
-                }
-                showRulesMessage(data.message || 'Could not save the sign-in rules', false);
+                const input = data.field ? document.getElementById('rule-' + data.field) : null;
+                if (input) { KBF.showFieldError(input, data.message || 'Check this value'); input.focus(); }
+                else KBF.toast(data.message || 'Could not save the sign-in rules.', 'error');
                 return;
             }
             renderRules(data.signInRules || {});
-            showRulesMessage(data.message || 'Sign-in rules saved', true);
+            document.getElementById('rulesMessage').classList.add('hidden');
+            KBF.toast('Sign-in rules saved.');
         } catch (e) {
             console.error('Save sign-in rules error:', e);
-            showRulesMessage('Could not save the sign-in rules. Please try again.', false);
+            KBF.toast('Could not save the sign-in rules. Please try again.', 'error');
         } finally {
             restoreBtn();
         }
@@ -503,20 +484,20 @@
             });
             const data = await res.json();
             if (!data.success) {
-                showMessage(data.message || 'Could not save settings', false);
+                KBF.toast(data.message || 'Could not save the 2-step setting.', 'error');
                 return;
             }
             savedPolicy = data.twoStepPolicy || policy;
             setPolicyChoice(savedPolicy);
-            showMessage(data.message || 'Settings saved', true);
+            KBF.toast('2-step verification setting saved.');
         } catch (e) {
             console.error('Save security settings error:', e);
-            showMessage('Could not save settings. Please try again.', false);
+            KBF.toast('Could not save the 2-step setting. Please try again.', 'error');
         } finally {
             restoreBtn();
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

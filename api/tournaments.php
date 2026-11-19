@@ -848,6 +848,7 @@ function adminRemindOrganiser(PDO $pdo, array $data) {
     sendJSON([
         'success' => true,
         'message' => $outcome !== '' ? $outcome : 'The reminder has been sent.',
+        'emailStatus' => $status,
         'lastReminder' => $stmt->fetchColumn() ?: null,
     ]);
 }

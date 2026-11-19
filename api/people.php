@@ -798,6 +798,7 @@ if ($action === 'add') {
         // "Send their KBF ID": the player_added email, even when the event is
         // switched off in Notifications, because the admin chose to send it
         $message = pName($firstName, $lastName) . ' was added with KBF ID ' . $kbfId . '.';
+        $emailStatus = null;
         if (!empty($input['sendKbfId'])) {
             require_once __DIR__ . '/notify.php';
             $gradeName = (string) pValue($pdo, "SELECT Name FROM Categories WHERE CategoryId = ?", [$gradeId]);
@@ -813,12 +814,13 @@ if ($action === 'add') {
                 'relatedType' => 'user',
                 'relatedId' => $newId,
             ]);
-            if (in_array($results['person'] ?? '', ['sent', 'waiting', 'failed'], true)) {
+            $emailStatus = $results['person'] ?? null;
+            if (in_array($emailStatus, ['sent', 'waiting', 'failed'], true)) {
                 $message .= ' ' . kbfNotifyOutcomeText($results, 'person', 'The email with their KBF ID');
             }
         }
 
-        sendJSON(['success' => true, 'message' => $message, 'id' => $newId, 'kbfId' => $kbfId]);
+        sendJSON(['success' => true, 'message' => $message, 'id' => $newId, 'kbfId' => $kbfId, 'emailStatus' => $emailStatus]);
 
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {

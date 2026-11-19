@@ -372,10 +372,14 @@
         });
     }
 
-    // Short status message at the bottom of the screen, read out by screen
-    // readers. kind: 'success' (default), 'error' or 'info'.
+    // Short status message, read out by screen readers. kind: 'success'
+    // (default), 'info', 'warning' or 'error'. Uses the shared toasts in
+    // js/kbf-toast.js (KBF.toast) when the page loads them.
     var toastTimer = null;
     function toast(message, kind) {
+        if (window.KBF && typeof window.KBF.toast === 'function') {
+            return window.KBF.toast(message, kind);
+        }
         var host = document.getElementById('kbf-toast');
         if (!host) {
             host = el('div', 'fixed bottom-4 left-4 right-4');

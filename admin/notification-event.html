@@ -37,7 +37,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -202,11 +202,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
-    <script src="/js/kbf-editor.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
+    <script src="/js/kbf-editor.js?v=2611191751"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.notifications
@@ -446,20 +447,19 @@
         attachmentBusy = true;
         const inputWasDisabled = fileInput.disabled;
         fileInput.disabled = true;
-        showSave('Uploading...', true);
         try {
             const res = await authenticatedFetch(API, { method: 'POST', body: form });
             const data = await res.json();
             if (!data.success) {
-                showSave(data.message || 'The file could not be added.', false);
+                KBF.toast(data.message || 'The file could not be added.', 'error');
                 return;
             }
             emails[current].attachments = data.attachments || [];
             renderAttachments();
-            showSave(data.message || 'File added', true);
+            KBF.toast('"' + file.name + '" attached to ' + emails[current].tabLabel + '.');
         } catch (e) {
             console.error('Upload error:', e);
-            showSave('The file could not be added. Please try again.', false);
+            KBF.toast('The file could not be added. Please try again.', 'error');
         } finally {
             attachmentBusy = false;
             fileInput.disabled = inputWasDisabled;
@@ -473,15 +473,15 @@
         try {
             const data = await postJson({ action: 'removeAttachment', id: id });
             if (!data.success) {
-                showSave(data.message || 'The file could not be removed.', false);
+                KBF.toast(data.message || 'The file could not be removed.', 'error');
                 return;
             }
             emails[current].attachments = data.attachments || [];
             renderAttachments();
-            showSave(data.message || 'File removed', true);
+            KBF.toast('Attachment removed from ' + emails[current].tabLabel + '.');
         } catch (e) {
             console.error('Remove attachment error:', e);
-            showSave('The file could not be removed. Please try again.', false);
+            KBF.toast('The file could not be removed. Please try again.', 'error');
         } finally {
             attachmentBusy = false;
         }
@@ -604,7 +604,7 @@
         try {
             const data = await postJson(Object.assign({ action: 'preview' }, currentDraft()));
             if (!data.success) {
-                showCheck(data.message || 'Could not make the preview.', false);
+                KBF.toast(data.message || 'Could not make the preview.', 'error');
                 return;
             }
             showWarnings(data.warnings);
@@ -615,7 +615,7 @@
             KBFDialog.open(dialog, { onClose: closePreview, initialFocus: '#previewClose', opener: this });
         } catch (e) {
             console.error('Preview error:', e);
-            showCheck('Could not make the preview.', false);
+            KBF.toast('Could not make the preview.', 'error');
         } finally {
             this.disabled = false;
         }
@@ -636,10 +636,17 @@
         try {
             const data = await postJson(Object.assign({ action: 'sendTest' }, currentDraft()));
             showWarnings(data.warnings);
-            showCheck(data.message || (data.success ? 'Test sent' : 'The test could not be sent.'), !!data.success);
+            // Say only what really happened to the test (the server's emailStatus)
+            if (data.success && data.emailStatus === 'sent') {
+                KBF.toast(data.message ? data.message + '.' : 'Test email sent to you.');
+            } else if (data.success && data.emailStatus === 'waiting') {
+                KBF.toast('Test email queued. It will go out shortly.', 'info');
+            } else {
+                KBF.toast(data.message || 'The test could not be sent.', 'error');
+            }
         } catch (e) {
             console.error('Test email error:', e);
-            showCheck('The test could not be sent.', false);
+            KBF.toast('The test could not be sent.', 'error');
         } finally {
             restoreTest();
             this.disabled = !canEdit;
@@ -659,17 +666,17 @@
         try {
             const data = await postJson({ action: 'restoreTemplate', key: eventKey, audience: emails[current].audience });
             if (!data.success) {
-                showCheck(data.message || 'Could not restore the original wording.', false);
+                KBF.toast(data.message || 'Could not restore the original wording.', 'error');
                 return;
             }
             emails[current].subject = data.subject;
             emails[current].bodyHtml = data.bodyHtml;
             emails[current].custom = false;
             showEmail(current);
-            showCheck(data.message || 'The original wording is back', true);
+            KBF.toast('Original wording restored for ' + emails[current].tabLabel + '.');
         } catch (e) {
             console.error('Restore error:', e);
-            showCheck('Could not restore the original wording.', false);
+            KBF.toast('Could not restore the original wording.', 'error');
         } finally {
             this.disabled = !canEdit;
         }
@@ -715,11 +722,12 @@
                     const idx = emails.findIndex(e => e.audience === data.audience);
                     if (idx >= 0) showEmail(idx);
                 }
-                showSave(data.message || 'Could not save the email.', false);
+                KBF.toast(data.message || 'Could not save the email.', 'error');
                 return;
             }
             showWarnings(data.warnings);
-            showSave(data.message || 'Email saved', true);
+            document.getElementById('saveMessage').classList.add('hidden');
+            KBF.toast(((eventData.event && eventData.event.label) ? eventData.event.label + ' emails' : 'Email') + ' saved.');
             // Reload so "Changed wording" and the cleaned message show
             const keep = current;
             const res = await authenticatedFetch(API + '?action=event&key=' + encodeURIComponent(eventKey));
@@ -731,13 +739,13 @@
             }
         } catch (e) {
             console.error('Save email error:', e);
-            showSave('Could not save the email. Please try again.', false);
+            KBF.toast('Could not save the email. Please try again.', 'error');
         } finally {
             restoreSave();
             this.disabled = !canEdit;
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

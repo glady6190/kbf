@@ -69,7 +69,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191418">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611191751">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -207,10 +207,11 @@
         </div>
     </main>
 
-    <script src="/js/escape.js?v=2611191418"></script>
-    <script src="/js/kbf-dialog.js?v=2611191418"></script>
-    <script src="/js/kbf-forms.js?v=2611191418"></script>
-    <script src="/js/admin-shell.js?v=2611191418"></script>
+    <script src="/js/escape.js?v=2611191751"></script>
+    <script src="/js/kbf-toast.js?v=2611191751"></script>
+    <script src="/js/kbf-dialog.js?v=2611191751"></script>
+    <script src="/js/kbf-forms.js?v=2611191751"></script>
+    <script src="/js/admin-shell.js?v=2611191751"></script>
     <script>
     // Page guard (shared shell)
     KBFShell.start({ anyOf: ['content.sponsors'], active: 'sponsors' }).then(function (user) {
@@ -255,6 +256,13 @@
         box.classList.remove('hidden');
         // Errors are announced straight away
         box.setAttribute('role', ok ? 'status' : 'alert');
+    }
+
+    // Result of an action (js/kbf-toast.js); clears the box's old message
+    function toast(boxId, text, ok) {
+        hideMessage(boxId);
+        if (window.KBF && typeof KBF.toast === 'function') KBF.toast(text, ok ? 'success' : 'error');
+        else showMessage(boxId, text, ok);
     }
 
     function hideMessage(boxId) {
@@ -476,14 +484,14 @@
             if (data.success) {
                 const wasEditing = !!editingId;
                 resetForm();
-                showMessage('formMessage', wasEditing ? 'Sponsor updated' : 'Sponsor added', true);
+                toast('formMessage', 'Sponsor "' + name + '" ' + (wasEditing ? 'saved.' : 'added.'), true);
                 await loadSponsors();
             } else {
-                showMessage('formMessage', data.message || 'Could not save the sponsor', false);
+                toast('formMessage', data.message || 'Could not save the sponsor.', false);
             }
         } catch (err) {
             console.error('Save sponsor error:', err);
-            showMessage('formMessage', 'Error saving the sponsor. Please try again.', false);
+            toast('formMessage', 'Error saving the sponsor. Please try again.', false);
         } finally {
             busy = false;
             restoreBtn();
@@ -622,14 +630,14 @@
             if (data.success) {
                 sponsors = reordered;
                 renderSponsors();
-                hideMessage('listMessage');
+                toast('listMessage', 'Sponsor order saved: "' + moved.name + '" is now number ' + (target + 1) + '.', true);
             } else {
-                showMessage('listMessage', data.message || 'Could not save the new order', false);
+                toast('listMessage', data.message || 'Could not save the new order.', false);
                 await loadSponsors();
             }
         } catch (err) {
             console.error('Reorder error:', err);
-            showMessage('listMessage', 'Error saving the new order. Please try again.', false);
+            toast('listMessage', 'Error saving the new order. Please try again.', false);
         } finally {
             busy = false;
         }
@@ -649,17 +657,17 @@
             if (data.success) {
                 sponsor.isActive = !!data.isActive;
                 if (editingId === sponsor.id) activeInput.checked = sponsor.isActive;
-                showMessage('listMessage', sponsor.name + ': ' + (sponsor.isActive ? 'shown on the home page' : 'hidden from the home page'), true);
+                toast('listMessage', 'Sponsor "' + sponsor.name + '" ' + (sponsor.isActive ? 'is now shown on the home page.' : 'is now hidden from the home page.'), true);
                 renderSponsors();
                 const again = document.getElementById('active-' + sponsor.id);
                 if (again) again.focus();
             } else {
-                showMessage('listMessage', data.message || 'Could not save the change', false);
+                toast('listMessage', data.message || 'Could not save the change.', false);
                 toggle.disabled = false;
             }
         } catch (err) {
             console.error('Active switch error:', err);
-            showMessage('listMessage', 'Error saving the change. Please try again.', false);
+            toast('listMessage', 'Error saving the change. Please try again.', false);
             toggle.disabled = false;
         } finally {
             busy = false;
@@ -682,19 +690,19 @@
             const data = await res.json();
             if (data.success) {
                 if (editingId === sponsor.id) resetForm();
-                showMessage('listMessage', 'Sponsor deleted', true);
+                toast('listMessage', 'Sponsor "' + sponsor.name + '" deleted.', true);
                 await loadSponsors();
             } else {
-                showMessage('listMessage', data.message || 'Could not delete the sponsor', false);
+                toast('listMessage', data.message || 'Could not delete the sponsor.', false);
             }
         } catch (err) {
             console.error('Delete sponsor error:', err);
-            showMessage('listMessage', 'Error deleting the sponsor. Please try again.', false);
+            toast('listMessage', 'Error deleting the sponsor. Please try again.', false);
         } finally {
             busy = false;
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611191418"></script>
+    <script src="/js/session-manager.js?v=2611191751"></script>
 </body>
 </html>

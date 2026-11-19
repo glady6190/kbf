@@ -558,6 +558,7 @@ if ($method === 'POST') {
                 'message' => $status === 'sent' ? 'Test sent to ' . trim((string) $me['Email'])
                     : ($status === 'waiting' ? 'The test will go out when the daily allowance frees up.'
                         : 'The test could not be sent: ' . rtrim(kbfMailLastError(), '.') . '.'),
+                'emailStatus' => $status,
                 'warnings' => $warnings,
             ], $ok ? 200 : 500);
         }
