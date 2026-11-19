@@ -372,14 +372,17 @@ a.auth-logo-mark:focus-visible { outline: 3px solid var(--theme-primary); outlin
 /* ---------- desktop: split screen ---------- */
 @media (min-width: 1024px) {
     .auth-shell { display: flex; align-items: stretch; }
+    /* Two equal halves at every width from 1024px (also ultrawide): the
+       panel's content block and the card are each centred in their half */
     .auth-panel {
-        display: flex; flex-direction: column; justify-content: center;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
         flex: 1 1 0; min-width: 0; padding: 56px 48px; overflow: hidden;
         background: #0F172A;
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 55%, #0F172A 100%);
         border-right: 4px solid var(--theme-primary);
     }
-    .auth-wrap { flex: 0 0 540px; width: 540px; padding: 48px 40px; }
+    .auth-panel-inner { max-width: 520px; text-align: left; }
+    .auth-wrap { flex: 1 1 0; min-width: 0; width: auto; padding: 48px 40px; }
     .auth-card { max-width: 460px; padding: 36px; }
     .auth-logo { display: none; }
     .auth-step, .auth-title, .auth-intro { text-align: left; }
@@ -393,7 +396,7 @@ a.auth-logo-mark:focus-visible { outline: 3px solid var(--theme-primary); outlin
 }
 @media (min-width: 1280px) {
     .auth-panel { padding: 72px 80px; }
-    .auth-wrap { flex-basis: 620px; width: 620px; padding: 48px; }
+    .auth-wrap { padding: 48px; }
     .auth-panel-title { font-size: 44px; }
 }
 

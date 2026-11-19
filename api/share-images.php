@@ -47,8 +47,10 @@ function kbfShareImageExists($urlPath) {
         && is_file(kbfShareRoot() . $urlPath);
 }
 
-// A TrueType font from the server, for the default picture's text (none
-// is shipped with the site). Null: GD's built-in font is used, enlarged.
+// The TrueType font for text on share pictures: Archivo Black, shipped
+// with the site (assets/fonts, SIL Open Font License, the same version as
+// the home page's woff2), then a server font. Null (no FreeType in GD):
+// GD's built-in font is used, enlarged.
 function kbfShareFont() {
     static $font = false;
     if ($font !== false) {
@@ -59,6 +61,7 @@ function kbfShareFont() {
         return $font;
     }
     $candidates = [
+        kbfShareRoot() . '/assets/fonts/ArchivoBlack-Regular.ttf',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
         '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
         '/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf',
@@ -176,13 +179,20 @@ function kbfMakeShareImage($sourceUrlPath) {
 function kbfShareDrawText($canvas, $text, $centreY, $sizePx, $color) {
     $font = kbfShareFont();
     if ($font !== null) {
-        $box = @imagettfbbox($sizePx, 0, $font, $text);
+        // Made smaller until it fits the width with a 60px margin each side
+        $size = $sizePx;
+        $box = @imagettfbbox($size, 0, $font, $text);
+        while ($box !== false && $size > 12 && abs($box[2] - $box[0]) > KBF_SHARE_WIDTH - 120) {
+            $size -= 2;
+            $box = @imagettfbbox($size, 0, $font, $text);
+        }
         if ($box !== false) {
+            // Centred on the ink: the box's own left and top offsets are taken off
             $width = abs($box[2] - $box[0]);
             $height = abs($box[7] - $box[1]);
-            $x = (int) round((KBF_SHARE_WIDTH - $width) / 2);
-            $y = (int) round($centreY + $height / 2);
-            @imagettftext($canvas, $sizePx, 0, $x, $y, $color, $font, $text);
+            $x = (int) round((KBF_SHARE_WIDTH - $width) / 2) - min($box[0], $box[6]);
+            $y = (int) round($centreY + $height / 2) - max($box[1], $box[3]);
+            @imagettftext($canvas, $size, 0, $x, $y, $color, $font, $text);
             return;
         }
     }
@@ -220,7 +230,8 @@ function kbfEnsureDefaultShareImage($force = false) {
         $canvas = kbfShareCanvas();
         kbfShareDrawLogo($canvas, (int) ((KBF_SHARE_WIDTH - 360) / 2), 70, 360);
         $white = imagecolorallocate($canvas, 0xFF, 0xFF, 0xFF);
-        kbfShareDrawText($canvas, 'Kerala Badminton Federation UK', 520, 40, $white);
+        // About 58px tall letters, the line 1060px wide (shrunk if needed)
+        kbfShareDrawText($canvas, 'Kerala Badminton Federation UK', 528, 44, $white);
         kbfShareSave($canvas, KBF_SHARE_DEFAULT);
         imagedestroy($canvas);
     } catch (Throwable $e) {

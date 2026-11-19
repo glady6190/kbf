@@ -24,6 +24,7 @@
  *     php jobs/make-thumbnails.php               # up to 200 files, 50 s
  *     php jobs/make-thumbnails.php --limit=500   # up to 500 files per run
  *     php jobs/make-thumbnails.php --dry-run     # count only, write nothing
+ *     php jobs/make-thumbnails.php --refresh-default  # also remake the default share picture
  * Run it until it reports "0 still to do".
  */
 
@@ -104,7 +105,8 @@ foreach ($folders as $folder) {
 require_once $root . '/api/config.php';
 require_once $root . '/api/share-images.php';
 if (!$dryRun) {
-    kbfEnsureDefaultShareImage();
+    // --refresh-default: made again even when it exists
+    kbfEnsureDefaultShareImage(in_array('--refresh-default', $argv, true));
     echo is_file($root . KBF_SHARE_DEFAULT) ? "Default share picture: ok\n" : "Default share picture: could not be made\n";
 }
 $shareSources = [
