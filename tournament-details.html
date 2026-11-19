@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournament Details - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -307,6 +306,7 @@
             overflow-wrap: anywhere;
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
@@ -674,7 +674,9 @@
         const poster = safeImagePath(t.PosterUrl);
         const date = toYmd(t.TournamentDate);
         if (!poster) return dateTileHtml(date, large);
-        return `<img src="${escapeHtml(poster)}" alt="Poster for ${escapeHtml(t.Name)}" class="t-poster-img" loading="lazy"
+        // The large poster is the page's first image: display copy, loaded straight away
+        const size = large ? ' width="420" height="580"' : ' width="132" height="188" loading="lazy" decoding="async"';
+        return `<img${imgVariantAttrs(poster, large ? 'display' : 'thumb')} alt="Poster for ${escapeHtml(t.Name)}" class="t-poster-img"${size}
                      data-date="${escapeHtml(date)}" data-large="${large ? '1' : '0'}">`;
     }
 

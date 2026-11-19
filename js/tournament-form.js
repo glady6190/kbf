@@ -331,7 +331,8 @@
             }
 
             if (src) {
-                el.posterImg.src = src;
+                if (window.KBF && window.KBF.setImageVariant) window.KBF.setImageVariant(el.posterImg, src, 'display');
+                else el.posterImg.src = src;
                 el.posterImg.classList.remove('hidden');
                 el.posterEmpty.classList.add('hidden');
             } else {

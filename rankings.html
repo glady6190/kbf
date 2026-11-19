@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player Grading - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -1160,6 +1159,7 @@
     }
 }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -1526,6 +1526,7 @@
         </script>
     </footer>
 
+    <script src="/js/escape.js"></script>
     <script>
     // ============================================
     // SETTINGS
@@ -1545,7 +1546,10 @@
     // STATE
     // ============================================
     let categoryList = [];      // categories from /api/categories.php, sorted by DisplayOrder ascending (best grade first)
-    let playersByGrade = {};    // ShortName -> [player]
+    let gradeCounts = {};       // ShortName -> number of players (from the first page of any list)
+    let viewTotal = 0;          // players in the current tab / search (server count)
+    let viewSeq = 0;            // a newer list request makes older answers ignored
+    let loadingPage = false;
     let currentCategory = 'All';
     let allSort = 'id';         // "All" tab sort: 'id' (KBF ID number) or 'name' (A to Z)
     let searchTerm = '';
@@ -1755,9 +1759,12 @@
         const showInitials = () => { avatar.textContent = initials(player); };
         if (player.photo) {
             const img = document.createElement('img');
-            img.src = player.photo;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 36;
+            img.height = 36;
+            setImageVariant(img, player.photo, 'thumb');
             img.addEventListener('error', showInitials);
             avatar.appendChild(img);
         } else {
@@ -1846,7 +1853,7 @@
         renderPoints();
         renderHelpGrades();
         renderTabs();
-        loadAllPlayers();
+        refreshView();
     }
 
     async function loadCategories() {
@@ -1889,8 +1896,8 @@
         document.querySelectorAll('#gr-tabs .gr-tab').forEach(tab => {
             const key = tab.dataset.category;
             const count = key === 'All'
-                ? categoryList.reduce((sum, c) => sum + (playersByGrade[c.ShortName] || []).length, 0)
-                : (playersByGrade[key] || []).length;
+                ? categoryList.reduce((sum, c) => sum + toInt(gradeCounts[c.ShortName]), 0)
+                : toInt(gradeCounts[key]);
             tab.querySelector('.gr-tab-count').textContent = plural(count, 'player');
         });
     }
@@ -1918,60 +1925,69 @@
     // ============================================
     // DATA LOADING
     // ============================================
-    async function loadAllPlayers() {
-        try {
-            const results = await Promise.all(categoryList.map(async category => {
-                const response = await fetch(`/api/users.php?category=${encodeURIComponent(category.ShortName)}`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                if (!data.success) {
-                    console.warn(`Failed to load category ${category.ShortName}:`, data.message);
-                    return [category.ShortName, []];
-                }
-                return [category.ShortName, data.users.map(u => normalisePlayer(u, category.ShortName))];
-            }));
-
-            results.forEach(([grade, players]) => { playersByGrade[grade] = players; });
-            updateTabCounts();
-            refreshView();
-        } catch (error) {
-            console.error('Error loading players:', error);
-            const loading = document.getElementById('loadingMessage');
-            loading.textContent = '';
-            loading.appendChild(el('p', 'text-red-400 font-bold uppercase', 'Error loading players. Please try again later.'));
+    // One page at a time from /api/users.php (limit/offset). The server
+    // sorts (grade tab: season points high to low, then name, players on 0
+    // points after them A to Z; All tab: KBF ID number or A to Z), searches
+    // (name, KBF ID, town) and gives each player's rank in their grade
+    // (level players share a rank and the next rank skips: 1, 1, 3).
+    function pageUrl(offset) {
+        const p = new URLSearchParams();
+        p.set('limit', String(PAGE_SIZE));
+        p.set('offset', String(offset));
+        if (currentCategory === 'All') {
+            p.set('sort', allSort);
+            p.set('activeGrades', '1');
+        } else {
+            p.set('category', currentCategory);
+            p.set('sort', 'rank');
         }
+        const q = searchTerm.trim();
+        if (q) p.set('q', q);
+        return '/api/users.php?' + p.toString();
     }
 
-    // ============================================
-    // ORDERING AND RANKS (F)
-    // ============================================
-    // Grade tab: season points high to low, then name. Level players share a rank and
-    // the next rank skips (1, 1, 3). Players on 0 points follow in A to Z order, unranked.
-    function rankedGrade(grade) {
-        const players = playersByGrade[grade] || [];
-        const scored = players.filter(p => p.season > 0).sort((a, b) => (b.season - a.season) || byName(a, b));
-        const unscored = players.filter(p => p.season <= 0).sort(byName);
-        const entries = [];
-        let previousPoints = null;
-        let previousRank = 0;
-        scored.forEach((player, i) => {
-            const rank = player.season === previousPoints ? previousRank : i + 1;
-            previousPoints = player.season;
-            previousRank = rank;
-            entries.push({ player: player, rank: rank });
-        });
-        unscored.forEach(player => entries.push({ player: player, rank: null }));
-        return entries;
-    }
-
-    // All tab: no ranks; sorted by KBF ID number (default) or A to Z
-    function allEntries() {
-        const players = categoryList.flatMap(c => playersByGrade[c.ShortName] || []);
-        players.sort(allSort === 'name'
-            ? byName
-            : (a, b) => (kbfNumber(a) - kbfNumber(b)) || byName(a, b));
-        return players.map(player => ({ player: player, rank: null }));
+    // reset: first page of the current tab / sort / search; otherwise the next page
+    async function loadPage(reset, focusFirstNew) {
+        if (!reset && loadingPage) return;
+        const seq = reset ? ++viewSeq : viewSeq;
+        const offset = reset ? 0 : viewEntries.length;
+        loadingPage = true;
+        try {
+            const response = await fetch(pageUrl(offset), { credentials: 'include' });
+            const data = await response.json();
+            if (seq !== viewSeq) return;
+            if (!data.success) throw new Error(data.message || 'Players could not be loaded');
+            const isAll = currentCategory === 'All';
+            const entries = (data.users || []).map(u => {
+                const grade = isAll ? String(u.CategoryShortName || '') : currentCategory;
+                const hasRank = !isAll && u.GradeRank !== null && u.GradeRank !== undefined;
+                return { player: normalisePlayer(u, grade), rank: hasRank ? toInt(u.GradeRank) : null };
+            });
+            if (data.gradeCounts) {
+                gradeCounts = data.gradeCounts;
+                updateTabCounts();
+            }
+            viewTotal = toInt(data.total);
+            if (reset) {
+                viewEntries = entries;
+                showView();
+            } else {
+                viewEntries = viewEntries.concat(entries);
+                renderBatch(focusFirstNew);
+            }
+        } catch (error) {
+            if (seq !== viewSeq) return;
+            console.error('Error loading players:', error);
+            if (reset) {
+                const loading = document.getElementById('loadingMessage');
+                loading.classList.remove('hidden');
+                loading.textContent = '';
+                loading.appendChild(el('p', 'text-red-400 font-bold uppercase', 'Error loading players. Please try again later.'));
+                document.getElementById('gr-list').hidden = true;
+            }
+        } finally {
+            if (seq === viewSeq) loadingPage = false;
+        }
     }
 
     // ============================================
@@ -1979,19 +1995,22 @@
     // ============================================
     function refreshView() {
         const isAll = currentCategory === 'All';
-        const query = searchTerm.trim().toLowerCase();
-        const ranked = isAll ? null : rankedGrade(currentCategory);
-        const base = isAll ? allEntries() : ranked;
-        viewEntries = query ? base.filter(e => e.player.search.includes(query)) : base;
-
-        // Count and sort switch
-        document.getElementById('gr-count').textContent = isAll
-            ? plural(viewEntries.length, 'player')
-            : plural(viewEntries.length, 'player') + ' in grade ' + currentCategory;
         document.getElementById('gr-sort').hidden = !isAll;
         document.getElementById('gr-col-first').textContent = isAll ? 'Grade' : 'Rank';
+        loadPage(true);
+    }
 
-        renderLeaders(isAll || query ? null : ranked);
+    // The first page of a view has arrived
+    function showView() {
+        const isAll = currentCategory === 'All';
+        const query = searchTerm.trim();
+
+        // Count
+        document.getElementById('gr-count').textContent = isAll
+            ? plural(viewTotal, 'player')
+            : plural(viewTotal, 'player') + ' in grade ' + currentCategory;
+
+        renderLeaders(isAll || query ? null : viewEntries);
 
         // List
         document.getElementById('loadingMessage').classList.add('hidden');
@@ -2144,7 +2163,7 @@
     function renderBatch(focusFirstNew) {
         const rows = document.getElementById('gr-rows');
         const start = shownCount;
-        const end = Math.min(shownCount + PAGE_SIZE, viewEntries.length);
+        const end = viewEntries.length;
         const fragment = document.createDocumentFragment();
         for (let i = start; i < end; i++) {
             fragment.appendChild(createRow(viewEntries[i]));
@@ -2161,12 +2180,12 @@
         const sentinel = document.getElementById('gr-sentinel');
         if (listObserver) {
             listObserver.unobserve(sentinel);
-            if (shownCount < viewEntries.length) listObserver.observe(sentinel);
+            if (shownCount < viewTotal) listObserver.observe(sentinel);
         }
     }
 
     function updateMoreBar() {
-        const total = viewEntries.length;
+        const total = Math.max(viewTotal, shownCount);
         const text = document.getElementById('gr-more-text');
         const button = document.getElementById('gr-more-btn');
         if (shownCount < total) {
@@ -2180,20 +2199,22 @@
 
     if ('IntersectionObserver' in window) {
         listObserver = new IntersectionObserver(entries => {
-            if (entries.some(e => e.isIntersecting) && shownCount < viewEntries.length) {
-                renderBatch(false);
+            if (entries.some(e => e.isIntersecting) && shownCount < viewTotal) {
+                loadPage(false, false);
             }
         }, { rootMargin: '0px 0px 400px 0px' });
     }
 
-    document.getElementById('gr-more-btn').addEventListener('click', () => renderBatch(true));
+    document.getElementById('gr-more-btn').addEventListener('click', () => loadPage(false, true));
 
     // ============================================
     // SEARCH AND SORT (E)
     // ============================================
+    let searchTimer = null;
     document.getElementById('searchInput').addEventListener('input', (e) => {
         searchTerm = e.target.value;
-        refreshView();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(refreshView, 250);
     });
 
     document.querySelectorAll('#gr-sort .gr-sort-btn').forEach(button => {

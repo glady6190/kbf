@@ -77,6 +77,17 @@ is the record of where the migrations start from.
 4. Sign in as the Super Admin and as one other staff member.
 5. Switch the cron jobs back on (see the time zone notes below), then switch
    maintenance mode off.
+6. One-off, after the move: make the display versions and thumbnails of the
+   images uploaded before this change. On the server, run
+   `php jobs/make-thumbnails.php` (Hostinger: SSH, or a one-off cron job)
+   until it reports "0 still to do". Each run handles up to 200 images in
+   about 50 seconds and can be stopped and run again at any time; nothing
+   is lost if it stops halfway. Until an image has its versions, pages show
+   the original instead.
+
+Do not upload the `tools/` and `docs/` folders, or `tailwind.config.js`:
+they are only used to build the stylesheet (see `docs/BUILD.md`), and the
+site blocks them anyway.
 
 ## Time zone notes
 

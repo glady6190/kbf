@@ -118,8 +118,12 @@
         var box = el('span', 'kgc-avatar');
         if (p.photo) {
             var img = document.createElement('img');
-            img.src = p.photo;
             img.alt = '';
+            img.decoding = 'async';
+            img.width = 36;
+            img.height = 36;
+            if (window.KBF && window.KBF.setImageVariant) window.KBF.setImageVariant(img, p.photo, 'thumb');
+            else img.src = p.photo;
             box.appendChild(img);
         } else {
             box.textContent = p.initials || '';

@@ -7,6 +7,10 @@
  * Exposes window.KBF.escapeHtml / escapeAttr / safeUrl / attr / linkHtml
  * and the globals escapeHtml, escapeAttr, esc, safeUrl so older call sites
  * keep working. Do not copy these helpers into pages; use this file.
+ *
+ * Image helpers (also globals): imageVariant, imgVariantAttrs,
+ * setImageVariant. Images using a resized copy carry data-fallback with the
+ * original url; a document 'error' listener swaps to it once.
  */
 (function (window) {
     'use strict';
@@ -103,15 +107,91 @@
         return '<a href="' + escapeHtml(url) + '"' + extra + '>' + escapeHtml(text) + '</a>';
     }
 
+    // Uploaded images have two resized copies next to the original:
+    //   /uploads/<folder>/<name>.d.jpg  display copy (max 1600 px)
+    //   /uploads/<folder>/<name>.t.jpg  thumbnail (max 480 px)
+    // Only these folders have copies; other paths are returned unchanged.
+    var VARIANT_PATTERN = /^((?:https?:\/\/[^\/?#]+)?\/?uploads\/(?:gallery\/\d+|announcements|profiles|registrations|tournaments)\/[^\/?#]+)\.(jpe?g|png|webp|gif)([?#].*)?$/i;
+
+    // Return the 'thumb' or 'display' copy of an uploaded image url.
+    // Returns url unchanged when it has no copies or is already a copy.
+    function imageVariant(url, kind) {
+        if (typeof url !== 'string' || url === '') return url;
+        var suffix = kind === 'display' ? '.d.jpg' : (kind === 'thumb' ? '.t.jpg' : '');
+        if (!suffix) return url;
+        var match = VARIANT_PATTERN.exec(url.trim());
+        if (!match) return url;
+        // Absolute urls only count when they point at this site.
+        if (/^https?:/i.test(match[1])) {
+            var origin = window.location && window.location.origin;
+            if (!origin || match[1].toLowerCase().indexOf(origin.toLowerCase() + '/') !== 0) return url;
+        }
+        if (/\.[dt]$/i.test(match[1])) return url;
+        return match[1] + suffix + (match[3] || '');
+    }
+
+    // Swap a failed variant image back to its original (once).
+    function handleVariantError(event) {
+        var img = event.target;
+        if (!img || img.tagName !== 'IMG' || !img.hasAttribute('data-fallback')) return;
+        var fallback = img.getAttribute('data-fallback');
+        img.removeAttribute('data-fallback');
+        if (!fallback || img.getAttribute('src') === fallback) return;
+        // Stop page onerror handlers (hide image, show initials) from
+        // reacting to the missing copy; they still run if the original fails.
+        event.stopImmediatePropagation();
+        img.src = fallback;
+    }
+
+    if (window.document && window.document.addEventListener) {
+        window.document.addEventListener('error', handleVariantError, true);
+    }
+
+    // Build ` src="..." data-fallback="..."` for an <img> in an HTML string.
+    // The url goes through safeUrl; values are escaped.
+    function imgVariantAttrs(url, kind) {
+        var original = safeUrl(url);
+        var variant = imageVariant(original, kind);
+        if (variant && variant !== original) {
+            return ' src="' + escapeHtml(variant) + '" data-fallback="' + escapeHtml(original) + '"';
+        }
+        return ' src="' + escapeHtml(original) + '"';
+    }
+
+    // Point an <img> element at the variant of url, falling back to url.
+    function setImageVariant(img, url, kind) {
+        if (!img) return img;
+        var original = url === null || url === undefined ? '' : String(url);
+        var variant = imageVariant(original, kind);
+        if (variant && variant !== original) {
+            img.setAttribute('data-fallback', original);
+            if (!img._kbfVariantListener) {
+                // Covers images that fail before they are added to the page.
+                img.addEventListener('error', handleVariantError);
+                img._kbfVariantListener = true;
+            }
+        } else {
+            img.removeAttribute('data-fallback');
+        }
+        img.src = variant;
+        return img;
+    }
+
     var KBF = window.KBF = window.KBF || {};
     KBF.escapeHtml = escapeHtml;
     KBF.escapeAttr = escapeAttr;
     KBF.safeUrl = safeUrl;
     KBF.attr = attr;
     KBF.linkHtml = linkHtml;
+    KBF.imageVariant = imageVariant;
+    KBF.imgVariantAttrs = imgVariantAttrs;
+    KBF.setImageVariant = setImageVariant;
 
     window.escapeHtml = escapeHtml;
     window.escapeAttr = escapeAttr;
     window.esc = escapeHtml;
     window.safeUrl = safeUrl;
+    window.imageVariant = imageVariant;
+    window.imgVariantAttrs = imgVariantAttrs;
+    window.setImageVariant = setImageVariant;
 })(window);

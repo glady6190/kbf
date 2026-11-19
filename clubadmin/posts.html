@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Posts - Organiser</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -30,6 +29,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -194,7 +194,7 @@ function goToCreatePost() {
             <div class="post-card border-4 border-gray-700 p-6">
                 ${post.FeaturedImage ? `
                     <div class="mb-4 -mx-6 -mt-6">
-                        <img src="${escapeHtml(safeUrl(post.FeaturedImage))}" alt="${escapeHtml(post.Title)}" class="w-full h-48 object-contain bg-slate-800 border-b-4 border-gray-700">
+                        <img${imgVariantAttrs(post.FeaturedImage, 'thumb')} alt="${escapeHtml(post.Title)}" width="400" height="192" loading="lazy" decoding="async" class="w-full h-48 object-contain bg-slate-800 border-b-4 border-gray-700">
                     </div>
                 ` : ''}
                 

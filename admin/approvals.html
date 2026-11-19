@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Approvals - Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -93,6 +92,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -401,9 +401,13 @@
         const src = safePhoto(photo);
         if (src) {
             const img = el('img');
-            img.src = src;
+            const px = (parseInt((/\bw-(\d+)\b/.exec(sizeClass) || [])[1], 10) || 10) * 4;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = px;
+            img.height = px;
+            setImageVariant(img, src, 'thumb');
             box.appendChild(img);
         } else {
             box.textContent = initialsOf(name);
@@ -1171,7 +1175,9 @@
             const img = el('img', 'block max-w-full w-auto h-auto');
             img.style.maxHeight = '28rem';
             img.style.objectFit = 'contain';
-            img.src = posterSrc;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            setImageVariant(img, posterSrc, 'display');
             img.alt = 'Poster for ' + t.name;
             poster.appendChild(img);
         } else {
@@ -1408,7 +1414,9 @@
         fillSelect('hType', data.types || [], t => [t.key, t.label]);
         fillSelect('hPerson', data.people || [], x => [String(x.id), x.name]);
         hist.entries = reset ? data.entries : hist.entries.concat(data.entries);
-        hist.total = Number(data.total) || 0;
+        // The exact total is sent only once the last page is reached
+        hist.total = (data.total === null || data.total === undefined) ? null : (Number(data.total) || 0);
+        hist.hasMore = !!data.hasMore;
         renderHistory();
         document.getElementById('hMore').classList.toggle('hidden', !data.hasMore);
     }
@@ -1445,7 +1453,9 @@
         document.getElementById('hEmpty').classList.toggle('hidden', hist.entries.length > 0);
         const n = hist.entries.length;
         document.getElementById('hCount').textContent = n
-            ? 'Showing 1 to ' + n.toLocaleString('en-GB') + ' of ' + hist.total.toLocaleString('en-GB')
+            ? 'Showing 1 to ' + n.toLocaleString('en-GB') + (hist.total !== null
+                ? ' of ' + hist.total.toLocaleString('en-GB')
+                : (hist.hasMore ? ' (more available)' : ''))
             : 'Showing 0';
     }
     </script>

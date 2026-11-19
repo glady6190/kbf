@@ -21,29 +21,16 @@ echo "Time: " . date('Y-m-d H:i:s') . "\n\n";
 $runId = kbfJobRunStart($pdo, 'ranking-calculator');
 
 try {
-    // Get all active players
-    $stmt = $pdo->query("
-        SELECT UserId
-        FROM Users
-        WHERE IsActive = 1
-          AND IsRemoved = 0
-          AND CategoryId IS NOT NULL
-    ");
-    $players = $stmt->fetchAll();
-    
-    echo "Found " . count($players) . " active players\n\n";
-    
+    // Every active player with a grade, with a few set-based queries for
+    // all of them at once (api/player-stats-calculator.php)
     $successCount = 0;
     $errorCount = 0;
-    
-    foreach ($players as $player) {
-        $playerId = $player['UserId'];
-        
-        if (calculatePlayerStats($pdo, $playerId)) {
-            $successCount++;
-        } else {
-            $errorCount++;
-        }
+    $saved = kbfRecalculatePlayerStats($pdo, null);
+    if ($saved === false) {
+        $errorCount = 1;
+        echo "ERROR: the player stats could not be calculated (see the error log)\n";
+    } else {
+        $successCount = (int) $saved;
     }
     
     echo "\n=== Calculation Complete ===\n";
@@ -106,6 +93,68 @@ try {
         }
     } catch (PDOException $e) {
         error_log('ranking-calculator: activity log clean-up error: ' . $e->getMessage());
+    }
+
+    // Trimming: tables that otherwise grow for ever, keeping only what is
+    // needed. Each step on its own, so one problem never stops the rest.
+    $trimSteps = [
+        // Recipients of broadcasts finished or cancelled more than 90 days ago
+        'broadcast recipients' => ["
+            DELETE eq FROM EmailQueue eq
+            JOIN EmailBroadcasts b ON b.BroadcastId = eq.BroadcastId
+            WHERE b.Status IN ('completed', 'cancelled')
+              AND COALESCE(b.CompletedDate, b.CancelledDate, b.CreatedDate) < DATE_SUB(NOW(), INTERVAL 90 DAY)
+        ", []],
+        // Sign-in attempts: successful ones after 30 days, failed ones after a day
+        'sign-in attempts' => ["
+            DELETE FROM LoginAttempts
+            WHERE (Success = 1 AND AttemptTime < DATE_SUB(NOW(), INTERVAL 30 DAY))
+               OR (Success = 0 AND AttemptTime < DATE_SUB(NOW(), INTERVAL 1 DAY))
+        ", []],
+        // Request counts (password reset limits) after a day
+        'request limits' => ["DELETE FROM RequestLimits WHERE CreatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY)", []],
+        // Password reset links used or expired more than 7 days ago
+        'password reset links' => ["
+            DELETE FROM PasswordResets
+            WHERE (Used = 1 AND CreatedAt < DATE_SUB(NOW(), INTERVAL 7 DAY))
+               OR ExpiresAt < DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ", []],
+        // Daily-summary items never sent (e.g. no recipient left) after 7 days
+        'daily-summary items' => ["DELETE FROM NotificationDigest WHERE CreatedDate < DATE_SUB(NOW(), INTERVAL 7 DAY)", []],
+        // Approval history and the old activity log: the activity log period
+        'approval history' => ["DELETE FROM ApprovalLogs WHERE LogDate < DATE_SUB(NOW(), INTERVAL ? DAY)", [$keepDays ?? 730]],
+        'old activity log' => ["DELETE FROM UserActivityLogs WHERE LogDate < DATE_SUB(NOW(), INTERVAL ? DAY)", [$keepDays ?? 730]],
+    ];
+    $trimmed = [];
+    foreach ($trimSteps as $label => list($sql, $params)) {
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            if ($stmt->rowCount() > 0) {
+                $trimmed[] = $stmt->rowCount() . ' ' . $label;
+            }
+        } catch (PDOException $e) {
+            error_log('ranking-calculator: trimming ' . $label . ' failed: ' . $e->getMessage());
+        }
+    }
+    // Sent broadcast emails keep their log row, but not each personalised
+    // body, after 30 days (the broadcast itself keeps the wording)
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE EmailLog SET BodyHtml = NULL, BodyText = NULL
+            WHERE Priority = 'bulk' AND Status = 'sent' AND SentDate < DATE_SUB(NOW(), INTERVAL 30 DAY)
+              AND BodyHtml IS NOT NULL
+        ");
+        $stmt->execute();
+        if ($stmt->rowCount() > 0) {
+            $trimmed[] = $stmt->rowCount() . ' broadcast email bodies';
+        }
+    } catch (PDOException $e) {
+        error_log('ranking-calculator: trimming broadcast email bodies failed: ' . $e->getMessage());
+    }
+    if ($trimmed) {
+        echo "Trimmed: " . implode(', ', $trimmed) . "\n";
+        $cleanupNote .= '; trimmed ' . implode(', ', $trimmed);
     }
 
     kbfJobRunFinish($pdo, $runId, $errorCount > 0 ? 'error' : 'ok',

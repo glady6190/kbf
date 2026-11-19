@@ -73,7 +73,102 @@ function kbfStoreImage($sourcePath, $isUploaded, $destDir, $urlDir, $prefix, $ma
     if ($isUploaded) {
         @unlink($sourcePath);
     }
+    // Display version and thumbnail next to it (a problem never stops the upload)
+    kbfMakeImageVariants($target);
     return [rtrim($urlDir, '/') . '/' . $filename, null];
+}
+
+// ============================================
+// DISPLAY VERSION AND THUMBNAIL
+// For /uploads/<folder>/<name>.<ext> the site also keeps
+//   <name>.d.jpg  display version, at most 1600 px on its longest side
+//   <name>.t.jpg  thumbnail, at most 480 px
+// Lists, grids and cards use the thumbnail; full-size views use the display
+// version (js/escape.js imageVariant()); both fall back to the original.
+// The random name of the original is kept. JPEG (transparent areas on white).
+// ============================================
+const KBF_IMAGE_DISPLAY_SIDE = 1600;
+const KBF_IMAGE_THUMB_SIDE = 480;
+
+// [display path, thumbnail path] for an original file path, or null when the
+// path is not an original image (or is itself a variant)
+function kbfImageVariantFiles($file) {
+    if (!is_string($file) || !preg_match('/^(.+)\.(jpe?g|png|webp|gif)$/i', $file, $m)) {
+        return null;
+    }
+    if (preg_match('/\.(d|t)$/', $m[1])) {
+        return null;
+    }
+    return [$m[1] . '.d.jpg', $m[1] . '.t.jpg'];
+}
+
+// Make the two versions of an original image file. $force: make them again
+// even if they exist. Returns true when both exist afterwards.
+function kbfMakeImageVariants($file, $force = false) {
+    $variants = kbfImageVariantFiles($file);
+    if ($variants === null || !is_file($file) || !function_exists('imagecreatetruecolor')) {
+        return false;
+    }
+    list($display, $thumb) = $variants;
+    if (!$force && is_file($display) && is_file($thumb)) {
+        return true;
+    }
+    try {
+        $info = @getimagesize($file);
+        if ($info === false || (int) $info[0] < 1 || (int) $info[1] < 1 || (int) $info[0] * (int) $info[1] > 50000000) {
+            return false;
+        }
+        switch ($info['mime'] ?? '') {
+            case 'image/jpeg': $source = @imagecreatefromjpeg($file); break;
+            case 'image/png': $source = @imagecreatefrompng($file); break;
+            case 'image/webp': $source = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file) : false; break;
+            case 'image/gif': $source = @imagecreatefromgif($file); break;
+            default: $source = false;
+        }
+        if (!$source) {
+            return false;
+        }
+        $ok = kbfWriteJpegVariant($source, $display, KBF_IMAGE_DISPLAY_SIDE, 82)
+            && kbfWriteJpegVariant($source, $thumb, KBF_IMAGE_THUMB_SIDE, 78);
+        imagedestroy($source);
+        if (!$ok) {
+            @unlink($display);
+            @unlink($thumb);
+        }
+        return $ok;
+    } catch (Throwable $e) {
+        error_log('kbfMakeImageVariants: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// Scale $source down (never up) to $maxSide and save it as JPEG
+function kbfWriteJpegVariant($source, $target, $maxSide, $quality) {
+    $width = imagesx($source);
+    $height = imagesy($source);
+    $ratio = min(1, $maxSide / max($width, $height));
+    $newWidth = max(1, (int) round($width * $ratio));
+    $newHeight = max(1, (int) round($height * $ratio));
+    $image = imagecreatetruecolor($newWidth, $newHeight);
+    imagefill($image, 0, 0, imagecolorallocate($image, 255, 255, 255));
+    imagecopyresampled($image, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+    imageinterlace($image, true);
+    $ok = imagejpeg($image, $target, $quality);
+    imagedestroy($image);
+    return (bool) $ok && is_file($target);
+}
+
+// Delete the two versions of an original image file (if any)
+function kbfDeleteImageVariants($file) {
+    $variants = kbfImageVariantFiles($file);
+    if ($variants === null) {
+        return;
+    }
+    foreach ($variants as $v) {
+        if (is_file($v)) {
+            @unlink($v);
+        }
+    }
 }
 
 // Decode with GD, fix JPEG orientation, scale down to KBF_IMAGE_MAX_SIDE and
@@ -182,5 +277,6 @@ function kbfDeleteStoredImage($urlPath, $urlDir) {
     if (is_file($file)) {
         @unlink($file);
     }
+    kbfDeleteImageVariants($file);
 }
 ?>

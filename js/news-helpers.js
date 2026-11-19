@@ -68,8 +68,10 @@
         return doc.body ? (doc.body.textContent || '') : '';
     }
 
+    // List responses carry a short excerpt in Content (and Excerpt); the
+    // single post (?id=) carries the full text
     function excerpt(post) {
-        return plainText(post.Content).replace(/\s+/g, ' ').trim();
+        return plainText(post.Excerpt !== undefined ? post.Excerpt : post.Content).replace(/\s+/g, ' ').trim();
     }
 
     // Local calendar date of a post (PublishedDate, then CreatedDate)

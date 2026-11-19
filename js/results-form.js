@@ -11,6 +11,8 @@
  *   });
  *
  * Data: GET /api/matches.php?action=form&tournamentId=
+ * Players: searched as you type, GET ?action=formPlayers&tournamentId=&q=
+ * (at most 8); drafted players looked up with &ids=
  * Saving: POST (new category), PUT (change a category), DELETE (results
  * waiting for approval) on /api/matches.php.
  *
@@ -156,9 +158,13 @@
         var src = player.kind === 'player' ? safePhoto(player.photo) : null;
         if (src) {
             var img = el('img');
-            img.src = src;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 30;
+            img.height = 30;
+            if (window.KBF && window.KBF.setImageVariant) window.KBF.setImageVariant(img, src, 'thumb');
+            else img.src = src;
             box.appendChild(img);
         } else if (player.kind === 'guest') {
             var parts = String(player.name || '').trim().split(/\s+/);
@@ -234,8 +240,40 @@
         var tid = parseInt(opts.tournamentId, 10) || 0;
 
         var data = null;          // GET ?action=form
-        var players = [];
+        var players = [];         // players already in this tournament's results
+        var knownPlayers = {};    // id -> player, from the form and from searches
         var categories = [];      // server categories plus names typed on this page
+
+        function rememberPlayer(p) {
+            if (p && p.kind === 'player' && p.id) knownPlayers[p.id] = p;
+        }
+
+        // Up to 8 players matching the text (KBF ID first, then names
+        // starting with it, then other matches), leaving out those taken
+        function searchPlayers(raw, taken) {
+            var exclude = Object.keys(taken).slice(0, 16).join(',');
+            return request(API + '?action=formPlayers&tournamentId=' + encodeURIComponent(String(tid)) +
+                    '&q=' + encodeURIComponent(raw) + (exclude ? '&exclude=' + encodeURIComponent(exclude) : ''))
+                .then(function (res) {
+                    if (!res || !res.success) return [];
+                    return (res.players || []).map(function (p) { p.kind = 'player'; rememberPlayer(p); return p; });
+                })
+                .catch(function () { return []; });
+        }
+
+        // Players by id that can still be chosen (for a draft), looked up on the server
+        function fetchPlayersById(ids) {
+            var missing = ids.filter(function (id) { return !knownPlayers[id]; }).slice(0, 16);
+            if (!missing.length) return Promise.resolve();
+            return request(API + '?action=formPlayers&tournamentId=' + encodeURIComponent(String(tid)) +
+                    '&ids=' + encodeURIComponent(missing.join(',')))
+                .then(function (res) {
+                    if (res && res.success) {
+                        (res.players || []).forEach(function (p) { p.kind = 'player'; rememberPlayer(p); });
+                    }
+                })
+                .catch(function () { /* drafted players that cannot be found are left out */ });
+        }
         var current = null;       // the selected category
         var mode = 'enter';       // 'enter' | 'edit' | 'readonly'
         var teams = null;         // { quarter: [[a,b] x4], semi: [[a,b] x2], final: [[a,b] x2] }
@@ -480,7 +518,10 @@
                     return false;
                 }
                 data = res;
+                // Players already in the results; others are searched on
+                // the server as the organiser types (formPlayers)
                 players = (res.players || []).map(function (p) { p.kind = 'player'; return p; });
+                players.forEach(rememberPlayer);
                 renderHeader();
                 if (!res.canEnter) {
                     loading.classList.add('hidden');
@@ -759,14 +800,27 @@
                 return name ? { kind: 'guest', name: name } : null;
             }
             var id = parseInt(value.id, 10);
-            return players.filter(function (p) { return p.id === id; })[0] || null;
+            return knownPlayers[id] || null;
         }
 
         draftContinue.addEventListener('click', function () {
             var d = readDraft();
             draftPending = false;
             draftOffer.classList.add('hidden');
-            if (d) {
+            if (!d) { mainBtn.focus(); return; }
+            // The drafted players are looked up again on the server first
+            var ids = [];
+            ROUND_ORDER.forEach(function (r) {
+                (d.teams[r] || []).forEach(function (team) {
+                    (team || []).forEach(function (v) {
+                        var id = v && typeof v === 'object' && v.kind !== 'guest' ? parseInt(v.id, 10) : 0;
+                        if (id > 0 && ids.indexOf(id) === -1) ids.push(id);
+                    });
+                });
+            });
+            var draftCategory = current;
+            fetchPlayersById(ids).then(function () {
+                if (current !== draftCategory) return;
                 var t = emptyTeams();
                 ROUND_ORDER.forEach(function (r) {
                     for (var i = 0; i < ROUNDS[r].teams; i++) {
@@ -779,8 +833,8 @@
                 dedupe();
                 renderBracket();
                 refresh();
-            }
-            mainBtn.focus();
+                mainBtn.focus();
+            });
         });
 
         draftRestart.addEventListener('click', function () {
@@ -1041,28 +1095,17 @@
             return ids;
         }
 
-        // At most 8: KBF ID matches first, then names starting with the
-        // text, then other matches
-        function suggestions(q, taken) {
-            var tiers = [[], [], []];
-            players.forEach(function (p) {
-                if (taken[p.id]) return;
-                var id = String(p.kbfId || '').toLowerCase();
-                var first = String(p.first || '').toLowerCase();
-                var last = String(p.last || '').toLowerCase();
-                var full = (first + ' ' + last).trim();
-                if (id && id.indexOf(q) === 0) tiers[0].push(p);
-                else if (first.indexOf(q) === 0 || last.indexOf(q) === 0 || full.indexOf(q) === 0) tiers[1].push(p);
-                else if (full.indexOf(q) !== -1 || (id && id.indexOf(q) !== -1)) tiers[2].push(p);
+        // The chosen players (other than this slot) whose ids are in taken
+        function chosenPlayers(taken) {
+            var list = [];
+            ROUND_ORDER.forEach(function (r) {
+                teams[r].forEach(function (team) {
+                    team.forEach(function (v) {
+                        if (v && v.kind === 'player' && taken[v.id] && list.indexOf(v) === -1) list.push(v);
+                    });
+                });
             });
-            tiers[0].sort(function (a, b) {
-                var ax = String(a.kbfId).toLowerCase() === q ? 0 : 1;
-                var bx = String(b.kbfId).toLowerCase() === q ? 0 : 1;
-                return ax - bx || fullName(a).localeCompare(fullName(b));
-            });
-            tiers[1].sort(function (a, b) { return fullName(a).localeCompare(fullName(b)); });
-            tiers[2].sort(function (a, b) { return fullName(a).localeCompare(fullName(b)); });
-            return tiers[0].concat(tiers[1], tiers[2]).slice(0, 8);
+            return list;
         }
 
         function searchBox(round, i, s, label, ui) {
@@ -1127,25 +1170,48 @@
                 options.push({ node: node, pick: pick });
             }
 
+            // Players are searched on the server (at most 8) a moment after
+            // typing stops; an older answer is ignored
+            var searchTimer = null;
+            var searchSeq = 0;
+
             function update() {
                 var raw = input.value.trim();
                 var q = raw.toLowerCase();
-                list.textContent = '';
-                options = [];
-                active = -1;
                 note.classList.add('hidden');
-                if (!q) { close(); return; }
+                clearTimeout(searchTimer);
+                var seq = ++searchSeq;
+                if (!q) {
+                    list.textContent = '';
+                    options = [];
+                    active = -1;
+                    close();
+                    return;
+                }
 
                 var taken = chosenIds(round, i, s);
                 // Typed the KBF ID of someone already in this category
-                players.forEach(function (p) {
-                    if (taken[p.id] && String(p.kbfId || '').toLowerCase() === q) {
+                chosenPlayers(taken).forEach(function (p) {
+                    if (String(p.kbfId || '').toLowerCase() === q) {
                         note.textContent = fullName(p) + ' (' + p.kbfId + ') is already in this category.';
                         note.classList.remove('hidden');
                     }
                 });
 
-                suggestions(q, taken).forEach(function (p) {
+                searchTimer = setTimeout(function () {
+                    searchPlayers(raw, taken).then(function (found) {
+                        if (seq !== searchSeq || input.value.trim() !== raw || document.activeElement !== input) return;
+                        var takenNow = chosenIds(round, i, s);
+                        showOptions(raw, found.filter(function (p) { return !takenNow[p.id]; }));
+                    });
+                }, 200);
+            }
+
+            function showOptions(raw, found) {
+                list.textContent = '';
+                options = [];
+                active = -1;
+                found.forEach(function (p) {
                     var li = el('li', 'rf-option');
                     li.appendChild(avatar(p));
                     var text = el('div', 'min-w-0 flex-1');

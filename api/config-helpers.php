@@ -289,6 +289,61 @@ function kbfJobRunFinish($pdo, $runId, $status, $summary) {
 }
 
 // ============================================
+// KBF IDS (KBFUK001, KBFUK002, ...)
+// ============================================
+
+/**
+ * The next KBF ID, e.g. "KBFUK123". Call inside the caller's transaction:
+ * the highest number used so far is kept in Settings (last_kbf_id_number),
+ * read with FOR UPDATE (so two sign-ups never get the same number) and saved
+ * as the new number. When the row is missing it is set up once from the
+ * highest KBF ID in Users and PlayerRegistrations. A number that is somehow
+ * already taken is skipped.
+ *
+ * @param PDO $pdo
+ * @return string
+ */
+function kbfNextKbfId($pdo) {
+    $stmt = $pdo->prepare("SELECT SettingValue FROM Settings WHERE SettingKey = 'last_kbf_id_number' FOR UPDATE");
+    $stmt->execute();
+    $stored = $stmt->fetchColumn();
+
+    if ($stored === false || !preg_match('/^\d+$/', (string) $stored)) {
+        // First use: the highest number in either table (one full read)
+        $lastNumber = 0;
+        foreach (['Users', 'PlayerRegistrations'] as $table) {
+            $max = $pdo->query("
+                SELECT MAX(CAST(SUBSTRING(PlayerId, 6) AS UNSIGNED)) FROM $table
+                WHERE PlayerId LIKE 'KBFUK%'
+            ")->fetchColumn();
+            $lastNumber = max($lastNumber, (int) $max);
+        }
+    } else {
+        $lastNumber = (int) $stored;
+    }
+
+    $taken = $pdo->prepare("
+        SELECT (SELECT COUNT(*) FROM Users WHERE PlayerId = ?)
+             + (SELECT COUNT(*) FROM PlayerRegistrations WHERE PlayerId = ?)
+    ");
+    for ($i = 0; $i < 1000; $i++) {
+        $lastNumber++;
+        $kbfId = 'KBFUK' . str_pad((string) $lastNumber, 3, '0', STR_PAD_LEFT);
+        $taken->execute([$kbfId, $kbfId]);
+        if ((int) $taken->fetchColumn() === 0) {
+            break;
+        }
+    }
+
+    $save = $pdo->prepare("
+        INSERT INTO Settings (SettingKey, SettingValue) VALUES ('last_kbf_id_number', ?)
+        ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)
+    ");
+    $save->execute([(string) $lastNumber]);
+    return $kbfId;
+}
+
+// ============================================
 // REMOVED PLAYERS (People: removed at their request, Users.IsRemoved = 1)
 // ============================================
 

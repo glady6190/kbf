@@ -10,7 +10,7 @@ require_once __DIR__ . '/mailer.php';
 //   GET  ?action=summary                       settings, usage in the last 24 hours, events
 //   GET  ?action=log&status=&event=&offset=    email log, newest first, 50 per page
 //   GET  ?action=csv&status=&event=            the same log as a CSV download
-//   POST {action:'saveSettings', limit, reserve, batchSize}
+//   POST {action:'saveSettings', limit, reserve, reserveNormal, batchSize}
 //   POST {action:'resend', id}                 a failed email goes back to waiting
 //
 // Order of checks: logged in (401), CSRF on writes (403), control.email (403).
@@ -95,8 +95,26 @@ function emailSettingsNow($pdo) {
     return [
         'limit' => $mail['limit'],
         'reserve' => $mail['reserve'],
+        'reserveNormal' => $mail['reserveNormal'],
+        'bulkShare' => $mail['bulkShare'],
         'batchSize' => $batch,
         'pausedUntil' => $mail['pausedUntil'],
+        'bulkPausedUntil' => $mail['bulkPausedUntil'],
+    ];
+}
+
+// Which service broadcasts use (never the password)
+function emailBroadcastService($pdo) {
+    $service = kbfMailBulkService();
+    if ($service === null) {
+        return ['separate' => false, 'name' => 'Hostinger mailbox (shared with every other email)'];
+    }
+    return [
+        'separate' => true,
+        'name' => 'Separate broadcast service (' . $service['host'] . ')',
+        'limit' => $service['limit'],
+        'perHour' => kbfMailBulkPerHour($service['limit']),
+        'sent24h' => kbfMailSentLast($pdo, 'bulk', 24),
     ];
 }
 
@@ -111,11 +129,13 @@ if ($method === 'GET') {
             $settings = emailSettingsNow($pdo);
             $sent24h = kbfMailSentLast24h($pdo);
 
+            // Waiting rows only (uses the Status index instead of the whole log)
             $stmt = $pdo->query("
                 SELECT
-                    SUM(Status = 'waiting' AND Priority IN ('important', 'normal')) AS WaitingUrgent,
-                    SUM(Status = 'waiting' AND Priority = 'bulk') AS WaitingBulk
+                    SUM(Priority IN ('important', 'normal')) AS WaitingUrgent,
+                    SUM(Priority = 'bulk') AS WaitingBulk
                 FROM EmailLog
+                WHERE Status = 'waiting'
             ");
             $counts = $stmt->fetch() ?: [];
 
@@ -138,12 +158,16 @@ if ($method === 'GET') {
                     'limit' => $settings['limit'],
                     'reserve' => $settings['reserve'],
                     'batchSize' => $settings['batchSize'],
+                    'reserveNormal' => $settings['reserveNormal'],
                 ],
                 'usage' => [
                     'sent24h' => $sent24h,
                     'limit' => $settings['limit'],
                     'reserve' => $settings['reserve'],
-                    'broadcastCap' => max(0, $settings['limit'] - $settings['reserve']),
+                    'reserveNormal' => $settings['reserveNormal'],
+                    'broadcastCap' => $settings['bulkShare'],
+                    'broadcastPerHour' => kbfMailBulkPerHour($settings['bulkShare']),
+                    'broadcastService' => emailBroadcastService($pdo),
                     'pausedUntil' => $settings['pausedUntil'],
                     'waiting' => (int) ($counts['WaitingUrgent'] ?? 0),
                     'broadcastPending' => $broadcastPending,
@@ -266,6 +290,10 @@ if ($method === 'POST') {
             $limit = readWholeNumber($data['limit'] ?? null);
             $reserve = readWholeNumber($data['reserve'] ?? null);
             $batch = readWholeNumber($data['batchSize'] ?? null);
+            // Older pages do not send it: keep the saved value
+            $reserveNormal = array_key_exists('reserveNormal', $data)
+                ? readWholeNumber($data['reserveNormal'])
+                : kbfMailSettings($pdo)['reserveNormal'];
 
             if ($limit === null || $limit < 1 || $limit > 10000) {
                 sendJSON(['success' => false, 'message' => 'Emails per 24 hours must be a whole number from 1 to 10,000.', 'field' => 'limit'], 400);
@@ -274,6 +302,10 @@ if ($method === 'POST') {
             if ($reserve === null || $reserve < 0 || $reserve > $maxReserve) {
                 sendJSON(['success' => false, 'message' => 'Keep back for important emails must be from 0 to ' . $maxReserve . ' (half the limit).', 'field' => 'reserve'], 400);
             }
+            $maxReserveNormal = $limit - $reserve;
+            if ($reserveNormal === null || $reserveNormal < 0 || $reserveNormal > $maxReserveNormal) {
+                sendJSON(['success' => false, 'message' => 'Keep back for everyday emails must be from 0 to ' . $maxReserveNormal . ' (the limit minus the important reserve).', 'field' => 'reserveNormal'], 400);
+            }
             if ($batch === null || $batch < 1 || $batch > $limit) {
                 sendJSON(['success' => false, 'message' => 'Broadcast emails per run must be from 1 to ' . $limit . ' (the limit).', 'field' => 'batchSize'], 400);
             }
@@ -281,11 +313,13 @@ if ($method === 'POST') {
             $before = [
                 'email_daily_limit' => (string) getSetting($pdo, 'email_daily_limit', ''),
                 'email_reserve_important' => (string) getSetting($pdo, 'email_reserve_important', ''),
+                'email_reserve_normal' => (string) getSetting($pdo, 'email_reserve_normal', ''),
                 'broadcast_batch_size' => (string) getSetting($pdo, 'broadcast_batch_size', ''),
             ];
             $after = [
                 'email_daily_limit' => (string) $limit,
                 'email_reserve_important' => (string) $reserve,
+                'email_reserve_normal' => (string) $reserveNormal,
                 'broadcast_batch_size' => (string) $batch,
             ];
 
@@ -313,6 +347,7 @@ if ($method === 'POST') {
                 'settings' => [
                     'limit' => $settings['limit'],
                     'reserve' => $settings['reserve'],
+                    'reserveNormal' => $settings['reserveNormal'],
                     'batchSize' => $settings['batchSize'],
                 ],
             ]);
@@ -347,7 +382,8 @@ if ($method === 'POST') {
                 sendJSON(['success' => false, 'message' => 'Password reset emails cannot be resent. Ask the person to request a new reset.'], 400);
             }
 
-            $stmt = $pdo->prepare("UPDATE EmailLog SET Status = 'waiting', Attempts = 0, LastError = NULL WHERE Id = ?");
+            $stmt = $pdo->prepare("UPDATE EmailLog SET Status = 'waiting', Attempts = 0, LastError = NULL"
+                . (kbfMailHasRetryColumn($pdo) ? ", NextAttemptDate = NULL" : "") . " WHERE Id = ?");
             $stmt->execute([$id]);
 
             // A broadcast recipient goes back on the broadcast's list as well

@@ -79,6 +79,7 @@ FROM (
     UNION ALL SELECT 'EmailBroadcasts', 'UpdatedDate', 'grading-broadcasts.sql'
     UNION ALL SELECT 'EmailBroadcasts', 'CancelledDate', 'grading-broadcasts.sql'
     UNION ALL SELECT 'Users', 'SessionVersion', 'security-hardening.sql'
+    UNION ALL SELECT 'EmailLog', 'NextAttemptDate', 'schema-fixes.sql'
 ) e
 LEFT JOIN INFORMATION_SCHEMA.COLUMNS c
        ON c.TABLE_SCHEMA = DATABASE() AND c.TABLE_NAME = e.TableName AND c.COLUMN_NAME = e.ColumnName
@@ -245,7 +246,7 @@ FROM (
     UNION ALL SELECT 'contact_email' UNION ALL SELECT 'security_email'
     UNION ALL SELECT 'session_timeout_minutes' UNION ALL SELECT 'audit_log_retention_days'
     UNION ALL SELECT 'terms_version' UNION ALL SELECT 'results_reminder_days'
-    UNION ALL SELECT 'close_to_promotion_points'
+    UNION ALL SELECT 'close_to_promotion_points' UNION ALL SELECT 'email_reserve_normal'
 ) e
 LEFT JOIN Settings s ON s.SettingKey = e.SettingKey
 WHERE s.SettingKey IS NULL;

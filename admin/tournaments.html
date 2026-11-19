@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournaments - Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -94,6 +93,7 @@
         .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -483,9 +483,12 @@
         const safe = safeImage(src);
         if (safe) {
             const img = el('img');
-            img.src = safe;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 40;
+            img.height = 52;
+            setImageVariant(img, safe, 'thumb');
             box.appendChild(img);
         } else {
             box.appendChild(icon('image', 'w-5 h-5'));

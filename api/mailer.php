@@ -10,12 +10,28 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
 //
 // Every email gets an EmailLog row, written before sending.
 //
-// Daily allowance = EmailLog rows with Status 'sent' in the last 24 hours:
+// Daily allowance = EmailLog rows with Status 'sent' in the last 24 hours,
+// split three ways:
 //   important  may use the whole email_daily_limit
 //   normal     may use the limit minus email_reserve_important
-//   bulk       may use the limit minus the reserve, and only when no
-//              important or normal emails are waiting
+//   bulk       may use the limit minus email_reserve_important minus
+//              email_reserve_normal (the "bulk share"), only when no
+//              important or normal emails are waiting, and spread through
+//              the day: at most the bulk share / 24 (rounded up) per hour
+// So everyday emails always have room, even while a broadcast runs.
 // Nothing is sent while email_paused_until is in the future.
+//
+// Optional separate service for broadcasts (bulk emails): when BULK_SMTP_HOST,
+// BULK_SMTP_PORT, BULK_SMTP_USERNAME, BULK_SMTP_PASSWORD and BULK_DAILY_LIMIT
+// are all set in .env, bulk emails go through that service with its own
+// limit (BULK_DAILY_LIMIT in 24 hours, spread at most limit / 24 per hour,
+// paused separately by email_bulk_paused_until), and the Hostinger allowance
+// counts only the other emails. Otherwise everything works as above.
+//
+// Temporary failures (connection or sign-in problems): the email waits.
+// After KBF_MAIL_TEMP_SKIP_AFTER of them it is skipped until later
+// (EmailLog.NextAttemptDate, backing off up to 6 hours), so one email can
+// never hold up the others.
 //
 // Results: 'sent', 'waiting' (the job sends it later) or 'failed'.
 //   * The mail server's own rate limit (e.g. SMTP 451, "ratelimit") keeps the
@@ -45,6 +61,9 @@ const KBF_MAIL_LOCK_NAME = 'kbf_mailer_send';  // MySQL named lock: one send at 
 const KBF_MAIL_LOCK_WAIT = 10;                 // seconds to wait for the lock
 const KBF_MAIL_DEFAULT_LIMIT = 100;
 const KBF_MAIL_DEFAULT_RESERVE = 20;
+const KBF_MAIL_DEFAULT_RESERVE_NORMAL = 10;
+const KBF_MAIL_TEMP_SKIP_AFTER = 3;            // temporary failures before an email is skipped for a while
+const KBF_MAIL_TEMP_MAX_BACKOFF = 360;         // minutes
 
 // Event keys and their names on the Email and limits page.
 // password_reset, password_reset_done and promotion are the stage 1 names,
@@ -158,71 +177,192 @@ function kbfSetSetting($pdo, $key, $value) {
         ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)
     ");
     $stmt->execute([$key, (string) $value]);
+    kbfMailSettings($pdo, true);
 }
 
-// ['limit' => int, 'reserve' => int, 'pausedUntil' => 'Y-m-d H:i:s' or null]
-function kbfMailSettings($pdo) {
+// A pause time from a setting, or null when it is not in the future
+function kbfMailPausedValue($pdo, $key) {
+    $raw = trim((string) getSetting($pdo, $key, ''));
+    if ($raw !== '') {
+        $ts = strtotime($raw);
+        if ($ts !== false && $ts > time()) {
+            return date('Y-m-d H:i:s', $ts);
+        }
+    }
+    return null;
+}
+
+// ['limit', 'reserve' (important), 'reserveNormal', 'bulkShare',
+//  'pausedUntil', 'bulkPausedUntil' ('Y-m-d H:i:s' or null)]
+// Read once and kept for 30 seconds in this request (a long job run reads
+// them again now and then); $reset reads them again at once.
+function kbfMailSettings($pdo, $reset = false) {
+    static $cached = null;
+    static $readAt = 0;
+    if ($reset) {
+        $cached = null;
+        return null;
+    }
+    if ($cached !== null && time() - $readAt < 30) {
+        return $cached;
+    }
     $limit = (int) getSetting($pdo, 'email_daily_limit', KBF_MAIL_DEFAULT_LIMIT);
     if ($limit < 1) {
         $limit = KBF_MAIL_DEFAULT_LIMIT;
     }
     $reserve = (int) getSetting($pdo, 'email_reserve_important', KBF_MAIL_DEFAULT_RESERVE);
     $reserve = max(0, min($reserve, intdiv($limit, 2)));
+    $reserveNormal = (int) getSetting($pdo, 'email_reserve_normal', KBF_MAIL_DEFAULT_RESERVE_NORMAL);
+    $reserveNormal = max(0, min($reserveNormal, $limit - $reserve));
 
-    $pausedUntil = null;
-    $raw = trim((string) getSetting($pdo, 'email_paused_until', ''));
-    if ($raw !== '') {
-        $ts = strtotime($raw);
-        if ($ts !== false && $ts > time()) {
-            $pausedUntil = date('Y-m-d H:i:s', $ts);
-        }
+    $cached = [
+        'limit' => $limit,
+        'reserve' => $reserve,
+        'reserveNormal' => $reserveNormal,
+        'bulkShare' => max(0, $limit - $reserve - $reserveNormal),
+        'pausedUntil' => kbfMailPausedValue($pdo, 'email_paused_until'),
+        'bulkPausedUntil' => kbfMailPausedValue($pdo, 'email_bulk_paused_until'),
+    ];
+    $readAt = time();
+    return $cached;
+}
+
+// The separate service for broadcasts, or null when it is not set up.
+// ['host', 'port', 'username', 'password', 'from', 'limit']
+function kbfMailBulkService() {
+    static $service = false;
+    if ($service !== false) {
+        return $service;
     }
-
-    return ['limit' => $limit, 'reserve' => $reserve, 'pausedUntil' => $pausedUntil];
+    $service = null;
+    $keys = ['BULK_SMTP_HOST', 'BULK_SMTP_PORT', 'BULK_SMTP_USERNAME', 'BULK_SMTP_PASSWORD', 'BULK_DAILY_LIMIT'];
+    $values = [];
+    foreach ($keys as $key) {
+        $values[$key] = trim((string) getenv($key));
+    }
+    $set = array_filter($values, function ($v) { return $v !== ''; });
+    if (!$set) {
+        return $service;
+    }
+    $port = (int) $values['BULK_SMTP_PORT'];
+    $limit = (int) $values['BULK_DAILY_LIMIT'];
+    if (count($set) < count($keys) || $port < 1 || $limit < 1) {
+        if (function_exists('kbfLogOnce')) {
+            kbfLogOnce('The broadcast email service in .env is incomplete (BULK_SMTP_HOST, BULK_SMTP_PORT, BULK_SMTP_USERNAME, BULK_SMTP_PASSWORD and BULK_DAILY_LIMIT are all needed); broadcasts use the Hostinger mailbox.');
+        }
+        return $service;
+    }
+    $from = trim((string) getenv('BULK_SMTP_FROM'));
+    $service = [
+        'host' => $values['BULK_SMTP_HOST'],
+        'port' => $port,
+        'username' => $values['BULK_SMTP_USERNAME'],
+        'password' => $values['BULK_SMTP_PASSWORD'],
+        'from' => filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : (getenv('SMTP_USERNAME') ?: 'noreply@kbf-uk.org'),
+        'limit' => $limit,
+    ];
+    return $service;
 }
 
+// Sent emails in the last $hours hours.
+// $scope: 'all', 'main' (what counts against the Hostinger allowance) or
+// 'bulk' (bulk emails only)
+function kbfMailSentLast($pdo, $scope = 'all', $hours = 24) {
+    $where = "Status = 'sent' AND SentDate > DATE_SUB(NOW(), INTERVAL " . (int) $hours . " HOUR)";
+    if ($scope === 'bulk') {
+        $where .= " AND Priority = 'bulk'";
+    } elseif ($scope === 'main' && kbfMailBulkService() !== null) {
+        $where .= " AND Priority <> 'bulk'";
+    }
+    return (int) $pdo->query("SELECT COUNT(*) FROM EmailLog WHERE $where")->fetchColumn();
+}
+
+// Sent emails that count against the Hostinger allowance (last 24 hours)
 function kbfMailSentLast24h($pdo) {
-    $stmt = $pdo->query("
-        SELECT COUNT(*) FROM EmailLog
-        WHERE Status = 'sent' AND SentDate > DATE_SUB(NOW(), INTERVAL 24 HOUR)
-    ");
-    return (int) $stmt->fetchColumn();
+    return kbfMailSentLast($pdo, 'main', 24);
 }
 
-// Important and normal emails still waiting
+// Important and normal emails still waiting (and not being skipped for now)
 function kbfMailUrgentWaiting($pdo) {
     $stmt = $pdo->query("
         SELECT COUNT(*) FROM EmailLog
         WHERE Status = 'waiting' AND Priority IN ('important', 'normal')
+        " . (kbfMailHasRetryColumn($pdo) ? "AND (NextAttemptDate IS NULL OR NextAttemptDate <= NOW())" : "") . "
     ");
     return (int) $stmt->fetchColumn();
 }
 
-// Most emails of this priority that may be sent in 24 hours
-function kbfMailCap($priority, $limit, $reserve) {
-    return $priority === 'important' ? $limit : max(0, $limit - $reserve);
+// Most emails of this priority that may be sent in 24 hours (Hostinger)
+function kbfMailCap($priority, $limit, $reserve, $reserveNormal = 0) {
+    if ($priority === 'important') {
+        return $limit;
+    }
+    if ($priority === 'normal') {
+        return max(0, $limit - $reserve);
+    }
+    return max(0, $limit - $reserve - $reserveNormal);
+}
+
+// Most bulk emails per hour: the day's share spread evenly (at least 1)
+function kbfMailBulkPerHour($share) {
+    return $share > 0 ? max(1, (int) ceil($share / 24)) : 0;
 }
 
 // How many emails of this priority may go out right now (0 when paused)
 function kbfMailRemaining($pdo, $priority) {
     $settings = kbfMailSettings($pdo);
+    $service = $priority === 'bulk' ? kbfMailBulkService() : null;
+
+    // Bulk through the separate service: its own limit and its own pause
+    if ($service !== null) {
+        if ($settings['bulkPausedUntil'] !== null) {
+            return 0;
+        }
+        $day = $service['limit'] - kbfMailSentLast($pdo, 'bulk', 24);
+        $hour = kbfMailBulkPerHour($service['limit']) - kbfMailSentLast($pdo, 'bulk', 1);
+        return max(0, min($day, $hour));
+    }
+
     if ($settings['pausedUntil'] !== null) {
         return 0;
     }
-    if ($priority === 'bulk' && kbfMailUrgentWaiting($pdo) > 0) {
-        return 0;
+    if ($priority === 'bulk') {
+        if (kbfMailUrgentWaiting($pdo) > 0) {
+            return 0;
+        }
+        $day = $settings['bulkShare'] - kbfMailSentLast24h($pdo);
+        $hour = kbfMailBulkPerHour($settings['bulkShare']) - kbfMailSentLast($pdo, 'bulk', 1);
+        return max(0, min($day, $hour));
     }
-    $cap = kbfMailCap($priority, $settings['limit'], $settings['reserve']);
+    $cap = kbfMailCap($priority, $settings['limit'], $settings['reserve'], $settings['reserveNormal']);
     return max(0, $cap - kbfMailSentLast24h($pdo));
 }
 
-// Pause all sending for an hour (the mail server's own rate limit)
-function kbfMailPause($pdo) {
+// Pause sending for an hour (the mail server's own rate limit). $bulk: the
+// separate broadcast service only.
+function kbfMailPause($pdo, $bulk = false) {
+    $key = $bulk ? 'email_bulk_paused_until' : 'email_paused_until';
     try {
-        kbfSetSetting($pdo, 'email_paused_until', date('Y-m-d H:i:s', time() + KBF_MAIL_PAUSE_SECONDS));
+        kbfSetSetting($pdo, $key, date('Y-m-d H:i:s', time() + KBF_MAIL_PAUSE_SECONDS));
     } catch (PDOException $e) {
-        error_log('mailer: could not set email_paused_until: ' . $e->getMessage());
+        error_log('mailer: could not set ' . $key . ': ' . $e->getMessage());
     }
+}
+
+// True when EmailLog.NextAttemptDate exists (database/schema-fixes.sql)
+function kbfMailHasRetryColumn($pdo) {
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (int) $pdo->query("
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'EmailLog' AND COLUMN_NAME = 'NextAttemptDate'
+            ")->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
 }
 
 // ============================================
@@ -230,10 +370,22 @@ function kbfMailPause($pdo) {
 // Returns ['kind' => 'sent'|'ratelimit'|'permanent'|'temporary', 'error' => string]
 // $msg: toEmail, toName, subject, html, text, attachments
 // ============================================
-function kbfMailSmtpSend(array $msg) {
+// $service: null for the Hostinger mailbox (.env SMTP_*), or the separate
+// broadcast service from kbfMailBulkService()
+function kbfMailSmtpSend(array $msg, $service = null) {
     $host = getenv('SMTP_HOST') ?: 'smtp.hostinger.com';
     $port = (int) (getenv('SMTP_PORT') ?: 465);
     $account = getenv('SMTP_USERNAME') ?: 'noreply@kbf-uk.org';
+    $login = $account;
+    $password = getenv('SMTP_PASSWORD');
+    $from = $account;
+    if (is_array($service)) {
+        $host = $service['host'];
+        $port = (int) $service['port'];
+        $login = $service['username'];
+        $password = $service['password'];
+        $from = $service['from'];
+    }
 
     $mail = new PHPMailer(true);
 
@@ -242,14 +394,14 @@ function kbfMailSmtpSend(array $msg) {
         $mail->isSMTP();
         $mail->Host       = $host;
         $mail->SMTPAuth   = true;
-        $mail->Username   = $account;
-        $mail->Password   = getenv('SMTP_PASSWORD');
+        $mail->Username   = $login;
+        $mail->Password   = $password;
         $mail->SMTPSecure = $port === 587 ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
         $mail->Port       = $port;
         $mail->CharSet    = 'UTF-8';
         $mail->Timeout    = 20;
 
-        $mail->setFrom($account, 'KBF-UK');
+        $mail->setFrom($from, 'KBF-UK');
         $mail->addReplyTo($account, 'KBF-UK');
         $mail->addAddress((string) $msg['toEmail'], (string) ($msg['toName'] ?? ''));
 
@@ -372,22 +524,35 @@ function kbfMailDeliver($pdo, $logId, $priority, array $live, $hasSecrets, array
     }
 
     try {
+        // Claim: the row must still be waiting (another run or a Resend may
+        // have sent it meanwhile); never send the same email twice
+        $stmt = $pdo->prepare("SELECT Status FROM EmailLog WHERE Id = ?");
+        $stmt->execute([$logId]);
+        $current = (string) $stmt->fetchColumn();
+        if ($current !== 'waiting') {
+            kbfMailLastOutcome('done');
+            return in_array($current, ['sent', 'failed'], true) ? $current : 'failed';
+        }
+
+        // Bulk emails go through the separate broadcast service when it is set up
+        $service = $priority === 'bulk' ? kbfMailBulkService() : null;
         $settings = kbfMailSettings($pdo);
-        if ($settings['pausedUntil'] !== null) {
-            return $waitOrFail('Sending is paused until ' . $settings['pausedUntil'] . '.', 'paused');
+        $pausedUntil = $service !== null ? $settings['bulkPausedUntil'] : $settings['pausedUntil'];
+        if ($pausedUntil !== null) {
+            return $waitOrFail('Sending is paused until ' . $pausedUntil . '.', 'paused');
         }
         if (kbfMailRemaining($pdo, $priority) < 1) {
             return $waitOrFail('The daily email allowance is used up.', 'allowance');
         }
 
-        $result = kbfMailSmtpSend($live);
+        $result = kbfMailSmtpSend($live, $service);
         kbfMailLastOutcome($result['kind']);
 
         if ($result['kind'] === 'sent') {
             return $finish('sent', null, true, true);
         }
         if ($result['kind'] === 'ratelimit') {
-            kbfMailPause($pdo);
+            kbfMailPause($pdo, $service !== null);
             if ($hasSecrets) {
                 return $finish('failed', 'The mail server refused because of its rate limit: ' . $result['error'] . ' Reset links are never stored, so a new reset must be requested.', false, true);
             }
@@ -397,7 +562,22 @@ function kbfMailDeliver($pdo, $logId, $priority, array $live, $hasSecrets, array
             if ($hasSecrets) {
                 return $finish('failed', $result['error'], false, true);
             }
-            return $finish('waiting', $result['error'], false, true);
+            $status = $finish('waiting', $result['error'], false, true);
+            // After KBF_MAIL_TEMP_SKIP_AFTER temporary failures this email is
+            // skipped for a while (15, 30, 60 ... up to 360 minutes), so the
+            // others carry on
+            if (kbfMailHasRetryColumn($pdo)) {
+                $stmt = $pdo->prepare("
+                    UPDATE EmailLog
+                    SET NextAttemptDate = DATE_ADD(NOW(), INTERVAL LEAST(?, 15 * POW(2, GREATEST(0, Attempts - ?))) MINUTE)
+                    WHERE Id = ? AND Status = 'waiting' AND Attempts >= ?
+                ");
+                $stmt->execute([KBF_MAIL_TEMP_MAX_BACKOFF, KBF_MAIL_TEMP_SKIP_AFTER, $logId, KBF_MAIL_TEMP_SKIP_AFTER]);
+                if ($stmt->rowCount() > 0) {
+                    kbfMailLastOutcome('skipped');
+                }
+            }
+            return $status;
         }
 
         // Real failure: failed after KBF_MAIL_MAX_ATTEMPTS attempts

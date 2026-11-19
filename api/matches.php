@@ -13,7 +13,10 @@ require_once __DIR__ . '/notify.php';
 //   GET ?action=form&tournamentId=     everything the results form needs:
 //                                      tournament, whether results can be
 //                                      entered, categories and their results,
-//                                      players to choose from, round points
+//                                      players already in its results, round points
+//   GET ?action=formPlayers&tournamentId=&q=&exclude=  (or &ids=)
+//                                      players to choose from, searched as
+//                                      the organiser types (at most 8)
 //   POST {tournamentId, categoryName, matches}
 //                                      submit one category (approved straight
 //                                      away with tournaments.approve)
@@ -308,6 +311,69 @@ function resultsPlacing($round, $winnerTeam, $slotIndex) {
     return $round . '|' . $outcome;
 }
 
+// Players who can be chosen on the results form (active, not removed, with
+// a KBF ID), in the form's shape. $opts:
+//   ids      exactly these players (at most 'max', 16 by default)
+//   q        search text: KBF ID matches first (exact first), then names
+//            starting with it, then other matches; at most 8
+//   exclude  user ids left out of a search (already chosen)
+function resultsSelectablePlayers(PDO $pdo, array $opts) {
+    $sql = "
+        SELECT u.UserId, u.PlayerId, u.FirstName, u.LastName, u.Location, u.ProfilePhoto,
+               c.ShortName AS Grade
+        FROM Users u
+        LEFT JOIN Categories c ON c.CategoryId = u.CategoryId
+        WHERE u.IsActive = 1 AND u.IsRemoved = 0
+          AND u.PlayerId IS NOT NULL AND u.PlayerId <> ''";
+    $params = [];
+    if (isset($opts['ids'])) {
+        $ids = array_slice(array_values(array_unique(array_map('intval', $opts['ids']))), 0, max(1, min(1000, (int) ($opts['max'] ?? 16))));
+        if (!$ids) {
+            return [];
+        }
+        $sql .= " AND u.UserId IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
+            ORDER BY u.FirstName, u.LastName";
+        $params = $ids;
+        $limit = null;
+    } else {
+        $q = (string) ($opts['q'] ?? '');
+        $esc = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q);
+        $prefix = $esc . '%';
+        $contains = '%' . $esc . '%';
+        $exclude = array_slice(array_values(array_unique(array_map('intval', $opts['exclude'] ?? []))), 0, 16);
+        $sql .= " AND (u.PlayerId LIKE ? OR CONCAT(u.FirstName, ' ', u.LastName) LIKE ?)";
+        array_push($params, $contains, $contains);
+        if ($exclude) {
+            $sql .= " AND u.UserId NOT IN (" . implode(',', array_fill(0, count($exclude), '?')) . ")";
+            $params = array_merge($params, $exclude);
+        }
+        $sql .= "
+            ORDER BY CASE
+                WHEN u.PlayerId = ? THEN 0
+                WHEN u.PlayerId LIKE ? THEN 1
+                WHEN u.FirstName LIKE ? OR u.LastName LIKE ? OR CONCAT(u.FirstName, ' ', u.LastName) LIKE ? THEN 2
+                ELSE 3 END,
+                u.FirstName, u.LastName, u.UserId
+            LIMIT 8";
+        array_push($params, $q, $prefix, $prefix, $prefix, $prefix);
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $players = [];
+    foreach ($stmt->fetchAll() as $u) {
+        $players[] = [
+            'id' => (int) $u['UserId'],
+            'kbfId' => (string) $u['PlayerId'],
+            'first' => (string) $u['FirstName'],
+            'last' => (string) $u['LastName'],
+            'city' => (string) $u['Location'],
+            'grade' => (string) $u['Grade'],
+            'photo' => $u['ProfilePhoto'],
+        ];
+    }
+    return $players;
+}
+
 // Each registered player's entry in these (old) matches:
 // [userId => ['placing' => ..., 'matchId' => n]]
 function resultsOldEntries(PDO $pdo, array $matchIds) {
@@ -565,29 +631,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ];
             }
 
-            // Players to choose from: active, not removed, with a KBF ID
+            // Players to choose from are searched as the organiser types
+            // (?action=formPlayers, PERF-06). Here only the players already
+            // in this tournament's results who can still be chosen.
             $players = [];
-            if ($block === null) {
-                $stmt = $pdo->query("
-                    SELECT u.UserId, u.PlayerId, u.FirstName, u.LastName, u.Location, u.ProfilePhoto,
-                           c.ShortName AS Grade
-                    FROM Users u
-                    LEFT JOIN Categories c ON c.CategoryId = u.CategoryId
-                    WHERE u.IsActive = 1 AND u.IsRemoved = 0
-                      AND u.PlayerId IS NOT NULL AND u.PlayerId <> ''
-                    ORDER BY u.FirstName, u.LastName
-                ");
-                foreach ($stmt->fetchAll() as $u) {
-                    $players[] = [
-                        'id' => (int) $u['UserId'],
-                        'kbfId' => (string) $u['PlayerId'],
-                        'first' => (string) $u['FirstName'],
-                        'last' => (string) $u['LastName'],
-                        'city' => (string) $u['Location'],
-                        'grade' => (string) $u['Grade'],
-                        'photo' => $u['ProfilePhoto'],
-                    ];
-                }
+            if ($block === null && $userIds) {
+                $players = resultsSelectablePlayers($pdo, ['ids' => array_keys($userIds), 'max' => 1000]);
             }
 
             $roundPoints = getRoundPointsMap($pdo);
@@ -618,7 +667,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ],
                 'categories' => $categoryList,
                 'players' => $players,
+                'playerSearch' => true,
             ]);
+        }
+
+        // ---------- Players for the results form ----------
+        //   ?action=formPlayers&tournamentId=&q=text&exclude=1,2,3
+        //        up to 8 players matching the text (KBF ID first, then
+        //        names starting with it, then other matches), leaving out
+        //        the players already chosen
+        //   ?action=formPlayers&tournamentId=&ids=1,2,3
+        //        those players, if they can still be chosen (a draft)
+        if (($_GET['action'] ?? '') === 'formPlayers') {
+            if (!isLoggedIn()) {
+                sendJSON(['success' => false, 'message' => 'Your session has expired. Please log in again.'], 401);
+            }
+            $tournamentId = filter_var($_GET['tournamentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if (!$tournamentId) {
+                sendJSON(['success' => false, 'message' => 'Invalid tournament ID'], 400);
+            }
+            $t = resultsLoadTournament($pdo, $tournamentId);
+            if (!$t) {
+                sendJSON(['success' => false, 'message' => 'Tournament not found'], 404);
+            }
+            $error = resultsAccessError($t);
+            if ($error !== null) {
+                sendJSON(['success' => false, 'message' => $error[0]], $error[1]);
+            }
+            if (resultsEntryBlock($t) !== null) {
+                sendJSON(['success' => true, 'players' => []]);
+            }
+            $idList = function ($raw) {
+                $ids = [];
+                foreach (explode(',', is_string($raw) ? $raw : '') as $part) {
+                    $id = filter_var(trim($part), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                    if ($id) {
+                        $ids[$id] = true;
+                    }
+                }
+                return array_slice(array_keys($ids), 0, 16);
+            };
+            if (isset($_GET['ids'])) {
+                $ids = $idList($_GET['ids']);
+                sendJSON(['success' => true, 'players' => $ids ? resultsSelectablePlayers($pdo, ['ids' => $ids]) : []]);
+            }
+            $q = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
+            $q = function_exists('mb_substr') ? mb_substr($q, 0, 100, 'UTF-8') : substr($q, 0, 100);
+            if ($q === '') {
+                sendJSON(['success' => true, 'players' => []]);
+            }
+            sendJSON(['success' => true, 'players' => resultsSelectablePlayers($pdo, [
+                'q' => $q,
+                'exclude' => $idList($_GET['exclude'] ?? ''),
+            ])]);
         }
 
         // ---------- Career-only notes for the chosen players ----------
@@ -750,13 +851,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         list($registeredPlayerIds) = resultsInsertMatches($pdo, $tournamentId, $rows, $categoryName, $autoApprove, $validPlayers);
 
-        // Recalculate stats only if auto-approved
-        if ($autoApprove) {
-            require_once __DIR__ . '/player-stats-calculator.php';
-            foreach (array_unique($registeredPlayerIds) as $playerId) {
-                calculatePlayerStats($pdo, $playerId);
-            }
-        }
+        // Stats (auto-approved only) are recalculated after the commit
 
         // Approval queue or auto-approve
         $queuedForApproval = false;
@@ -771,6 +866,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
+
+        // Stats for the players awarded points, after the commit
+        if ($autoApprove && $registeredPlayerIds) {
+            require_once __DIR__ . '/player-stats-calculator.php';
+            kbfRecalculatePlayerStats($pdo, $registeredPlayerIds);
+        }
 
         auditLog('results_submitted', 'tournament', $tournamentId,
             'Results for: ' . $tournament['Name'] . '; category: ' . $categoryName . '; matches: ' . count($rows)
@@ -904,15 +1005,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $stmt = $pdo->prepare("DELETE FROM Matches WHERE MatchId = ?");
         $stmt->execute([$matchId]);
 
-        // Recalculate stats for the players whose points we just reversed, so a
-        // deletion that drops someone below the promotion threshold clears their
-        // eligibility flag immediately rather than waiting for the nightly job.
-        require_once __DIR__ . '/player-stats-calculator.php';
-        foreach ($reversedPlayers as $playerId) {
-            calculatePlayerStats($pdo, $playerId);
-        }
-
         $pdo->commit();
+
+        // Recalculate stats for the players whose points we just reversed
+        // (after the commit), so a deletion that drops someone below the
+        // promotion threshold clears their eligibility flag immediately
+        // rather than waiting for the nightly job.
+        if ($reversedPlayers) {
+            require_once __DIR__ . '/player-stats-calculator.php';
+            kbfRecalculatePlayerStats($pdo, $reversedPlayers);
+        }
 
         auditLog('result_deleted', 'tournament', $match['TournamentId'], 'Match ' . $matchId . ' deleted');
         kbfNotifyFlush();
@@ -1013,17 +1115,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         $stmt = $pdo->prepare("DELETE FROM Matches WHERE MatchId IN ($placeholders)");
         $stmt->execute($matchIds);
 
-        if ($approved) {
-            // Recalculate stats for every player whose points changed
-            require_once __DIR__ . '/player-stats-calculator.php';
-            foreach (array_unique(array_merge($awardedIds, $reversedIds)) as $playerId) {
-                calculatePlayerStats($pdo, $playerId);
-            }
-        } else {
+        if (!$approved) {
             resultsQueueForApproval($pdo, $tournamentId);
         }
 
         $pdo->commit();
+
+        // Stats for every player whose points changed, after the commit
+        if ($approved && ($awardedIds || $reversedIds)) {
+            require_once __DIR__ . '/player-stats-calculator.php';
+            kbfRecalculatePlayerStats($pdo, array_merge($awardedIds, $reversedIds));
+        }
 
         auditLog('results_edited', 'tournament', $tournamentId,
             'Results replaced for: ' . $tournament['Name'] . '; category: ' . ($categoryName === '' ? '(none)' : $categoryName)

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Post - Organiser</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -27,6 +26,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -180,7 +180,7 @@
             
             // Show existing image if exists
             if (post.FeaturedImage) {
-                document.getElementById('previewImg').src = post.FeaturedImage;
+                setImageVariant(document.getElementById('previewImg'), post.FeaturedImage, 'display');
                 document.getElementById('imagePreview').classList.remove('hidden');
             }
             

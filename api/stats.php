@@ -7,8 +7,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // Stats are public, non-sensitive data — override the blanket no-cache header
-// set by security-init.php so browsers and proxies can cache for 60 seconds.
-header('Cache-Control: public, max-age=60');
+// set by security-init.php so browsers and proxies can cache for 60 seconds
+// (visitors who are not signed in; see kbfPublicCache in security-init.php).
+kbfPublicCache(60);
 
 // ============================================
 // FILE-BASED CACHE (60-second TTL)

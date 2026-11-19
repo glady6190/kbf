@@ -43,8 +43,33 @@ RewriteEngine On
 # Block whole folders: Composer libraries, local tool settings, database
 # scripts, runtime storage and scheduled jobs (each also has its own rules
 # where possible)
-RewriteRule ^(vendor|\.claude|database|storage|jobs)(/|$) - [F,L]
+RewriteRule ^(vendor|\.claude|database|storage|jobs|tools|docs)(/|$) - [F,L]
 RewriteRule (^|/)\.env - [F,L]
+# The stylesheet build settings (only used to build assets/css/site.css)
+RewriteRule ^tailwind\.config\.js$ - [F,L]
+
+# ============================================
+# COMPRESSION AND BROWSER CACHING (static files)
+# Works on Apache (mod_deflate, mod_headers) and LiteSpeed (which compresses
+# by itself and honours the same Header lines). PHP responses set their own
+# Cache-Control and are not touched here.
+#   - CSS and JS keep the same file names after a change: short cache
+#     (1 hour), so a rebuilt stylesheet reaches visitors the same day
+#   - Images and fonts in assets/: 7 days
+#   - Uploaded files (uploads/.htaccess) get new random names whenever they
+#     change: cached for a year
+# ============================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml font/ttf application/font-ttf
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+    <FilesMatch "\.(jpe?g|png|webp|gif|svg|ico|woff2?|ttf)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
 
 # ============================================
 # CORS HEADERS FOR API

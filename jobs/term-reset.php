@@ -60,7 +60,11 @@ try {
     // 1. SETTINGS AND PLAN (shared rules)
     // ============================================
     $settings = kbfSeasonSettings($pdo);
-    $plan = kbfSeasonPlan($pdo, $settings, null, true);
+    // Status first; the player list is only built when a reset is due
+    $plan = kbfSeasonPlan($pdo, $settings, null, false);
+    if ($plan['status'] === 'due') {
+        $plan = kbfSeasonPlan($pdo, $settings, null, true);
+    }
     $currentTermKey = $plan['season']['key'];
     $floorTrigger = (int) $settings['trigger'];
     $floorValue = (int) $settings['value'];

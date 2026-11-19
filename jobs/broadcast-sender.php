@@ -20,7 +20,16 @@
  * completed only when every recipient is sent or truly failed (opted-out
  * members are skipped, as before).
  *
- * Each real run writes a JobRuns row. Dry runs write nothing.
+ * A real run writes a JobRuns row only when it did something (sent, failed,
+ * started or finished a broadcast, cleaned up) or failed, plus at most one
+ * "nothing to do" row per hour. Dry runs write nothing.
+ *
+ * One run at a time: a database lock (GET_LOCK) is held for the whole run
+ * and released by the database if the process dies. Each run stops starting
+ * new sends after 50 seconds. The daily allowance is split three ways and
+ * bulk is spread through the day (api/mailer.php); broadcasts may use a
+ * separate service (BULK_SMTP_* in .env). An email with repeated temporary
+ * failures is skipped for a while so the others carry on.
  *
  * Usage (CLI only):
  *     php jobs/broadcast-sender.php            # send
@@ -37,53 +46,75 @@ if (PHP_SAPI !== 'cli') {
 
 $dryRun = in_array('--dry-run', $argv, true);
 
-// ============================================
-// SINGLE-RUN LOCK (real runs only)
-// Prevents two overlapping cron runs. A stale lock (older than 30 minutes,
-// from a crashed run) is reclaimed. Released on every exit path.
-// ============================================
 date_default_timezone_set('Europe/London'); // UK time, as api/config.php (loaded below)
-$lockFile = sys_get_temp_dir() . '/kbf-broadcast-sender.lock';
-$LOCK_STALE_SECONDS = 30 * 60; // 30 minutes
-
-if (!$dryRun) {
-    $fh = @fopen($lockFile, 'x');
-
-    if ($fh === false) {
-        $lockAge = time() - @filemtime($lockFile);
-        if ($lockAge < $LOCK_STALE_SECONDS) {
-            echo "another broadcast-sender run is in progress, exiting\n";
-            exit(0);
-        }
-        error_log("broadcast-sender: reclaiming stale lock (age {$lockAge}s)");
-        echo "WARNING: stale lock found (age {$lockAge}s) - reclaiming and continuing\n";
-        @unlink($lockFile);
-        $fh = @fopen($lockFile, 'x');
-        if ($fh === false) {
-            echo "another broadcast-sender run is in progress, exiting\n";
-            exit(0);
-        }
-    }
-
-    fwrite($fh, 'pid=' . getmypid() . ' started=' . date('Y-m-d H:i:s') . "\n");
-    fclose($fh);
-
-    register_shutdown_function(function () use ($lockFile) {
-        if (file_exists($lockFile)) {
-            @unlink($lockFile);
-        }
-    });
-}
 
 require_once dirname(__DIR__) . '/api/config.php';
 require_once dirname(__DIR__) . '/api/config-helpers.php';
 require_once dirname(__DIR__) . '/api/auth/email-config.php';
 require_once dirname(__DIR__) . '/api/broadcast-helpers.php';
 
+// ============================================
+// SINGLE-RUN LOCK (real runs only)
+// A database lock held on this run's connection for the whole run. It can
+// never expire while the run is still working, and the database releases it
+// by itself if the process dies (the connection closes), so two runs can
+// never send the same emails.
+// ============================================
+const KBF_SENDER_LOCK = 'kbf_email_sender_run';
+const KBF_SENDER_TIME_BUDGET = 50; // seconds: stop starting new sends after this (cron runs every minute)
+$runStarted = time();
+
+if (!$dryRun) {
+    $gotLock = false;
+    try {
+        $gotLock = (int) $pdo->query("SELECT GET_LOCK('" . KBF_SENDER_LOCK . "', 0)")->fetchColumn() === 1;
+    } catch (PDOException $e) {
+        error_log('broadcast-sender: GET_LOCK failed: ' . $e->getMessage());
+    }
+    if (!$gotLock) {
+        echo "another broadcast-sender run is in progress, exiting\n";
+        exit(0);
+    }
+    register_shutdown_function(function () use ($pdo) {
+        try {
+            $pdo->query("SELECT RELEASE_LOCK('" . KBF_SENDER_LOCK . "')");
+        } catch (\Throwable $e) {
+            // the connection closing releases it anyway
+        }
+    });
+}
+
+// Time left in this run's budget
+function kbfSenderTimeUp() {
+    global $runStarted;
+    return time() - $runStarted >= KBF_SENDER_TIME_BUDGET;
+}
+
+// JobRuns: a row only when the run did something (or failed), plus at most
+// one "nothing to do" row per hour, so the Activity log is not flooded
+function kbfSenderRecordRun($pdo, $startedAt, $status, $summary, $didSomething) {
+    try {
+        if (!$didSomething && $status !== 'error') {
+            $recent = (int) $pdo->query("
+                SELECT COUNT(*) FROM JobRuns
+                WHERE JobName = 'broadcast-sender' AND StartedDate > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+            ")->fetchColumn();
+            if ($recent > 0) {
+                return;
+            }
+        }
+        $stmt = $pdo->prepare("
+            INSERT INTO JobRuns (JobName, StartedDate, FinishedDate, Status, Summary)
+            VALUES ('broadcast-sender', ?, NOW(), ?, ?)
+        ");
+        $stmt->execute([date('Y-m-d H:i:s', $startedAt), $status === 'error' ? 'error' : 'ok', substr((string) $summary, 0, 500)]);
+    } catch (PDOException $e) {
+        error_log('broadcast-sender: JobRuns write failed: ' . $e->getMessage());
+    }
+}
+
 echo "Starting email sender" . ($dryRun ? " [DRY RUN]" : "") . "...\n";
 echo "Time: " . date('Y-m-d H:i:s') . "\n\n";
-
-$runId = $dryRun ? 0 : kbfJobRunStart($pdo, 'broadcast-sender');
 
 // Summary counters
 $sentThisRun   = 0;
@@ -92,8 +123,10 @@ $notes         = [];
 
 // Stop sending for this run after a 'waiting' result, unless the email only
 // had a real failure (then the next email may still go out)
+// An email skipped for a while after repeated temporary failures never stops
+// the others.
 function kbfJobShouldStop($status) {
-    return $status === 'waiting' && kbfMailLastOutcome() !== 'permanent';
+    return $status === 'waiting' && !in_array(kbfMailLastOutcome(), ['permanent', 'skipped'], true);
 }
 
 try {
@@ -109,7 +142,11 @@ try {
     $mailSettings = kbfMailSettings($pdo);
     $sent24h = kbfMailSentLast24h($pdo);
 
-    echo "Daily limit: {$mailSettings['limit']}  |  Reserve: {$mailSettings['reserve']}  |  Sent in last 24h: {$sent24h}\n";
+    $bulkService = kbfMailBulkService();
+    echo "Daily limit: {$mailSettings['limit']}  |  Reserve (important): {$mailSettings['reserve']}  |  Reserve (normal): {$mailSettings['reserveNormal']}  |  Sent in last 24h: {$sent24h}\n";
+    echo "Broadcasts: " . ($bulkService !== null
+        ? "separate service {$bulkService['host']}, {$bulkService['limit']} per 24 hours"
+        : "Hostinger mailbox, bulk share {$mailSettings['bulkShare']} per 24 hours") . "\n";
     echo "Broadcast batch size: {$batchSize}  |  Base URL: {$baseUrl}\n";
     if ($mailSettings['pausedUntil'] !== null) {
         echo "Sending is PAUSED until {$mailSettings['pausedUntil']}\n";
@@ -149,10 +186,12 @@ try {
     // 3. WAITING IMPORTANT AND NORMAL EMAILS (important first, oldest first)
     // ============================================
     // SELECT * so AttachmentsJson comes along when the column exists
+    // Emails being skipped for a while after temporary failures are left out
     $stmt = $pdo->query("
         SELECT *
         FROM EmailLog
         WHERE Status = 'waiting' AND Priority IN ('important', 'normal')
+        " . (kbfMailHasRetryColumn($pdo) ? "AND (NextAttemptDate IS NULL OR NextAttemptDate <= NOW())" : "") . "
         ORDER BY (Priority = 'important') DESC, Id ASC
         LIMIT 500
     ");
@@ -162,7 +201,7 @@ try {
     $stopSending = $mailSettings['pausedUntil'] !== null;
 
     foreach ($waitingRows as $row) {
-        if ($stopSending) {
+        if ($stopSending || (!$dryRun && kbfSenderTimeUp())) {
             break;
         }
         if ($dryRun) {
@@ -283,7 +322,9 @@ try {
         }
 
         // How many broadcast emails may go out now
-        $allowance = $stopSending ? 0 : ($dryRun ? $batchSize : kbfMailRemaining($pdo, 'bulk'));
+        // (With the separate broadcast service, a stop on the Hostinger side
+        // does not hold broadcasts back.)
+        $allowance = ($stopSending && $bulkService === null) ? 0 : ($dryRun ? $batchSize : kbfMailRemaining($pdo, 'bulk'));
         $take = max(0, min($batchSize, $allowance));
         echo "Broadcast emails allowed this run: {$take}\n\n";
 
@@ -299,6 +340,12 @@ try {
                 WHERE eq.BroadcastId = ?
                   AND eq.Status = 'pending'
                   AND u.EmailOptOut = 0
+                  " . (kbfMailHasRetryColumn($pdo) ? "
+                  AND NOT EXISTS (
+                      SELECT 1 FROM EmailLog el
+                      WHERE el.BroadcastId = eq.BroadcastId AND el.RelatedType = 'broadcast_recipient'
+                        AND el.RelatedId = eq.QueueId AND el.Status = 'waiting'
+                        AND el.NextAttemptDate > NOW())" : "") . "
                 ORDER BY eq.QueueId ASC
                 LIMIT {$take}
             ");
@@ -333,6 +380,10 @@ try {
                     continue;
                 }
 
+                if (kbfSenderTimeUp()) {
+                    echo "  Time budget for this run used - the rest go out on the next run\n";
+                    break;
+                }
                 $statusStmt->execute([$broadcastId]);
                 if (!in_array((string) $statusStmt->fetchColumn(), ['queued', 'sending'], true)) {
                     echo "  Broadcast #{$broadcastId} was paused or cancelled - stopping\n";
@@ -471,7 +522,7 @@ try {
         $summary .= ' (' . implode('; ', $notes) . ')';
     }
 
-    kbfJobRunFinish($pdo, $runId, 'ok', $summary);
+    kbfSenderRecordRun($pdo, $runStarted, 'ok', $summary, $sentThisRun > 0 || $failedThisRun > 0 || !empty($notes));
 
     echo "\n=== Run Complete ===\n";
     echo $summary . "\n";
@@ -479,7 +530,9 @@ try {
 
 } catch (PDOException $e) {
     error_log('Broadcast sender error: ' . $e->getMessage());
-    kbfJobRunFinish($pdo, $runId, 'error', 'Error after sending ' . $sentThisRun . ' email(s): ' . $e->getMessage());
+    if (!$dryRun) {
+        kbfSenderRecordRun($pdo, $runStarted, 'error', 'Error after sending ' . $sentThisRun . ' email(s): ' . $e->getMessage(), true);
+    }
     echo "ERROR: " . $e->getMessage() . "\n";
     exit(1);
 }

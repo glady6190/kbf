@@ -87,8 +87,12 @@ try {
         sendJSON(['success' => false, 'message' => 'Failed to process image'], 500);
     }
     
+    // Display version and thumbnail (a problem never stops the upload)
+    require_once __DIR__ . '/image-helpers.php';
+    kbfMakeImageVariants($uploadPath);
+
     $photoPath = '/uploads/profiles/' . $filename;
-    
+
     sendJSON([
         'success' => true,
         'message' => 'Photo uploaded successfully',

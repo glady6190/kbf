@@ -28,6 +28,9 @@
 --    the column default becomes 'draft'
 -- 5. Indexes the current queries need (only when missing)
 -- 6. Exact duplicate indexes removed
+-- 7. Email sending (audit batch 4): EmailLog.NextAttemptDate (an email
+--    with repeated temporary failures is skipped until then) and the
+--    email_reserve_normal setting (10)
 -- ============================================
 
 
@@ -804,3 +807,19 @@ SET @kbf_sql := IF(
 PREPARE kbf_stmt FROM @kbf_sql;
 EXECUTE kbf_stmt;
 DEALLOCATE PREPARE kbf_stmt;
+
+
+-- --------------------------------------------
+-- 7. EMAIL SENDING
+-- --------------------------------------------
+
+-- EmailLog.NextAttemptDate: after repeated temporary failures an email is
+-- skipped until this time, so it never holds up the others (empty = send
+-- whenever the allowance allows)
+ALTER TABLE EmailLog
+    ADD COLUMN IF NOT EXISTS NextAttemptDate DATETIME NULL DEFAULT NULL;
+
+-- The everyday-email reserve (Email and limits page): kept back from
+-- broadcasts so everyday emails always have room
+INSERT IGNORE INTO Settings (SettingKey, SettingValue, Description) VALUES
+    ('email_reserve_normal', '10', 'Part of the daily limit kept back from broadcasts for everyday emails');

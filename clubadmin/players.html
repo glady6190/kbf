@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Players - Organiser</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -67,6 +66,7 @@
             .select-all-checkbox { width: 20px; height: 20px; }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -127,6 +127,10 @@
                         </thead>
                         <tbody id="playersTableBody" class="divide-y divide-gray-700"></tbody>
                     </table>
+                </div>
+                <div id="playersMore" class="hidden mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <p id="playersCount" class="text-gray-400 font-bold uppercase text-xs"></p>
+                    <button type="button" id="playersMoreBtn" class="px-4 py-2 bg-slate-800 border-2 border-gray-700 text-white font-black uppercase text-xs hover:border-gray-600 transition">Load more</button>
                 </div>
             </div>
         </div>
@@ -212,28 +216,47 @@
     // ============================================
     // DATA LOADING FUNCTIONS
     // ============================================
-    async function loadPlayers() {
+    // One page at a time (api/users.php limit/offset); "Load more" adds the
+    // next page. Select all and the contacts download use the loaded players.
+    const PLAYERS_PAGE = 50;
+    let playersTotal = 0;
+    let playersSeq = 0;
+
+    async function loadPlayers(more) {
+        const append = more === true;
         const category = document.getElementById('categoryFilter').value;
-        const search = document.getElementById('searchInput').value;
+        const search = document.getElementById('searchInput').value.trim();
+        const seq = append ? playersSeq : ++playersSeq;
 
         try {
             // No club or role filter: show the player list the API returns
             const params = new URLSearchParams();
             if (category) params.set('category', category);
             if (search) params.set('search', search);
-            const query = params.toString();
-            const url = '/api/users.php' + (query ? '?' + query : '');
+            params.set('sort', 'name');
+            params.set('limit', String(PLAYERS_PAGE));
+            params.set('offset', String(append ? allPlayers.length : 0));
+            const url = '/api/users.php?' + params.toString();
 
             const response = await authenticatedFetch(url);
             const data = await response.json();
+            if (seq !== playersSeq) return;
 
             if (data.success) {
-                allPlayers = data.users || [];
+                allPlayers = append ? allPlayers.concat(data.users || []) : (data.users || []);
+                playersTotal = Number(data.total) || allPlayers.length;
                 displayPlayers();
+                const moreBox = document.getElementById('playersMore');
+                moreBox.classList.toggle('hidden', allPlayers.length === 0);
+                document.getElementById('playersCount').textContent =
+                    'Showing ' + allPlayers.length.toLocaleString('en-GB') + ' of ' + playersTotal.toLocaleString('en-GB');
+                document.getElementById('playersMoreBtn').classList.toggle('hidden', !data.hasMore);
             }
         } catch (error) {
             console.error('Error loading players:', error);
-            document.getElementById('loadingMessage').innerHTML = '<p class="text-red-400 font-bold uppercase text-sm">Error loading players</p>';
+            if (!append) {
+                document.getElementById('loadingMessage').innerHTML = '<p class="text-red-400 font-bold uppercase text-sm">Error loading players</p>';
+            }
         }
     }
 
@@ -262,7 +285,7 @@
                 </td>` : ''}
                 <td class="px-3 sm:px-6 py-3 sm:py-4">
                     ${player.ProfilePhoto ?
-                        `<img src="${escapeHtml(safeUrl(player.ProfilePhoto))}" alt="${escapeHtml(player.FirstName)}" class="user-photo border-2 border-gray-700">` :
+                        `<img${imgVariantAttrs(player.ProfilePhoto, 'thumb')} alt="${escapeHtml(player.FirstName)}" width="48" height="48" loading="lazy" decoding="async" class="user-photo border-2 border-gray-700">` :
                         `<div class="user-photo bg-slate-800 border-2 border-gray-700 flex items-center justify-center">
                             <span class="text-gray-500 font-black text-xs">${escapeHtml((player.FirstName || '').charAt(0))}${escapeHtml((player.LastName || '').charAt(0))}</span>
                         </div>`
@@ -418,8 +441,13 @@
     // ============================================
     // EVENT LISTENERS
     // ============================================
-    document.getElementById('searchInput').addEventListener('input', loadPlayers);
-    document.getElementById('categoryFilter').addEventListener('change', loadPlayers);
+    let playersSearchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(playersSearchTimer);
+        playersSearchTimer = setTimeout(() => loadPlayers(false), 250);
+    });
+    document.getElementById('categoryFilter').addEventListener('change', () => loadPlayers(false));
+    document.getElementById('playersMoreBtn').addEventListener('click', () => loadPlayers(true));
 </script>
 <script src="/js/session-manager.js"></script>
 </body>

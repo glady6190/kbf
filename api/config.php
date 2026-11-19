@@ -126,18 +126,62 @@ if (PHP_SAPI !== 'cli') {
 // A signed-in session ends this long after sign-in, however busy it is
 define('SESSION_ABSOLUTE_LIFETIME', 12 * 3600);
 
+// Sessions on read-only requests (PERF-07). A PHP file session is locked for
+// the whole request, so parallel calls from one browser would run one after
+// another. Sign-in endpoints (api/auth/) keep the full behaviour: they write
+// to the session on GET (security token, clean-up of sign-in states).
+//  - GET/HEAD with no session cookie: no session is started; $_SESSION is an
+//    empty array, so every check sees a signed-out visitor.
+//  - GET/HEAD with a session cookie: the session starts (inactivity timeout,
+//    12-hour limit, impersonation and account checks all run as before) and
+//    is closed at the end of this file, so the lock is released at once.
+// Anything that must write later calls kbfSessionWritable() first.
+function kbfIsSessionKeptOpen() {
+    if (PHP_SAPI === 'cli' || !in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD'], true)) {
+        return true;
+    }
+    if (defined('KBF_SESSION_WRITE')) {
+        return true;
+    }
+    $script = isset($_SERVER['SCRIPT_FILENAME']) ? realpath($_SERVER['SCRIPT_FILENAME']) : false;
+    return $script !== false && basename(dirname($script)) === 'auth'
+        && realpath(dirname($script, 2)) === realpath(__DIR__);
+}
+
+// (Re)open the session for writing when it is not active (read-only request
+// whose session was closed early or never started). The stored session is
+// read again, so changes made meanwhile by another request are kept.
+// Returns true when the session is active afterwards.
+function kbfSessionWritable() {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return true;
+    }
+    if (PHP_SAPI === 'cli' || headers_sent()) {
+        return false;
+    }
+    @session_start();
+    return session_status() === PHP_SESSION_ACTIVE;
+}
+
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
     ini_set('session.use_strict_mode', 1);
     ini_set('session.cookie_samesite', 'Strict');
-    
+
     // Enable secure flag if HTTPS
     if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
         ini_set('session.cookie_secure', 1);
     }
-    
+}
+
+define('KBF_SESSION_KEPT_OPEN', kbfIsSessionKeptOpen());
+
+if (session_status() === PHP_SESSION_NONE && !KBF_SESSION_KEPT_OPEN && empty($_COOKIE[session_name()])) {
+    // Anonymous read: treated as signed out, no session file is created
+    $_SESSION = [];
+} elseif (session_status() === PHP_SESSION_NONE) {
     session_start();
     
     // Session timeout check
@@ -202,6 +246,9 @@ if (PHP_SAPI !== 'cli') {
         error_log(($isType ? 'Invalid input: ' : 'Uncaught error: ') . get_class($e) . ': ' . $e->getMessage()
             . ' in ' . $e->getFile() . ':' . $e->getLine());
         if (!headers_sent()) {
+            if (function_exists('kbfNoStore')) {
+                kbfNoStore();
+            }
             http_response_code($isType ? 400 : 500);
             header('Content-Type: application/json');
         }
@@ -235,6 +282,10 @@ function isLoggedIn() {
 
 // End the session so this request is treated as signed out
 function kbfEndSession() {
+    if (!kbfSessionWritable()) {
+        $_SESSION = [];
+        return;
+    }
     session_unset();
     session_destroy();
     if (!headers_sent()) {
@@ -425,6 +476,10 @@ function requireAuth() {
 
 // Helper function to send JSON response
 function sendJSON($data, $status = 200) {
+    if (($status >= 300 || (is_array($data) && isset($data['success']) && $data['success'] === false))
+            && function_exists('kbfNoStore')) {
+        kbfNoStore();
+    }
     http_response_code($status);
     header('Content-Type: application/json');
     echo json_encode($data);
@@ -434,7 +489,10 @@ function sendJSON($data, $status = 200) {
 // CSRF Token generation and validation
 function generateCSRFToken() {
     if (!isset($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        kbfSessionWritable();
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
     }
     return $_SESSION['csrf_token'];
 }
@@ -620,5 +678,12 @@ require_once __DIR__ . '/two-factor.php';
 // the session, so a deactivated user is logged out immediately.
 if (isset($_SESSION['user_id'])) {
     isLoggedIn();
+}
+
+// Read-only request (not a sign-in endpoint): the access check above is done
+// and nothing else writes to the session, so release the session lock now.
+// The values stay readable in $_SESSION for the rest of the request.
+if (!KBF_SESSION_KEPT_OPEN && session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
 }
 ?>

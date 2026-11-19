@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournament Gallery - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -170,6 +169,7 @@
             padding-left: 25px;
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -534,8 +534,9 @@
         grid.innerHTML = photos.map((photo, index) => `
             <div class="photo-item border-4 border-gray-700 overflow-hidden" onclick="openLightbox(${index})">
                 <div class="h-64 sm:h-72 overflow-hidden bg-slate-800">
-                    <img src="${escapeHtml(safeUrl(photo.FilePath))}"
-                         alt="Tournament photo ${index + 1}" 
+                    <img${imgVariantAttrs(photo.FilePath, 'thumb')}
+                         alt="Tournament photo ${index + 1}"
+                         width="300" height="288" loading="lazy" decoding="async"
                          class="w-full h-full object-cover">
                 </div>
             </div>
@@ -547,7 +548,7 @@
     // ============================================
     function openLightbox(index) {
         currentPhotoIndex = index;
-        document.getElementById('lightboxImage').src = safeUrl(allPhotos[index].FilePath);
+        setImageVariant(document.getElementById('lightboxImage'), safeUrl(allPhotos[index].FilePath), 'display');
         document.getElementById('lightbox').classList.add('active');
         document.body.style.overflow = 'hidden';
     }
@@ -560,13 +561,13 @@
     function prevPhoto(event) {
         event.stopPropagation();
         currentPhotoIndex = (currentPhotoIndex - 1 + allPhotos.length) % allPhotos.length;
-        document.getElementById('lightboxImage').src = safeUrl(allPhotos[currentPhotoIndex].FilePath);
+        setImageVariant(document.getElementById('lightboxImage'), safeUrl(allPhotos[currentPhotoIndex].FilePath), 'display');
     }
 
     function nextPhoto(event) {
         event.stopPropagation();
         currentPhotoIndex = (currentPhotoIndex + 1) % allPhotos.length;
-        document.getElementById('lightboxImage').src = safeUrl(allPhotos[currentPhotoIndex].FilePath);
+        setImageVariant(document.getElementById('lightboxImage'), safeUrl(allPhotos[currentPhotoIndex].FilePath), 'display');
     }
 
     // Keyboard navigation

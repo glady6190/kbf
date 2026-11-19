@@ -44,6 +44,9 @@ try {
         $contactEmail = 'admin@kbf-uk.org';
     }
 
+    // The same for every visitor: browsers may keep it for a minute
+    // (only when no one is signed in; see kbfPublicCache)
+    kbfPublicCache(60);
     sendJSON([
         'success' => true,
         'contact' => ['email' => $contactEmail],

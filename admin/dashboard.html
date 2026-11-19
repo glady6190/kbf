@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -98,6 +97,7 @@
             .db-action { border-width: 2px; flex-direction: column; text-align: center; }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -564,9 +564,12 @@
             const photo = safePhoto(r.photo);
             if (photo) {
                 const img = el('img');
-                img.src = photo;
                 img.alt = '';
                 img.loading = 'lazy';
+                img.decoding = 'async';
+                img.width = 40;
+                img.height = 40;
+                setImageVariant(img, photo, 'thumb');
                 avatar.appendChild(img);
             } else {
                 avatar.textContent = initials(r.name);

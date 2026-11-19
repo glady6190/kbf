@@ -401,7 +401,7 @@ if ($method === 'GET') {
                 }
             }
             $season = kbfSeasonSettings($pdo);
-            $plan = kbfSeasonPlan($pdo, $season, null, true);
+            $plan = kbfSeasonPlan($pdo, $season, null, 'counts');
             sendJSON([
                 'success' => true,
                 'grades' => $active,
@@ -418,7 +418,7 @@ if ($method === 'GET') {
                     'seasonName' => $plan['season']['name'],
                     'nextResetLabel' => $plan['nextResetLabel'],
                     'counts' => $plan['counts'],
-                    'total' => count($plan['players']),
+                    'total' => $plan['total'],
                 ],
                 'close' => closeRangeNow($pdo),
                 'canEdit' => !isImpersonating(),
@@ -435,22 +435,22 @@ if ($method === 'GET') {
                 // Saving new months records the current season, so nobody is reset
                 $settings['lastTermReset'] = kbfSeasonAt($months)['key'];
             }
-            $plan = kbfSeasonPlan($pdo, $settings, null, true);
-
-            $offset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+            $offset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
             if ($offset === false) {
                 $offset = 0;
             }
-            $page = array_slice($plan['players'], $offset, KBF_PREVIEW_PAGE);
+            // Counts from one GROUP BY query, and only this page of players
+            $plan = kbfSeasonPlan($pdo, $settings, null, ['offset' => $offset, 'limit' => KBF_PREVIEW_PAGE]);
+            $page = $plan['players'];
             sendJSON([
                 'success' => true,
                 'status' => $plan['status'],
                 'seasonName' => $plan['season']['name'],
                 'nextResetLabel' => $plan['nextResetLabel'],
                 'counts' => $plan['counts'],
-                'total' => count($plan['players']),
+                'total' => $plan['total'],
                 'players' => $page,
-                'hasMore' => $offset + count($page) < count($plan['players']),
+                'hasMore' => $offset + count($page) < $plan['total'],
                 'nextOffset' => $offset + count($page),
             ]);
         }

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player Profile - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -179,6 +178,7 @@
     padding-left: 25px;
 }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -625,7 +625,9 @@
         if (p.photo && /^\/uploads\/[A-Za-z0-9\/_.\-]+$/.test(p.photo) && p.photo.indexOf('..') === -1) {
             img.alt = p.name;
             img.addEventListener('error', function () { img.classList.add('hidden'); initials.classList.remove('hidden'); });
-            img.src = p.photo;
+            img.width = 160;
+            img.height = 160;
+            setImageVariant(img, p.photo, 'thumb');
             img.classList.remove('hidden');
             initials.classList.add('hidden');
         }

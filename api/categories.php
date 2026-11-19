@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $categories = kbfActiveGrades($pdo);
 
+        kbfPublicCache(60);
         sendJSON([
             'success' => true,
             'categories' => $categories

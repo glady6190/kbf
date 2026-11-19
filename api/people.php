@@ -159,6 +159,9 @@ function pDeletePhotoFile($path) {
     if (is_file($full)) {
         @unlink($full);
     }
+    // Its display version and thumbnail go too
+    require_once __DIR__ . '/image-helpers.php';
+    kbfDeleteImageVariants($full);
 }
 
 // Validation of the fields shared by Add and Edit. Returns [value, error].
@@ -740,18 +743,8 @@ if ($action === 'add') {
         // KBF ID: one more than the highest in Users and PlayerRegistrations
         $pdo->query("SELECT UserId FROM Users ORDER BY UserId DESC LIMIT 1 FOR UPDATE");
         $pdo->query("SELECT RegistrationId FROM PlayerRegistrations ORDER BY RegistrationId DESC LIMIT 1 FOR UPDATE");
-        $lastNumber = 0;
-        foreach (['Users', 'PlayerRegistrations'] as $table) {
-            $last = $pdo->query("
-                SELECT PlayerId FROM $table
-                WHERE PlayerId IS NOT NULL
-                ORDER BY CAST(SUBSTRING(PlayerId, 6) AS UNSIGNED) DESC
-                LIMIT 1")->fetchColumn();
-            if ($last) {
-                $lastNumber = max($lastNumber, (int) substr($last, 5));
-            }
-        }
-        $kbfId = 'KBFUK' . str_pad((string) ($lastNumber + 1), 3, '0', STR_PAD_LEFT);
+        // (the highest number is kept in Settings: kbfNextKbfId)
+        $kbfId = kbfNextKbfId($pdo);
 
         // Players never have a password, a staff role or a club.
         // Role 'Player' is the display-only value every player row has.

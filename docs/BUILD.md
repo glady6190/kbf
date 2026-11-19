@@ -1,0 +1,49 @@
+# Rebuilding the site stylesheet
+
+Every page loads one stylesheet, `/assets/css/site.css`. It is built with
+Tailwind CSS on this PC. Nothing is built on the server.
+
+Rebuild it whenever you add, remove or change Tailwind classes (for example
+`bg-slate-800`, `sm:px-6`, `min-w-[10rem]`) in any page or script. If you skip
+this, a new class simply has no style on the live site.
+
+## The files
+
+- `tools/tailwindcss-windows-x64.exe` - the Tailwind CLI program (version 3.4.17).
+- `tailwind.config.js` - says which files to scan for class names, plus a
+  `safelist` for any class that is built in JavaScript from pieces (for example
+  `'bg-' + colour`), which the scan cannot see. Write class names out in full
+  where you can; otherwise add them to the safelist.
+- `assets/css/tailwind.input.css` - the input file (`@tailwind base`,
+  `components`, `utilities`).
+- `assets/css/site.css` - the built, minified output. Do not edit it by hand.
+
+## Rebuild
+
+Open a terminal in `C:\KBF` and run:
+
+```
+tools\tailwindcss-windows-x64.exe -c tailwind.config.js -i assets/css/tailwind.input.css -o assets/css/site.css --minify
+```
+
+It takes about a second. Then upload `assets/css/site.css` with the changed
+pages. Browsers may keep the old copy for a while; a hard refresh
+(Ctrl+F5) shows the new one.
+
+## What is uploaded
+
+Upload `assets/css/site.css`. Do not upload `tools/`, `docs/`,
+`tailwind.config.js` or `assets/css/tailwind.input.css`; the site does not
+need them. `tools/` is also left out of git.
+
+## Getting the program again
+
+The version is pinned to Tailwind CSS v3.4.17 (do not use v4; it works
+differently). Download the Windows file into `tools\`:
+
+https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-windows-x64.exe
+
+Its SHA-256 checksum should be
+`67f1c5e3f5a03406a7bf5badf5ada09b79f3ae78ec43450c15f7e983068da346`
+(listed in `sha256sums.txt` on the same release page). To check it in
+PowerShell: `Get-FileHash tools\tailwindcss-windows-x64.exe`.

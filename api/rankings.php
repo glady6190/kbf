@@ -477,9 +477,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$newCategoryId, $userId]);
 
-        require_once __DIR__ . '/player-stats-calculator.php';
-        calculatePlayerStats($pdo, $userId);
-
         // Promotion is by rank (DisplayOrder), not by CategoryId
         $stmt = $pdo->prepare("
             SELECT u.FirstName, u.LastName, u.PlayerId, u.ProfilePhoto, u.YearOfBirth,
@@ -498,6 +495,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             && (int) $playerData['NewDisplayOrder'] < (int) $playerData['OldDisplayOrder'];
 
         $pdo->commit();
+
+        // Stats for this player in the new grade, after the commit
+        require_once __DIR__ . '/player-stats-calculator.php';
+        kbfRecalculatePlayerStats($pdo, [$userId]);
 
         $oldLabel = $playerData && $playerData['OldShort'] !== null ? gPlain($playerData['OldShort']) : 'none';
         $newLabel = $playerData ? gPlain($playerData['NewShort']) : (string) $newCategoryId;

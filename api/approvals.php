@@ -293,6 +293,8 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
 
     // Notification to send once the decision is saved: [eventKey, context, audience]
     $pendingNotify = null;
+    // Players whose stats are recalculated after the commit (never inside it)
+    $statsPlayerIds = [];
 
     try {
         $pdo->beginTransaction();
@@ -391,6 +393,10 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                                 $stmt = $pdo->prepare("UPDATE Users SET ProfilePhoto = ? WHERE UserId = ?");
                                 $stmt->execute(['/uploads/profiles/' . $newFilename, $userId]);
                                 unlink($oldPath);
+                                // Display version and thumbnail follow the photo
+                                require_once __DIR__ . '/image-helpers.php';
+                                kbfDeleteImageVariants($oldPath);
+                                kbfMakeImageVariants($newPath);
                             }
                         }
                     }
@@ -420,6 +426,8 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                         if (file_exists($photoPath)) {
                             unlink($photoPath);
                         }
+                        require_once __DIR__ . '/image-helpers.php';
+                        kbfDeleteImageVariants($photoPath);
                     }
                 }
 
@@ -647,11 +655,8 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
                     }
                 }
 
-                // Recalculate stats for all involved players
-                require_once __DIR__ . '/player-stats-calculator.php';
-                foreach (array_unique($registeredPlayerIds) as $playerId) {
-                    calculatePlayerStats($pdo, $playerId);
-                }
+                // Stats for the players involved: worked out after the commit
+                $statsPlayerIds = array_merge($statsPlayerIds, $registeredPlayerIds);
 
                 // Mark tournament as completed
                 $stmt = $pdo->prepare("UPDATE Tournaments SET Status = 'Completed' WHERE TournamentId = ?");
@@ -695,6 +700,13 @@ function apDecide(PDO $pdo, $type, $id, $action, $categoryInput, $reasonKey, $me
         }
 
         $pdo->commit();
+
+        // Stats and eligibility for the players affected, now that the
+        // decision is saved and its locks are released
+        if ($statsPlayerIds) {
+            require_once __DIR__ . '/player-stats-calculator.php';
+            kbfRecalculatePlayerStats($pdo, $statsPlayerIds);
+        }
 
         foreach ($auditPending as $a) {
             auditLog($a[0], $a[1], $a[2], $a[3]);
@@ -749,24 +761,45 @@ function apHistoryTypes() {
 }
 
 // Entries as one table (fixed strings only; the IN lists come from the
-// whitelist above)
-function apHistoryUnionSql(array $types) {
+// whitelist above). Optional filters pushed into each half (PERF-10):
+//   $logWhere / $auditWhere  extra conditions on al.* / a.* (placeholders:
+//                            the caller passes log params, then audit params)
+//   $decisions               ['Approved'] / ['Rejected'] (null = both)
+//   $halfLimit               each half sorted newest first and limited (a page)
+function apHistoryUnionSql(array $types, array $logWhere = [], array $auditWhere = [], ?array $decisions = null, $halfLimit = null) {
+    $decisions = $decisions === null ? ['Approved', 'Rejected'] : array_values(array_intersect(['Approved', 'Rejected'], $decisions));
     $logTypes = "'" . implode("','", array_values($types)) . "'";
     $actions = [];
     foreach (array_keys($types) as $key) {
-        $actions = array_merge($actions, AP_HISTORY_TYPES[$key][1]);
+        foreach (AP_HISTORY_TYPES[$key][1] as $act) {
+            $isApproved = substr($act, -8) === 'approved';
+            if (in_array($isApproved ? 'Approved' : 'Rejected', $decisions, true)) {
+                $actions[] = $act;
+            }
+        }
+    }
+    if (!$types || !$decisions || !$actions) {
+        // Nothing can match (same columns, no rows)
+        $logTypes = "''";
+        $actions = [''];
+        $decisions = [''];
     }
     $auditActions = "'" . implode("','", $actions) . "'";
+    $logDecisions = "'" . implode("','", $decisions) . "'";
     $decisionCase = "CASE WHEN a.Action LIKE '%approved' THEN 'Approved' ELSE 'Rejected' END";
+    $logExtra = $logWhere ? ' AND ' . implode(' AND ', $logWhere) : '';
+    $auditExtra = $auditWhere ? ' AND ' . implode(' AND ', $auditWhere) : '';
+    $halfLimit = $halfLimit === null ? null : max(1, (int) $halfLimit);
 
     return "
-        SELECT 'log' AS Source, al.LogId AS EntryId, al.LogDate AS At, al.LogType AS Type, al.ReferenceId AS RefId,
+        (SELECT 'log' AS Source, al.LogId AS EntryId, al.LogDate AS At, al.LogType AS Type, al.ReferenceId AS RefId,
                al.ReferenceName AS ItemName, al.Action AS Decision, al.ApprovedByAdminId AS DeciderId,
                al.ApprovedByAdminName AS DeciderLogged, al.ReferenceDetails AS Details, al.Comments AS Comment
         FROM ApprovalLogs al
-        WHERE al.Action IN ('Approved', 'Rejected') AND al.LogType IN ($logTypes)
+        WHERE al.Action IN ($logDecisions) AND al.LogType IN ($logTypes)$logExtra"
+        . ($halfLimit !== null ? " ORDER BY al.LogDate DESC, al.LogId DESC LIMIT $halfLimit" : '') . ")
         UNION ALL
-        SELECT 'audit', a.AuditId, a.CreatedDate,
+        (SELECT 'audit', a.AuditId, a.CreatedDate,
                CASE WHEN a.Action LIKE 'registration%' THEN 'Registration'
                     WHEN a.Action LIKE 'tournament%' THEN 'Tournament' ELSE 'Results' END,
                a.TargetId,
@@ -776,7 +809,7 @@ function apHistoryUnionSql(array $types) {
                $decisionCase,
                a.ActorUserId, NULL, a.Details, NULL
         FROM AuditLog a
-        WHERE a.Action IN ($auditActions)
+        WHERE a.Action IN ($auditActions)$auditExtra
           AND NOT EXISTS (
               SELECT 1 FROM ApprovalLogs d
               WHERE d.Action = $decisionCase
@@ -787,59 +820,75 @@ function apHistoryUnionSql(array $types) {
                     OR (a.Action LIKE 'results%' AND d.LogType = 'Results'
                         AND d.ReferenceId IN (SELECT q.ApprovalId FROM ResultsApprovalQueue q WHERE q.TournamentId = a.TargetId))
                 )
-          )";
+          )"
+        . ($halfLimit !== null ? " ORDER BY a.CreatedDate DESC, a.AuditId DESC LIMIT $halfLimit" : '') . ")";
 }
 
-// [sql, params, filters] for the history list with the request's filters
-function apHistoryQuery(PDO $pdo, array $types) {
+// [sql, params, filters] for the history list with the request's filters.
+// Type, decision, person and date are applied inside each half of the
+// union. $halfLimit (a page: offset + page size + 1) sorts and limits each
+// half in the database; it is not used with a search, which needs the
+// joined names.
+function apHistoryQuery(PDO $pdo, array $types, $halfLimit = null) {
     $where = ['1 = 1'];
     $params = [];
     $filters = [];
+    $logWhere = [];
+    $logParams = [];
+    $auditWhere = [];
+    $auditParams = [];
+    $decisions = null;
+    $halfTypes = $types;
 
     $type = $_GET['type'] ?? '';
     if (is_string($type) && isset($types[$type])) {
-        $where[] = 'e.Type = ?';
-        $params[] = $types[$type];
+        $halfTypes = [$type => $types[$type]];
         $filters['type'] = $type;
     }
     $decision = $_GET['decision'] ?? '';
     if ($decision === 'approved' || $decision === 'rejected') {
-        $where[] = 'e.Decision = ?';
-        $params[] = ucfirst($decision);
+        $decisions = [ucfirst($decision)];
         $filters['decision'] = $decision;
     }
     $person = filter_var($_GET['person'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if ($person) {
-        $where[] = 'e.DeciderId = ?';
-        $params[] = (int) $person;
+        $logWhere[] = 'al.ApprovedByAdminId = ?';
+        $logParams[] = (int) $person;
+        $auditWhere[] = 'a.ActorUserId = ?';
+        $auditParams[] = (int) $person;
         $filters['person'] = (int) $person;
     }
+    // Date conditions on both halves: [sql tail, params]
+    $dates = [];
     $range = $_GET['range'] ?? 'all';
     if ($range === '7' || $range === '30') {
-        $where[] = 'e.At >= DATE_SUB(CURDATE(), INTERVAL ' . ((int) $range - 1) . ' DAY)';
+        $dates[] = [' >= DATE_SUB(CURDATE(), INTERVAL ' . ((int) $range - 1) . ' DAY)', []];
         $filters['date'] = 'last ' . $range . ' days';
     } elseif ($range === 'season') {
         $current = kbfSeasonAt(kbfSeasonSettings($pdo)['months']);
         $season = kbfSeasonRange($current['key']);
         if ($season) {
-            $where[] = 'e.At >= ? AND e.At < ?';
-            $params[] = $season['from'] . ' 00:00:00';
-            $params[] = $season['to'] . ' 00:00:00';
+            $dates[] = [' >= ?', [$season['from'] . ' 00:00:00']];
+            $dates[] = [' < ?', [$season['to'] . ' 00:00:00']];
             $filters['date'] = 'this season';
         }
     } elseif ($range === 'custom') {
         $from = kbfDateParam($_GET['from'] ?? null);
         $to = kbfDateParam($_GET['to'] ?? null);
         if ($from) {
-            $where[] = 'e.At >= ?';
-            $params[] = $from . ' 00:00:00';
+            $dates[] = [' >= ?', [$from . ' 00:00:00']];
             $filters['from'] = $from;
         }
         if ($to) {
-            $where[] = 'e.At < DATE_ADD(?, INTERVAL 1 DAY)';
-            $params[] = $to;
+            $dates[] = [' < DATE_ADD(?, INTERVAL 1 DAY)', [$to]];
             $filters['to'] = $to;
         }
+    }
+    foreach ($dates as $d) {
+        $logWhere[] = 'al.LogDate' . $d[0];
+        $auditWhere[] = 'a.CreatedDate' . $d[0];
+        $logParams = array_merge($logParams, $d[1]);
+        $auditParams = array_merge($auditParams, $d[1]);
     }
     $q = apSearchParam();
     if ($q !== '') {
@@ -847,6 +896,7 @@ function apHistoryQuery(PDO $pdo, array $types) {
         $where[] = "(e.ItemName LIKE ? OR e.Comment LIKE ? OR e.DeciderLogged LIKE ? OR CONCAT(COALESCE(ud.FirstName, ''), ' ', COALESCE(ud.LastName, '')) LIKE ?)";
         array_push($params, $like, $like, $like, $like);
         $filters['search'] = $q;
+        $halfLimit = null;
     }
 
     $sql = "
@@ -855,10 +905,10 @@ function apHistoryQuery(PDO $pdo, array $types) {
                      THEN (SELECT c.ShortName FROM PlayerRegistrations pr JOIN Categories c ON c.CategoryId = pr.CategoryId
                            WHERE pr.RegistrationId = e.RefId)
                 END) AS ChosenGrade
-        FROM (" . apHistoryUnionSql($types) . ") e
+        FROM (" . apHistoryUnionSql($halfTypes, $logWhere, $auditWhere, $decisions, $halfLimit) . ") e
         LEFT JOIN Users ud ON ud.UserId = e.DeciderId
         WHERE " . implode(' AND ', $where);
-    return [$sql, $params, $filters];
+    return [$sql, array_merge($logParams, $auditParams, $params), $filters];
 }
 
 function apHistoryRow(array $r) {
@@ -1224,7 +1274,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
         // ---------- history ----------
         if ($action === 'history' || $action === 'historyCsv') {
             $types = apHistoryTypes();
-            list($sql, $params, $filters) = apHistoryQuery($pdo, $types);
+            $offset = min(kbfOffsetParam(), 100000);
+            list($sql, $params, $filters) = apHistoryQuery($pdo, $types,
+                $action === 'history' ? $offset + APPROVAL_PAGE_SIZE + 1 : null);
             $sql .= ' ORDER BY e.At DESC, e.EntryId DESC';
 
             if ($action === 'historyCsv') {
@@ -1243,7 +1295,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
                 exit;
             }
 
-            $offset = kbfOffsetParam();
             $stmt = $pdo->prepare($sql . ' LIMIT ' . (APPROVAL_PAGE_SIZE + 1) . ' OFFSET ' . $offset);
             $stmt->execute($params);
             $entries = array_map('apHistoryRow', $stmt->fetchAll());
@@ -1252,22 +1303,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
                 array_pop($entries);
             }
 
-            list($plainSql, $plainParams) = apHistoryQuery($pdo, $types);
-            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM ($plainSql) z");
-            $countStmt->execute($plainParams);
-            $total = (int) $countStmt->fetchColumn();
+            // No second pass over the union for a count: the exact total is
+            // known once the last page is reached; until then it is null and
+            // the page shows "more" (hasMore)
+            $total = $hasMore ? null : $offset + count($entries);
 
-            // People who have decided something, for the filter
+            // People who have decided something, for the filter (first page
+            // only; the page fills its list once): the deciders in
+            // ApprovalLogs and the actors of approval entries in AuditLog,
+            // without the duplicate check
             $people = [];
-            $peopleStmt = $pdo->query("
-                SELECT DISTINCT e.DeciderId, ud.FirstName, ud.LastName, e.DeciderLogged
-                FROM (" . apHistoryUnionSql($types) . ") e
-                LEFT JOIN Users ud ON ud.UserId = e.DeciderId
-                WHERE e.DeciderId > 0
+            $logTypeList = "'" . implode("','", array_values($types)) . "'";
+            $actionList = [];
+            foreach (array_keys($types) as $key) {
+                $actionList = array_merge($actionList, AP_HISTORY_TYPES[$key][1]);
+            }
+            $actionList = "'" . implode("','", $actionList ?: ['']) . "'";
+            $peopleStmt = $offset > 0 || !$types ? null : $pdo->query("
+                SELECT p.DeciderId, ud.FirstName, ud.LastName, p.DeciderLogged
+                FROM (
+                    SELECT al.ApprovedByAdminId AS DeciderId, MAX(al.ApprovedByAdminName) AS DeciderLogged
+                    FROM ApprovalLogs al
+                    WHERE al.Action IN ('Approved', 'Rejected') AND al.LogType IN ($logTypeList) AND al.ApprovedByAdminId > 0
+                    GROUP BY al.ApprovedByAdminId
+                    UNION ALL
+                    SELECT a.ActorUserId, NULL
+                    FROM AuditLog a
+                    WHERE a.Action IN ($actionList) AND a.ActorUserId > 0
+                    GROUP BY a.ActorUserId
+                ) p
+                LEFT JOIN Users ud ON ud.UserId = p.DeciderId
             ");
-            foreach ($peopleStmt->fetchAll() as $p) {
+            foreach ($peopleStmt ? $peopleStmt->fetchAll() : [] as $p) {
                 $pid = (int) $p['DeciderId'];
-                if (isset($people[$pid])) {
+                if (isset($people[$pid]) && $people[$pid]['name'] !== '') {
                     continue;
                 }
                 $name = apName($p['FirstName'], $p['LastName']);

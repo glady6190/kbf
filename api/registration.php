@@ -302,6 +302,10 @@ $phoneNumber = $cleanPhoneNumber;
             sendJSON(['success' => false, 'message' => 'Failed to process image'], 500);
         }
         
+        // Display version and thumbnail (a problem never stops the registration)
+        require_once __DIR__ . '/image-helpers.php';
+        kbfMakeImageVariants($uploadPath);
+
         $profilePhotoPath = '/uploads/registrations/' . $filename;
     }
     
@@ -314,35 +318,9 @@ try {
     $pdo->query("SELECT RegistrationId FROM PlayerRegistrations ORDER BY RegistrationId DESC LIMIT 1 FOR UPDATE");
     $pdo->query("SELECT UserId FROM Users ORDER BY UserId DESC LIMIT 1 FOR UPDATE");
     
-    // Now safely read the last Player IDs from BOTH tables
-    $stmt = $pdo->query("
-        SELECT PlayerId FROM Users 
-        WHERE PlayerId IS NOT NULL 
-        ORDER BY CAST(SUBSTRING(PlayerId, 6) AS UNSIGNED) DESC 
-        LIMIT 1
-    ");
-    $lastUserPlayerId = $stmt->fetch();
-    
-    $stmt = $pdo->query("
-        SELECT PlayerId FROM PlayerRegistrations 
-        WHERE PlayerId IS NOT NULL
-        ORDER BY CAST(SUBSTRING(PlayerId, 6) AS UNSIGNED) DESC 
-        LIMIT 1
-    ");
-    $lastRegPlayerId = $stmt->fetch();
-    
-    // Find the highest number from BOTH tables
-    $lastNumber = 0;
-    if ($lastUserPlayerId && $lastUserPlayerId['PlayerId']) {
-        $lastNumber = max($lastNumber, (int)substr($lastUserPlayerId['PlayerId'], 5));
-    }
-    if ($lastRegPlayerId && $lastRegPlayerId['PlayerId']) {
-        $lastNumber = max($lastNumber, (int)substr($lastRegPlayerId['PlayerId'], 5));
-    }
-    
-    // Generate new Player ID
-    $newNumber = $lastNumber + 1;
-    $playerId = 'KBFUK' . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+    // New KBF ID: the highest number is kept in Settings (locked row), so
+    // no table is scanned (api/config-helpers.php kbfNextKbfId)
+    $playerId = kbfNextKbfId($pdo);
     
     // Insert into PlayerRegistrations
 

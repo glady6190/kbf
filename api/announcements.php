@@ -302,26 +302,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $limit = isset($_GET['limit']) ? filter_var($_GET['limit'], FILTER_VALIDATE_INT) : 10;
             $offset = isset($_GET['offset']) ? filter_var($_GET['offset'], FILTER_VALIDATE_INT) : 0;
             
-            // SECURITY: Enforce reasonable limits (up to 500, so the News
-            // page can load every published post in one request)
-            if ($limit === false || $limit < 1 || $limit > 500) {
+            // SECURITY: Enforce reasonable limits (PERF-06: at most 50 a
+            // page; older posts are reached with offset)
+            if ($limit === false || $limit < 1) {
                 $limit = 10;
             }
+            $limit = min(50, (int) $limit);
             if ($offset === false || $offset < 0) {
                 $offset = 0;
             }
-            
-            // Get total count
-            $stmt = $pdo->query("
-                SELECT COUNT(*) as total 
-                FROM Announcements 
-                WHERE IsPublished = 1 AND IsVisible = 1
-            ");
-            $total = $stmt->fetch()['total'];
-            
-            // Get announcements
+            $offset = min(1000000, (int) $offset);
+
+            // Optional filters (News page tabs and search, home page):
+            //   type        news (not promotions) | promotions |
+            //               tournament (not promotions, about a tournament)
+            //   tournament  one tournament's posts
+            //   q           search in title, tournament name and text
+            $filterSql = '';
+            $filterParams = [];
+            $promotionSql = "a.Title LIKE '%player promotion:%'";
+            $type = is_string($_GET['type'] ?? null) ? $_GET['type'] : '';
+            if ($type === 'news') {
+                $filterSql .= " AND NOT ($promotionSql)";
+            } elseif ($type === 'promotions') {
+                $filterSql .= " AND $promotionSql";
+            } elseif ($type === 'tournament') {
+                $filterSql .= " AND NOT ($promotionSql) AND a.TournamentId > 0";
+            } elseif ($type !== '' && $type !== 'all') {
+                sendJSON(['success' => false, 'message' => 'Invalid type'], 400);
+            }
+            if (isset($_GET['tournament']) && $_GET['tournament'] !== '') {
+                $tournamentFilter = filter_var($_GET['tournament'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if (!$tournamentFilter) {
+                    sendJSON(['success' => false, 'message' => 'Invalid tournament ID'], 400);
+                }
+                $filterSql .= " AND a.TournamentId = ?";
+                $filterParams[] = (int) $tournamentFilter;
+            }
+            $q = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
+            if ($q !== '') {
+                $q = function_exists('mb_substr') ? mb_substr($q, 0, 100, 'UTF-8') : substr($q, 0, 100);
+                $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+                $filterSql .= " AND (a.Title LIKE ? OR t.Name LIKE ? OR a.Content LIKE ?)";
+                array_push($filterParams, $like, $like, $like);
+            }
+
+            // Get total count (with the filters)
             $stmt = $pdo->prepare("
-                SELECT a.AnnouncementId, a.Title, a.Content, a.FeaturedImage,
+                SELECT COUNT(*) as total
+                FROM Announcements a
+                LEFT JOIN Tournaments t ON a.TournamentId = t.TournamentId
+                WHERE a.IsPublished = 1 AND a.IsVisible = 1" . $filterSql);
+            $stmt->execute($filterParams);
+            $total = $stmt->fetch()['total'];
+
+            // Get announcements: newest first (published date, else created
+            // date). Content is a short plain-text excerpt in lists (HTML
+            // tags removed, entities kept); the full text comes with ?id=
+            $stmt = $pdo->prepare("
+                SELECT a.AnnouncementId, a.Title, LEFT(a.Content, 4000) AS Content, a.FeaturedImage,
                        a.CreatedDate, a.PublishedDate, a.IsVisible,
                        " . $authorColumn . "
                        a.TournamentId,
@@ -330,22 +369,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 FROM Announcements a
                 " . $authorJoin . "
                 LEFT JOIN Tournaments t ON a.TournamentId = t.TournamentId
-                WHERE a.IsPublished = 1 AND a.IsVisible = 1
-                ORDER BY a.PublishedDate DESC
+                WHERE a.IsPublished = 1 AND a.IsVisible = 1" . $filterSql . "
+                ORDER BY COALESCE(a.PublishedDate, a.CreatedDate) DESC, a.AnnouncementId DESC
                 LIMIT ? OFFSET ?
             ");
-            $stmt->execute([$limit, $offset]);
+            $i = 1;
+            foreach ($filterParams as $p) {
+                $stmt->bindValue($i++, $p);
+            }
+            $stmt->bindValue($i++, $limit, PDO::PARAM_INT);
+            $stmt->bindValue($i, $offset, PDO::PARAM_INT);
+            $stmt->execute();
             // No under-18 player's photo as a post image for visitors
             // (home page news cards and promotions strip, News page)
             $announcements = kbfPublicPostImages($pdo, $stmt->fetchAll());
-            
-            sendJSON([
-                'success' => true, 
+            foreach ($announcements as &$post) {
+                $stripped = (string) preg_replace(['/<[^>]*>/', '/<[^>]*$/'], [' ', ''], (string) $post['Content']);
+                $plain = trim(preg_replace('/\s+/u', ' ', $stripped) ?? preg_replace('/[ \t\r\n]+/', ' ', $stripped));
+                if ((function_exists('mb_strlen') ? mb_strlen($plain, 'UTF-8') : strlen($plain)) > 400) {
+                    $plain = function_exists('mb_substr') ? mb_substr($plain, 0, 400, 'UTF-8') : substr($plain, 0, 400);
+                    // No half entity at the end
+                    $plain = preg_replace('/&[#A-Za-z0-9]*$/', '', $plain) . '…';
+                }
+                $post['Content'] = $plain;
+                $post['Excerpt'] = $plain;
+            }
+            unset($post);
+
+            $response = [
+                'success' => true,
                 'announcements' => $announcements,
                 'total' => (int)$total,
                 'limit' => $limit,
-                'offset' => $offset
-            ]);
+                'offset' => $offset,
+                'hasMore' => $offset + count($announcements) < (int) $total
+            ];
+            // Tab counts for the News page (first page only)
+            if ($offset === 0) {
+                $counts = $pdo->query("
+                    SELECT COUNT(*) AS AllPosts,
+                           SUM(CASE WHEN $promotionSql THEN 1 ELSE 0 END) AS Promotions,
+                           SUM(CASE WHEN NOT ($promotionSql) AND a.TournamentId > 0 THEN 1 ELSE 0 END) AS TournamentPosts
+                    FROM Announcements a
+                    WHERE a.IsPublished = 1 AND a.IsVisible = 1
+                ")->fetch();
+                $response['counts'] = [
+                    'all' => (int) $counts['AllPosts'],
+                    'promotions' => (int) $counts['Promotions'],
+                    'tournament' => (int) $counts['TournamentPosts'],
+                ];
+            }
+            if (!$showAuthor) {
+                kbfPublicCache(60);
+            }
+            sendJSON($response);
         }
     } catch(PDOException $e) {
         error_log('Database error in announcements.php GET: ' . $e->getMessage());

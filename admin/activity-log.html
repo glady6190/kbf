@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activity Log - Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -27,6 +26,7 @@
         /* Impersonation tag: fixed amber on every theme */
         .as-tag { display: inline-flex; align-items: center; gap: .25rem; margin-top: .25rem; padding: .125rem .375rem; background: #f59e0b; color: #0F172A; font-size: .65rem; font-weight: 900; text-transform: uppercase; }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -142,6 +142,7 @@
     const EYE = 'M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z';
 
     let offset = 0;
+    let knownTotal = null;
     let showAddress = false;
     let optionsLoaded = false;
     let searchTimer = null;
@@ -287,7 +288,12 @@
             data.entries.forEach(e => body.appendChild(renderRow(e)));
             offset = data.nextOffset;
             const shown = body.children.length;
-            document.getElementById('logCount').textContent = 'Showing ' + shown.toLocaleString('en-GB') + ' of ' + Number(data.total).toLocaleString('en-GB') + ' entries';
+            // The exact total comes only with the first page of a filtered
+            // list; otherwise "more" is shown while there are more entries
+            if (reset) knownTotal = (data.total === null || data.total === undefined) ? null : Number(data.total);
+            document.getElementById('logCount').textContent = knownTotal !== null
+                ? 'Showing ' + shown.toLocaleString('en-GB') + ' of ' + knownTotal.toLocaleString('en-GB') + ' entries'
+                : 'Showing ' + shown.toLocaleString('en-GB') + (data.hasMore ? ' entries (more available)' : ' entries');
             document.getElementById('logEmpty').classList.toggle('hidden', shown > 0);
             more.classList.toggle('hidden', !data.hasMore);
         } catch (err) {

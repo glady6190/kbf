@@ -229,7 +229,8 @@ try {
     // ============================================
     $seasonPlan = null;
     if ($can['grading'] || $can['super']) {
-        $seasonPlan = kbfSeasonPlan($pdo, kbfSeasonSettings($pdo), null, $can['grading']);
+        // Counts only (one GROUP BY query), never the full player list
+        $seasonPlan = kbfSeasonPlan($pdo, kbfSeasonSettings($pdo), null, $can['grading'] ? 'counts' : false);
     }
     if ($can['grading'] && $seasonPlan) {
         $daysToReset = (int) floor((strtotime($seasonPlan['nextResetDate']) - strtotime(date('Y-m-d'))) / 86400);

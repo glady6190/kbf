@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournaments - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -702,6 +701,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
@@ -1170,8 +1170,8 @@
         const poster = safeImagePath(t.PosterUrl);
         const date = toYmd(t.TournamentDate);
         if (!poster) return dateTileHtml(date, large);
-        return `<img src="${escapeHtml(poster)}" alt="Poster for ${escapeHtml(t.Name)}" class="t-poster-img" loading="lazy"
-                     data-date="${escapeHtml(date)}" data-large="${large ? '1' : '0'}">`;
+        return `<img${imgVariantAttrs(poster, 'thumb')} alt="Poster for ${escapeHtml(t.Name)}" class="t-poster-img" loading="lazy"
+                     decoding="async" width="132" height="188" data-date="${escapeHtml(date)}" data-large="${large ? '1' : '0'}">`;
     }
 
     // A poster that fails to load falls back to the date tile
@@ -1208,29 +1208,57 @@
         });
     }
 
+    // Pages come from the server one at a time (limit/offset) and are kept
+    // once loaded: pageCache[tab][page]. The calendar loads one month at a
+    // time: calendarCache['YYYY-MM'].
+    const pageCache = { upcoming: {}, past: {} };
+    const calendarCache = {};
+    const calendarLoading = {};
+
+    async function fetchTournamentPage(tab, page) {
+        if (pageCache[tab][page]) return pageCache[tab][page];
+        const offset = (page - 1) * tournamentsPerPage;
+        const response = await fetch(`/api/tournaments.php?status=${tab}&limit=${tournamentsPerPage}&offset=${offset}`, { credentials: 'include' });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Tournaments could not be loaded');
+        totalTournaments[tab] = Number(data.total) || 0;
+        // Upcoming soonest first, past newest first (the server pages in the same order)
+        pageCache[tab][page] = sortTournaments(data.tournaments, tab === 'upcoming' ? 1 : -1);
+        return pageCache[tab][page];
+    }
+
     async function loadTournaments() {
         try {
-            let response = await fetch('/api/tournaments.php?status=upcoming', { credentials: 'include' });
-            let data = await response.json();
-            if (data.success) {
-                // Soonest first
-                allTournaments.upcoming = sortTournaments(data.tournaments, 1);
-                totalTournaments.upcoming = data.tournaments.length;
-                document.getElementById('upcomingCount').textContent = countLabel(data.tournaments.length);
-            }
-            response = await fetch('/api/tournaments.php?status=past', { credentials: 'include' });
-            data = await response.json();
-            if (data.success) {
-                // Newest first
-                allTournaments.past = sortTournaments(data.tournaments, -1);
-                totalTournaments.past = data.tournaments.length;
-                document.getElementById('pastCount').textContent = countLabel(data.tournaments.length);
-            }
-            calendarTournaments = [...allTournaments.upcoming, ...allTournaments.past];
+            await Promise.all([fetchTournamentPage('upcoming', 1), fetchTournamentPage('past', 1)]);
+            allTournaments.upcoming = pageCache.upcoming[1];
+            allTournaments.past = pageCache.past[1];
+            document.getElementById('upcomingCount').textContent = countLabel(totalTournaments.upcoming);
+            document.getElementById('pastCount').textContent = countLabel(totalTournaments.past);
             displayTournaments();
         } catch (error) {
             console.error('Error loading tournaments:', error);
             document.getElementById('loading').innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Tournaments</p>';
+        }
+    }
+
+    // One calendar month (upcoming and past tournaments), then the calendar is drawn again
+    async function loadCalendarMonth(year, month) {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+        if (calendarCache[key] || calendarLoading[key]) return;
+        calendarLoading[key] = true;
+        const last = new Date(year, month + 1, 0).getDate();
+        try {
+            const response = await fetch(`/api/tournaments.php?status=listed&from=${key}-01&to=${key}-${String(last).padStart(2, '0')}&limit=100`, { credentials: 'include' });
+            const data = await response.json();
+            calendarCache[key] = data.success ? (data.tournaments || []) : [];
+        } catch (error) {
+            console.error('Error loading calendar month:', error);
+            calendarCache[key] = [];
+        } finally {
+            calendarLoading[key] = false;
+        }
+        if (currentTab === 'calendar' && currentCalendarDate.getFullYear() === year && currentCalendarDate.getMonth() === month) {
+            renderCalendar();
         }
     }
 
@@ -1265,29 +1293,36 @@
         paginationContainer.classList.add('hidden');
         
         // Use setTimeout to allow UI to update
-        setTimeout(() => {
-            loading.classList.add('hidden');
-
+        setTimeout(async () => {
             if (currentTab === 'calendar') {
+                loading.classList.add('hidden');
                 calendarView.classList.remove('hidden');
                 renderCalendar();
             } else {
-                const allTournamentsForTab = allTournaments[currentTab];
-                const page = currentPage[currentTab];
-                
-                if (allTournamentsForTab.length === 0) {
+                const tab = currentTab;
+                const page = currentPage[tab];
+                let tournaments;
+                try {
+                    tournaments = await fetchTournamentPage(tab, page);
+                } catch (error) {
+                    console.error('Error loading tournaments:', error);
+                    loading.innerHTML = '<p class="text-red-400 font-bold uppercase text-lg">Error Loading Tournaments</p>';
+                    return;
+                }
+                // A newer tab or page was chosen meanwhile
+                if (tab !== currentTab || page !== currentPage[tab]) return;
+                loading.classList.add('hidden');
+
+                if (totalTournaments[tab] === 0 || tournaments.length === 0) {
                     noTournaments.classList.remove('hidden');
                     return;
                 }
-                
-                const startIndex = (page - 1) * tournamentsPerPage;
-                const endIndex = startIndex + tournamentsPerPage;
-                const tournaments = allTournamentsForTab.slice(startIndex, endIndex);
-                const totalPages = Math.ceil(allTournamentsForTab.length / tournamentsPerPage);
-                
+
+                const totalPages = Math.ceil(totalTournaments[tab] / tournamentsPerPage);
+
                 grid.classList.remove('hidden');
                 grid.innerHTML = tournaments.map(tournament => createTournamentCard(tournament)).join('');
-                
+
                 if (totalPages > 1) {
                     paginationContainer.classList.remove('hidden');
                     updatePaginationControls(page, totalPages);
@@ -1357,6 +1392,11 @@
         
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+        // This month's tournaments (loaded once; drawn again when they arrive)
+        const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+        if (!calendarCache[monthKey]) loadCalendarMonth(year, month);
+        calendarTournaments = (calendarCache[monthKey] || []).map(t =>
+            Object.assign({}, t, { TournamentDate: String(t.TournamentDate || '').slice(0, 10) }));
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const daysInPrevMonth = new Date(year, month, 0).getDate();
@@ -1455,7 +1495,7 @@
     }
 
     function nextPage() {
-        const totalPages = Math.ceil(allTournaments[currentTab].length / tournamentsPerPage);
+        const totalPages = Math.ceil(totalTournaments[currentTab] / tournamentsPerPage);
         if (currentPage[currentTab] < totalPages) {
             currentPage[currentTab]++;
             displayTournaments();

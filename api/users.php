@@ -60,7 +60,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $category = isset($_GET['category']) && !empty($_GET['category']) ? $_GET['category'] : null;
 $search = isset($_GET['search']) && !empty($_GET['search']) ? $_GET['search'] : null;
 
-
+// Paging (PERF-06): with ?limit= the list comes one page at a time, with
+// total, hasMore and (first page) gradeCounts. Without limit the whole list
+// is returned as before.
+//   limit   1 to 100
+//   offset  0 or more
+//   sort    rank (season points, then name; default with a grade) |
+//           id (KBF ID number; default without a grade) | name
+//   q       public search in name, KBF ID and town (paged only)
+//   activeGrades=1  without a grade: only players of the active grades
+//                   (the rankings page "All" tab)
+$paged = isset($_GET['limit']);
+$pageLimit = null;
+$pageOffset = 0;
+$pageSort = null;
+$pageQuery = '';
+if ($paged) {
+    $pageLimit = filter_var($_GET['limit'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+    $pageOffset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
+    if ($pageLimit === false || $pageOffset === false) {
+        sendJSON(['success' => false, 'message' => 'Invalid limit or offset'], 400);
+    }
+    $pageSort = $_GET['sort'] ?? ($category !== null ? 'rank' : 'id');
+    if (!in_array($pageSort, ['rank', 'id', 'name'], true)) {
+        sendJSON(['success' => false, 'message' => 'Invalid sort'], 400);
+    }
+    $pageQuery = trim((string) ($_GET['q'] ?? ''));
+    $pageQuery = function_exists('mb_substr') ? mb_substr($pageQuery, 0, 100, 'UTF-8') : substr($pageQuery, 0, 100);
+}
 
 // Who is asking
 $isAuthenticated = isLoggedIn();
@@ -68,7 +95,8 @@ $canViewFullList = $isAuthenticated && hasPermission('players.view_export');
 $canSeeContacts = $isAuthenticated && hasPermission('players.contact_details');
 
 // Public rankings request: filtered by category, or the player list, no search
-$isPublicFilter = ($role === 'Player' && $search === null) || ($category !== null && $search === null);
+$isPublicFilter = ($role === 'Player' && $search === null) || ($category !== null && $search === null)
+    || ($paged && $search === null);
 
 // The full list needs players.view_export. Other staff (e.g. organisers
 // picking players for results) get the public fields only.
@@ -131,17 +159,22 @@ if ($isPublicRankingsRequest) {
 }
 
 $params = [];
+// Filters, kept apart so a paged request can count with the same conditions
+$filterSql = '';
 
 // Apply role filter if provided
 if ($role) {
-    $query .= " AND u.Role = ?";
+    $filterSql .= " AND u.Role = ?";
     $params[] = $role;
 }
 
 
 if ($category) {
-    $query .= " AND c.ShortName = ?";
+    $filterSql .= " AND c.ShortName = ?";
     $params[] = $category;
+} elseif ($paged && ($_GET['activeGrades'] ?? '') === '1') {
+    // Rankings "All" tab: the players of the active grades only
+    $filterSql .= " AND c.CategoryId IS NOT NULL AND " . kbfActiveGradeCondition($pdo, 'c.');
 }
 
             if ($search) {
@@ -149,34 +182,111 @@ if ($category) {
                 // Email is searchable only for people who may see emails.
                 $searchTerm = '%' . $search . '%';
                 if ($canSeeContacts) {
-                    $query .= " AND (u.FirstName LIKE ? OR u.LastName LIKE ? OR u.Email LIKE ? OR u.PlayerId LIKE ?)";
+                    $filterSql .= " AND (u.FirstName LIKE ? OR u.LastName LIKE ? OR u.Email LIKE ? OR u.PlayerId LIKE ?)";
                     $params[] = $searchTerm;
                     $params[] = $searchTerm;
                     $params[] = $searchTerm;
                     $params[] = $searchTerm;
                 } else {
-                    $query .= " AND (u.FirstName LIKE ? OR u.LastName LIKE ? OR u.PlayerId LIKE ?)";
+                    $filterSql .= " AND (u.FirstName LIKE ? OR u.LastName LIKE ? OR u.PlayerId LIKE ?)";
                     $params[] = $searchTerm;
                     $params[] = $searchTerm;
                     $params[] = $searchTerm;
                 }
             }
 
-            $query .= " ORDER BY c.DisplayOrder, u.TotalPoints DESC";
+            if ($paged && $pageQuery !== '') {
+                // Public search (name, KBF ID, town), one page at a time
+                $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $pageQuery) . '%';
+                $filterSql .= " AND (CONCAT(u.FirstName, ' ', u.LastName) LIKE ? OR u.PlayerId LIKE ? OR u.Location LIKE ?)";
+                array_push($params, $like, $like, $like);
+            }
 
-            $stmt = $pdo->prepare($query);
-            $stmt->execute($params);
+            $query .= $filterSql;
+
+            if (!$paged) {
+                $query .= " ORDER BY c.DisplayOrder, u.TotalPoints DESC";
+
+                $stmt = $pdo->prepare($query);
+                $stmt->execute($params);
+                $users = $stmt->fetchAll();
+                if ($isPublicRankingsRequest) {
+                    // Public grading lists: no under-18 photos and no year of
+                    // birth for visitors who are not staff
+                    $users = kbfPublicPlayerRows($users);
+                    if ($search === null) {
+                        kbfPublicCache(60);
+                    }
+                }
+
+                sendJSON([
+                    'success' => true,
+                    'users' => $users
+                ]);
+            }
+
+            // ---------- one page ----------
+            $orderBy = [
+                'rank' => "(u.TotalPoints > 0) DESC, u.TotalPoints DESC, u.FirstName, u.LastName, u.UserId",
+                'id' => "(u.PlayerId IS NULL OR u.PlayerId NOT REGEXP '[0-9]') ASC, CAST(REGEXP_SUBSTR(u.PlayerId, '[0-9]+') AS UNSIGNED), u.FirstName, u.LastName, u.UserId",
+                'name' => "u.FirstName, u.LastName, u.UserId",
+            ][$pageSort];
+            // Rank in the player's grade (season points; level players share a
+            // rank, 1, 1, 3), null on 0 points
+            $rankColumn = ", (CASE WHEN u.TotalPoints > 0 THEN 1 + (
+                    SELECT COUNT(*) FROM Users r
+                    WHERE r.CategoryId = u.CategoryId AND r.IsActive = 1 AND r.IsRemoved = 0 AND r.TotalPoints > u.TotalPoints
+                ) END) AS GradeRank, c.ShortName AS CategoryShortName";
+            $pageSql = preg_replace('/\s+FROM Users u\b/', $rankColumn . "\n        FROM Users u", $query, 1)
+                . " ORDER BY " . $orderBy . " LIMIT ? OFFSET ?";
+            $stmt = $pdo->prepare($pageSql);
+            $i = 1;
+            foreach ($params as $p) {
+                $stmt->bindValue($i++, $p);
+            }
+            $stmt->bindValue($i++, (int) $pageLimit, PDO::PARAM_INT);
+            $stmt->bindValue($i, (int) $pageOffset, PDO::PARAM_INT);
+            $stmt->execute();
             $users = $stmt->fetchAll();
             if ($isPublicRankingsRequest) {
-                // Public grading lists: no under-18 photos and no year of
-                // birth for visitors who are not staff
                 $users = kbfPublicPlayerRows($users);
             }
 
-            sendJSON([
+            $countStmt = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM Users u
+                LEFT JOIN Categories c ON u.CategoryId = c.CategoryId
+                WHERE u.IsActive = 1 AND u.IsRemoved = 0" . $filterSql);
+            $countStmt->execute($params);
+            $total = (int) $countStmt->fetchColumn();
+
+            $response = [
                 'success' => true,
-                'users' => $users
-            ]);
+                'users' => $users,
+                'total' => $total,
+                'offset' => (int) $pageOffset,
+                'limit' => (int) $pageLimit,
+                'hasMore' => $pageOffset + count($users) < $total,
+            ];
+            if ($pageOffset === 0) {
+                // Players per active grade (rankings tabs)
+                $counts = [];
+                $gc = $pdo->query("
+                    SELECT c.ShortName, COUNT(*) AS N
+                    FROM Users u
+                    JOIN Categories c ON c.CategoryId = u.CategoryId
+                    WHERE u.IsActive = 1 AND u.IsRemoved = 0 AND " . kbfActiveGradeCondition($pdo, 'c.') . "
+                    GROUP BY c.ShortName
+                ");
+                foreach ($gc->fetchAll() as $row) {
+                    $counts[(string) $row['ShortName']] = (int) $row['N'];
+                }
+                $response['gradeCounts'] = $counts;
+            }
+            if ($isPublicRankingsRequest && $search === null) {
+                kbfPublicCache(60);
+            }
+            sendJSON($response);
         }
     } catch(PDOException $e) {
     error_log('Database error in users.php GET: ' . $e->getMessage());

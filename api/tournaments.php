@@ -324,6 +324,10 @@ function storeTournamentPoster(array $file) {
         return [null, 'Failed to save poster'];
     }
 
+    // Display version and thumbnail (a problem never stops the upload)
+    require_once __DIR__ . '/image-helpers.php';
+    kbfMakeImageVariants($uploadDir . $filename);
+
     return [TOURNAMENT_POSTER_URL_DIR . $filename, null];
 }
 
@@ -341,6 +345,8 @@ function deleteTournamentPoster($posterPath) {
     if (is_file($fullPath)) {
         @unlink($fullPath);
     }
+    require_once __DIR__ . '/image-helpers.php';
+    kbfDeleteImageVariants($fullPath);
 }
 
 // Adds PosterUrl and PosterSource ('tournament' | 'post' | null) to each row.
@@ -1088,8 +1094,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $mineOnly = isset($_GET['mine']) && $_GET['mine'] === '1';
 
             // Validate status
-            if ($status && !in_array($status, ['upcoming', 'past', 'pending', 'Pending', 'Approved', 'Rejected', 'Completed'])) {
+            if ($status && !in_array($status, ['upcoming', 'past', 'listed', 'pending', 'Pending', 'Approved', 'Rejected', 'Completed'])) {
                 sendJSON(['success' => false, 'message' => 'Invalid status'], 400);
+            }
+
+            // Optional date range (YYYY-MM-DD, both inclusive), e.g. one
+            // calendar month on the Tournaments page
+            $dateRange = [];
+            foreach (['from', 'to'] as $key) {
+                if (!isset($_GET[$key]) || $_GET[$key] === '') {
+                    continue;
+                }
+                $value = (string) $_GET[$key];
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+                    sendJSON(['success' => false, 'message' => 'Invalid date'], 400);
+                }
+                $dateRange[$key] = $value;
             }
 
             // Validate clubId
@@ -1137,6 +1157,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $query .= " AND t.TournamentDate >= CURDATE() AND t.Status = 'Approved'";
 } elseif ($status === 'past') {
     $query .= " AND t.TournamentDate < CURDATE() AND t.Status IN ('Completed', 'Approved')";
+} elseif ($status === 'listed') {
+    // Upcoming and past together (the Tournaments page calendar)
+    $query .= " AND ((t.TournamentDate >= CURDATE() AND t.Status = 'Approved')
+                  OR (t.TournamentDate < CURDATE() AND t.Status IN ('Completed', 'Approved')))";
 } elseif ($status === 'pending') {
     $query .= " AND t.Status = 'Pending'";
 } elseif ($status) {
@@ -1148,24 +1172,71 @@ if ($clubId) {
     $query .= " AND t.OrganizingClubId = ?";
     $params[] = $clubId;
 }
+if (isset($dateRange['from'])) {
+    $query .= " AND t.TournamentDate >= ?";
+    $params[] = $dateRange['from'];
+}
+if (isset($dateRange['to'])) {
+    $query .= " AND t.TournamentDate <= ?";
+    $params[] = $dateRange['to'];
+}
+
+// Paging (PERF-06): ?limit= (1 to 100) and ?offset= return one page with
+// total and hasMore; without limit the whole list is returned as before
+$pageLimit = null;
+$pageOffset = 0;
+if (isset($_GET['limit'])) {
+    $pageLimit = filter_var($_GET['limit'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+    $pageOffset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
+    if ($pageLimit === false || $pageOffset === false) {
+        sendJSON(['success' => false, 'message' => 'Invalid limit or offset'], 400);
+    }
+}
+$countSql = "SELECT COUNT(*) " . substr($query, strpos($query, 'FROM Tournaments t'));
+$countParams = array_slice($params, 1);
 
 // Sort upcoming tournaments by soonest first (ASC), past tournaments by latest first (DESC)
 if ($status === 'upcoming') {
-    $query .= " ORDER BY t.TournamentDate ASC";
+    $query .= " ORDER BY t.TournamentDate ASC, (t.StartTime IS NULL) ASC, t.StartTime ASC, t.TournamentId ASC";
 } else {
-    $query .= " ORDER BY t.TournamentDate DESC";
+    $query .= " ORDER BY t.TournamentDate DESC, (t.StartTime IS NULL) DESC, t.StartTime DESC, t.TournamentId DESC";
 }
 
-            $stmt = $pdo->prepare($query);
-            $stmt->execute($params);
+            if ($pageLimit !== null) {
+                $stmt = $pdo->prepare($query . " LIMIT ? OFFSET ?");
+                $i = 1;
+                foreach ($params as $p) {
+                    $stmt->bindValue($i++, $p);
+                }
+                $stmt->bindValue($i++, (int) $pageLimit, PDO::PARAM_INT);
+                $stmt->bindValue($i, (int) $pageOffset, PDO::PARAM_INT);
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare($query);
+                $stmt->execute($params);
+            }
             $tournaments = $stmt->fetchAll();
 
             attachTournamentPosters($pdo, $tournaments);
 
-            sendJSON([
+            $response = [
                 'success' => true,
                 'tournaments' => $tournaments
-            ]);
+            ];
+            if ($pageLimit !== null) {
+                $countStmt = $pdo->prepare($countSql);
+                $countStmt->execute($countParams);
+                $total = (int) $countStmt->fetchColumn();
+                $response['total'] = $total;
+                $response['offset'] = (int) $pageOffset;
+                $response['limit'] = (int) $pageLimit;
+                $response['hasMore'] = $pageOffset + count($tournaments) < $total;
+            }
+            // Public lists (no one signed in, not "mine") can be cached briefly
+            if (!$mineOnly && !in_array($status, ['pending', 'Pending', 'Rejected'], true)) {
+                kbfPublicCache(60);
+            }
+            sendJSON($response);
         }
     } catch(PDOException $e) {
         error_log('Database error in tournaments.php GET: ' . $e->getMessage());

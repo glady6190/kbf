@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KBF-UK - Home</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -1445,6 +1444,7 @@
             .hero-title { font-size: min(86px, 6.4vw); }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Top Upcoming Tournaments Ticker -->
@@ -2055,7 +2055,8 @@
 
     async function loadTournamentTicker() {
         try {
-            const response = await fetch('/api/tournaments.php', {
+            // Only the next few approved upcoming tournaments, soonest first
+            const response = await fetch('/api/tournaments.php?status=upcoming&limit=10', {
                 credentials: 'include'
             });
             if (!response.ok) throw new Error('Ticker fetch failed: ' + response.status);
@@ -2187,9 +2188,12 @@
         };
         if (post.FeaturedImage) {
             const img = document.createElement('img');
-            img.src = post.FeaturedImage;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 300;
+            img.height = 200;
+            setImageVariant(img, post.FeaturedImage, 'thumb');
             img.addEventListener('error', () => img.replaceWith(placeholder()));
             media.appendChild(img);
         } else {
@@ -2228,9 +2232,12 @@
         const showInitials = () => { avatar.textContent = promotionInitials(name); };
         if (post.FeaturedImage) {
             const img = document.createElement('img');
-            img.src = post.FeaturedImage;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 40;
+            img.height = 40;
+            setImageVariant(img, post.FeaturedImage, 'thumb');
             img.addEventListener('error', showInitials);
             avatar.appendChild(img);
         } else {
@@ -2286,20 +2293,21 @@
 
     async function loadAnnouncements() {
         try {
-            const response = await fetch('/api/announcements.php?limit=40', {
-                credentials: 'include'
-            });
-            const data = await response.json();
-
-            const container = document.getElementById('announcements');
-            const posts = (data && data.success && Array.isArray(data.announcements)) ? data.announcements.slice() : [];
-            posts.sort((a, b) => {
+            // Only what is shown: the 4 newest news posts and the 3 newest
+            // promotions (newest first from the server; text is an excerpt)
+            const [newsData, promoData] = await Promise.all([
+                fetch('/api/announcements.php?type=news&limit=4', { credentials: 'include' }).then(r => r.json()),
+                fetch('/api/announcements.php?type=promotions&limit=3', { credentials: 'include' }).then(r => r.json())
+            ]);
+            const listOf = data => (data && data.success && Array.isArray(data.announcements)) ? data.announcements.slice() : [];
+            const byNewest = (a, b) => {
                 const da = postDate(a), db = postDate(b);
                 return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
-            });
+            };
 
-            const news = posts.filter(post => !isPromotion(post)).slice(0, 4);
-            const promotions = posts.filter(isPromotion).slice(0, 3);
+            const container = document.getElementById('announcements');
+            const news = listOf(newsData).sort(byNewest).filter(post => !isPromotion(post)).slice(0, 4);
+            const promotions = listOf(promoData).sort(byNewest).filter(isPromotion).slice(0, 3);
 
             renderPromotions(promotions);
 

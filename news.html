@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -252,6 +251,7 @@
 
 
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -528,11 +528,12 @@
     </footer>
 
     <!-- Shared news and promotion helpers (also used by the home page) -->
+    <script src="/js/escape.js"></script>
     <script src="/js/news-helpers.js"></script>
    <script>
     // ============================================
     // NEWS PAGE
-    // All published posts are loaded once, sorted newest first and shown as
+    // Published posts are loaded from the server in pages (newest first) and shown as
     // a list (default) or a grid. Two or more non-promotion posts about the
     // same tournament become one group item, except while searching or while
     // a tournament filter (?tournament={id}) is set. 10 items at a time.
@@ -630,7 +631,7 @@
     window.addEventListener('popstate', function () {
         readUrl(false);
         state.shown = PAGE_SIZE;
-        render();
+        reload();
     });
 
     // ============================================
@@ -641,7 +642,7 @@
             btn.addEventListener('click', () => {
                 state.tab = btn.dataset.tab;
                 state.shown = PAGE_SIZE;
-                render();
+                reload();
             });
         });
         document.querySelectorAll('.nw-view').forEach(btn => {
@@ -651,28 +652,25 @@
         search.addEventListener('input', () => {
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => {
-                state.q = search.value.trim().toLowerCase();
+                state.q = search.value.trim();
                 state.shown = PAGE_SIZE;
-                render();
-            }, 150);
+                reload();
+            }, 250);
         });
         document.getElementById('clearSearch').addEventListener('click', () => {
             search.value = '';
             state.q = '';
             state.shown = PAGE_SIZE;
-            render();
+            reload();
             search.focus();
         });
         document.getElementById('tournamentClear').addEventListener('click', () => {
             state.tournament = null;
             state.shown = PAGE_SIZE;
             writeUrl(true);
-            render();
+            reload();
         });
-        document.getElementById('showMore').addEventListener('click', () => {
-            state.shown += PAGE_SIZE;
-            render();
-        });
+        document.getElementById('showMore').addEventListener('click', showMoreItems);
     }
 
     function setView(view) {
@@ -688,38 +686,83 @@
         state.tournament = id;
         state.shown = PAGE_SIZE;
         writeUrl(true);
-        render();
-        document.getElementById('tournamentChip').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        reload().then(() => {
+            document.getElementById('tournamentChip').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
     }
 
     // ============================================
     // DATA
     // ============================================
-    async function loadNews() {
-        try {
-            const response = await fetch('/api/announcements.php?limit=500', { credentials: 'include' });
-            const data = await response.json();
-            document.getElementById('loading').classList.add('hidden');
-            if (!data.success) throw new Error('not loaded');
+    // Posts come from the server 50 at a time, already filtered by the tab,
+    // tournament and search, newest first; each post's text is an excerpt.
+    // More are loaded when "Show more" needs them, so every older post can
+    // be reached.
+    const FETCH_SIZE = 50;
+    let serverTotal = 0;        // posts matching the current tab / tournament / search
+    let serverHasMore = false;
+    let loadSeq = 0;            // a newer request makes older answers ignored
 
-            allPosts = (data.announcements || []).slice();
-            allPosts.forEach(p => {
-                p._promotion = N.isPromotion(p);
-                p._title = text(p.Title);
-                p._tournament = text(p.TournamentName);
-                p._excerpt = N.excerpt(p);
-                p._search = (p._title + ' ' + p._tournament + ' ' + p._excerpt).toLowerCase();
-            });
-            // Newest first by PublishedDate (falling back to CreatedDate)
-            allPosts.sort((a, b) => (sortTime(b) - sortTime(a)) || (Number(b.AnnouncementId) - Number(a.AnnouncementId)));
+    function listUrl(offset) {
+        const p = new URLSearchParams();
+        p.set('limit', String(FETCH_SIZE));
+        p.set('offset', String(offset));
+        if (state.tab === 'tournament' || state.tab === 'promotions') p.set('type', state.tab);
+        if (state.tournament) p.set('tournament', String(state.tournament));
+        if (state.q) p.set('q', state.q);
+        return '/api/announcements.php?' + p.toString();
+    }
 
+    function preparePost(p) {
+        p._promotion = N.isPromotion(p);
+        p._title = text(p.Title);
+        p._tournament = text(p.TournamentName);
+        p._excerpt = N.excerpt(p);
+        return p;
+    }
+
+    // The next page for the current filters; false when a newer request took over
+    async function fetchMore(seq) {
+        const response = await fetch(listUrl(allPosts.length), { credentials: 'include' });
+        const data = await response.json();
+        if (seq !== loadSeq) return false;
+        if (!data.success) throw new Error('not loaded');
+        const posts = (data.announcements || []).map(preparePost);
+        allPosts = allPosts.concat(posts);
+        // Newest first by PublishedDate (falling back to CreatedDate)
+        allPosts.sort((a, b) => (sortTime(b) - sortTime(a)) || (Number(b.AnnouncementId) - Number(a.AnnouncementId)));
+        serverTotal = Number(data.total) || 0;
+        serverHasMore = !!data.hasMore && posts.length > 0;
+        if (data.counts) {
             // Tab counts are numbers of posts, not items
-            document.querySelector('[data-count="all"]').textContent = allPosts.length;
-            document.querySelector('[data-count="tournament"]').textContent = allPosts.filter(p => !p._promotion && hasTournament(p)).length;
-            document.querySelector('[data-count="promotions"]').textContent = allPosts.filter(p => p._promotion).length;
+            document.querySelector('[data-count="all"]').textContent = Number(data.counts.all) || 0;
+            document.querySelector('[data-count="tournament"]').textContent = Number(data.counts.tournament) || 0;
+            document.querySelector('[data-count="promotions"]').textContent = Number(data.counts.promotions) || 0;
+        }
+        return true;
+    }
 
+    // Load until there are more items than are shown (a group holds several posts)
+    async function ensureItems(seq) {
+        while (serverHasMore && buildItems(filteredPosts()).length <= state.shown) {
+            if (!(await fetchMore(seq))) return false;
+        }
+        return true;
+    }
+
+    // First page for the current tab / tournament / search
+    async function reload() {
+        const seq = ++loadSeq;
+        allPosts = [];
+        serverTotal = 0;
+        serverHasMore = true;
+        try {
+            if (!(await fetchMore(seq))) return;
+            if (!(await ensureItems(seq))) return;
+            document.getElementById('loading').classList.add('hidden');
             render();
         } catch (error) {
+            if (seq !== loadSeq) return;
             console.error('Error loading news:', error);
             const loading = document.getElementById('loading');
             loading.classList.remove('hidden');
@@ -728,12 +771,27 @@
         }
     }
 
+    function loadNews() {
+        return reload();
+    }
+
+    async function showMoreItems() {
+        state.shown += PAGE_SIZE;
+        const seq = loadSeq;
+        try {
+            if (await ensureItems(seq)) render();
+        } catch (error) {
+            console.error('Error loading more news:', error);
+        }
+    }
+
+    // The server has already filtered by tab, tournament and search; the tab
+    // and tournament rules are kept here too
     function filteredPosts() {
         let list = allPosts;
         if (state.tab === 'tournament') list = list.filter(p => !p._promotion && hasTournament(p));
         if (state.tab === 'promotions') list = list.filter(p => p._promotion);
         if (state.tournament) list = list.filter(p => Number(p.TournamentId) === state.tournament);
-        if (state.q) list = list.filter(p => p._search.indexOf(state.q) !== -1);
         return list;
     }
 
@@ -794,8 +852,9 @@
         container.textContent = '';
         container.className = state.view === 'grid' ? 'nw-grid' : 'nw-list';
 
-        document.getElementById('noPosts').classList.toggle('hidden', !(list.length === 0 && !state.q));
-        document.getElementById('noResults').classList.toggle('hidden', !(list.length === 0 && state.q));
+        const none = list.length === 0 && !serverHasMore;
+        document.getElementById('noPosts').classList.toggle('hidden', !(none && !state.q));
+        document.getElementById('noResults').classList.toggle('hidden', !(none && state.q));
 
         const visible = items.slice(0, state.shown);
         visible.forEach(item => {
@@ -804,9 +863,10 @@
 
         const postsShown = visible.reduce((n, item) => n + (item.type === 'group' ? item.posts.length : 1), 0);
         const pager = document.getElementById('pager');
+        const totalPosts = Math.max(serverTotal, list.length);
         pager.classList.toggle('hidden', list.length === 0);
-        document.getElementById('pagerText').textContent = 'Showing ' + postsShown + ' of ' + list.length + ' post' + (list.length === 1 ? '' : 's');
-        document.getElementById('showMore').classList.toggle('hidden', items.length <= state.shown);
+        document.getElementById('pagerText').textContent = 'Showing ' + postsShown + ' of ' + totalPosts + ' post' + (totalPosts === 1 ? '' : 's');
+        document.getElementById('showMore').classList.toggle('hidden', items.length <= state.shown && !serverHasMore);
     }
 
     // ---------- shared pieces ----------
@@ -826,9 +886,12 @@
         const src = post ? safeImage(post.FeaturedImage) : null;
         if (src) {
             const img = document.createElement('img');
-            img.src = src;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 132;
+            img.height = 176;
+            setImageVariant(img, src, 'thumb');
             img.addEventListener('error', placeholder);
             box.appendChild(img);
         } else {
@@ -858,9 +921,12 @@
         const src = safeImage(post.FeaturedImage);
         if (src) {
             const img = document.createElement('img');
-            img.src = src;
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 60;
+            img.height = 60;
+            setImageVariant(img, src, 'thumb');
             img.addEventListener('error', initials);
             box.appendChild(img);
         } else {
@@ -1016,9 +1082,12 @@
             const src = safeImage(p.FeaturedImage);
             if (src) {
                 const img = document.createElement('img');
-                img.src = src;
                 img.alt = '';
                 img.loading = 'lazy';
+                img.decoding = 'async';
+                img.width = 400;
+                img.height = 220;
+                setImageVariant(img, src, 'thumb');
                 img.addEventListener('error', () => img.replaceWith(N.icon('newspaper', 'nw-icon nw-placeholder')));
                 media.appendChild(img);
             } else {

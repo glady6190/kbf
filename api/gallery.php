@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['tournamentId'])) {
         
         $stmt = $pdo->query($query);
         $tournaments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
+        // Same for every visitor: cached briefly when no one is signed in
+        kbfPublicCache(60);
         sendJSON([
             'success' => true,
             'tournaments' => $tournaments
@@ -88,7 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['tournamentId'])) {
         $stmt = $pdo->prepare($photosQuery);
         $stmt->execute([$tournamentId]);
         $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
+        kbfPublicCache(60);
         sendJSON([
             'success' => true,
             'tournament' => $tournament,

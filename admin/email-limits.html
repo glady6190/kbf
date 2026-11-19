@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email and Limits - Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
         [data-theme="emerald"] { --theme-primary: #10b981; --theme-secondary: #059669; --theme-light: #34d399; }
@@ -38,6 +37,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -66,7 +66,7 @@
                 <p class="text-xs sm:text-sm text-gray-300 font-semibold leading-relaxed mb-5 sm:mb-6">Your Hostinger mailbox can send 100 emails in any 24 hours. Set the limit to match.</p>
 
                 <form id="settingsForm" novalidate>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label for="limitInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Emails per 24 hours</label>
                             <input type="number" id="limitInput" class="field-input" min="1" max="10000" step="1" inputmode="numeric" required>
@@ -75,6 +75,11 @@
                             <label for="reserveInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Keep back for important emails</label>
                             <input type="number" id="reserveInput" class="field-input" min="0" step="1" inputmode="numeric" required aria-describedby="reserveHint">
                             <p id="reserveHint" class="text-xs text-gray-400 font-semibold mt-1">Approvals, password resets</p>
+                        </div>
+                        <div>
+                            <label for="reserveNormalInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Keep back for everyday emails</label>
+                            <input type="number" id="reserveNormalInput" class="field-input" min="0" step="1" inputmode="numeric" required aria-describedby="reserveNormalHint">
+                            <p id="reserveNormalHint" class="text-xs text-gray-400 font-semibold mt-1">Results, tournaments, grades: broadcasts never use this</p>
                         </div>
                         <div>
                             <label for="batchInput" class="block text-xs font-black theme-primary-text uppercase mb-2">Broadcast emails per run</label>
@@ -93,6 +98,7 @@
                             <span class="flex items-center gap-2"><span class="result-square usage-reserve" style="position:static"></span>Kept back for important emails</span>
                         </div>
                         <p id="usageText" class="mt-3 text-xs sm:text-sm text-gray-200 font-semibold leading-relaxed"></p>
+                        <p id="serviceText" class="mt-1 text-xs sm:text-sm text-gray-200 font-semibold leading-relaxed"></p>
                         <p id="waitingText" class="mt-1 text-xs sm:text-sm text-gray-400 font-semibold"></p>
                         <div id="pausedNotice" class="hidden mt-4 p-3 sm:p-4 border-2 sm:border-4 border-amber-500 bg-amber-500/10 flex gap-3" role="status">
                             <svg class="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -233,14 +239,14 @@
     // ============================================
     // STATE
     // ============================================
-    let saved = { limit: 100, reserve: 20, batchSize: 20 };
+    let saved = { limit: 100, reserve: 20, reserveNormal: 10, batchSize: 20 };
     let usage = null;
     let canEdit = true;
     let nextOffset = 0;
 
     async function initPage() {
         document.getElementById('settingsForm').addEventListener('submit', saveSettings);
-        ['limitInput', 'reserveInput'].forEach(id => {
+        ['limitInput', 'reserveInput', 'reserveNormalInput'].forEach(id => {
             document.getElementById(id).addEventListener('input', updateUsageBar);
         });
         document.getElementById('statusFilter').addEventListener('change', () => loadLog(true));
@@ -272,6 +278,7 @@
 
             document.getElementById('limitInput').value = saved.limit;
             document.getElementById('reserveInput').value = saved.reserve;
+            document.getElementById('reserveNormalInput').value = saved.reserveNormal != null ? saved.reserveNormal : 10;
             document.getElementById('batchInput').value = saved.batchSize;
 
             if (first) {
@@ -284,7 +291,7 @@
                 });
             }
 
-            ['limitInput', 'reserveInput', 'batchInput'].forEach(id => {
+            ['limitInput', 'reserveInput', 'reserveNormalInput', 'batchInput'].forEach(id => {
                 document.getElementById(id).disabled = !canEdit;
             });
             document.getElementById('saveBtn').disabled = !canEdit;
@@ -325,21 +332,35 @@
         const typedReserve = parseInt(document.getElementById('reserveInput').value, 10);
         const limit = typedLimit > 0 ? typedLimit : saved.limit;
         const reserve = typedReserve >= 0 ? Math.min(typedReserve, Math.floor(limit / 2)) : saved.reserve;
+        const typedNormal = parseInt(document.getElementById('reserveNormalInput').value, 10);
+        const reserveNormal = typedNormal >= 0 ? Math.min(typedNormal, limit - reserve) : (saved.reserveNormal || 0);
         const sent = parseInt(usage.sent24h, 10) || 0;
+        const service = usage.broadcastService || { separate: false };
 
+        // Kept back: the important reserve, and the everyday reserve when
+        // broadcasts share this mailbox
+        const keptBack = reserve + (service.separate ? 0 : reserveNormal);
         const sentPct = Math.min(100, (sent / limit) * 100);
-        const reservePct = Math.min(100, (reserve / limit) * 100);
+        const reservePct = Math.min(100, (keptBack / limit) * 100);
         document.getElementById('usageSent').style.width = sentPct + '%';
         document.getElementById('usageReserve').style.width = reservePct + '%';
 
-        const text = sent + ' of ' + limit + ' used in the last 24 hours. Broadcasts stop at ' + (limit - reserve) +
-            ' and carry on automatically when the allowance frees up.';
+        const share = Math.max(0, limit - reserve - reserveNormal);
+        const perHour = share > 0 ? Math.max(1, Math.ceil(share / 24)) : 0;
+        const text = sent + ' of ' + limit + ' used in the last 24 hours. Everyday emails stop at ' + (limit - reserve) +
+            (service.separate ? '.' : '. Broadcasts stop at ' + share + ', at most ' + perHour +
+                ' an hour, and carry on automatically when the allowance frees up.');
         document.getElementById('usageText').textContent = text;
         document.getElementById('usageBar').setAttribute('aria-label', text);
+
+        document.getElementById('serviceText').textContent = service.separate
+            ? 'Broadcasts are sent through ' + service.name + ': ' + (parseInt(service.sent24h, 10) || 0) + ' of ' +
+              service.limit + ' used in the last 24 hours, at most ' + service.perHour + ' an hour.'
+            : 'Broadcasts are sent through the ' + (service.name || 'Hostinger mailbox') + '.';
     }
 
     function clearInvalid() {
-        ['limitInput', 'reserveInput', 'batchInput'].forEach(id => {
+        ['limitInput', 'reserveInput', 'reserveNormalInput', 'batchInput'].forEach(id => {
             document.getElementById(id).removeAttribute('aria-invalid');
         });
     }
@@ -363,6 +384,7 @@
         const limit = wholeNumber(document.getElementById('limitInput').value);
         const reserve = wholeNumber(document.getElementById('reserveInput').value);
         const batchSize = wholeNumber(document.getElementById('batchInput').value);
+        const reserveNormal = wholeNumber(document.getElementById('reserveNormalInput').value);
 
         if (isNaN(limit) || limit < 1 || limit > 10000) {
             markInvalid('limitInput', 'Emails per 24 hours must be a whole number from 1 to 10,000.');
@@ -371,6 +393,11 @@
         const maxReserve = Math.floor(limit / 2);
         if (isNaN(reserve) || reserve < 0 || reserve > maxReserve) {
             markInvalid('reserveInput', 'Keep back for important emails must be from 0 to ' + maxReserve + ' (half the limit).');
+            return;
+        }
+        const maxReserveNormal = limit - reserve;
+        if (isNaN(reserveNormal) || reserveNormal < 0 || reserveNormal > maxReserveNormal) {
+            markInvalid('reserveNormalInput', 'Keep back for everyday emails must be from 0 to ' + maxReserveNormal + ' (the limit minus the important reserve).');
             return;
         }
         if (isNaN(batchSize) || batchSize < 1 || batchSize > limit) {
@@ -384,11 +411,11 @@
             const res = await authenticatedFetch(API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'saveSettings', limit: limit, reserve: reserve, batchSize: batchSize })
+                body: JSON.stringify({ action: 'saveSettings', limit: limit, reserve: reserve, reserveNormal: reserveNormal, batchSize: batchSize })
             });
             const data = await res.json();
             if (!data.success) {
-                const fieldIds = { limit: 'limitInput', reserve: 'reserveInput', batchSize: 'batchInput' };
+                const fieldIds = { limit: 'limitInput', reserve: 'reserveInput', reserveNormal: 'reserveNormalInput', batchSize: 'batchInput' };
                 if (data.field && fieldIds[data.field]) {
                     markInvalid(fieldIds[data.field], data.message || 'Please check this value.');
                 } else {

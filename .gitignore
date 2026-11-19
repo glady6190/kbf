@@ -16,6 +16,7 @@
 # Local tools and dependencies
 .claude/
 node_modules/
+/tools/
 
 # Logs
 *.log

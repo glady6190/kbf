@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gallery - KBF-UK</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --theme-primary: #10b981;
@@ -146,6 +145,7 @@
             padding-left: 25px;
         }
     </style>
+    <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -451,8 +451,9 @@
         grid.innerHTML = tournaments.map(tournament => `
             <a href="/tournament-gallery?id=${encodeURIComponent(tournament.TournamentId)}" class="tournament-card border-4 border-gray-700 overflow-hidden block">
                 <div class="h-48 sm:h-64 overflow-hidden bg-slate-800">
-                    <img src="${escapeHtml(safeUrl(tournament.ThumbnailPath))}"
-                         alt="${escapeHtml(tournament.Name)}" 
+                    <img${imgVariantAttrs(tournament.ThumbnailPath, 'thumb')}
+                         alt="${escapeHtml(tournament.Name)}"
+                         width="400" height="256" loading="lazy" decoding="async"
                          class="w-full h-full object-cover">
                 </div>
                 <div class="p-4 sm:p-6">
