@@ -4,53 +4,89 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2-step verification - KBF-UK</title>
-    <link rel="stylesheet" href="/assets/css/auth.css">
+    <link rel="stylesheet" href="/assets/css/auth.css?v=2611191347">
 </head>
 <body class="auth-body" data-theme="emerald">
-    <main class="auth-wrap">
-        <div class="auth-card">
-            <div class="auth-logo">
-                <span class="auth-logo-ring">
-                    <span class="auth-logo-glow"></span>
-                    <span class="auth-logo-img"><img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo"></span>
-                </span>
+    <div class="auth-shell">
+        <!-- Portal panel (desktop only, decorative) -->
+        <aside class="auth-panel" aria-hidden="true">
+            <div class="auth-panel-inner">
+                <div class="auth-brand">
+                    <div class="auth-brand-logo"><img src="/assets/images/logo/KBF-Logo.jpeg" alt="" width="104" height="104"></div>
+                    <div class="auth-brand-text">
+                        <p class="auth-brand-name">KBF-UK</p>
+                        <p class="auth-brand-sub">Kerala Badminton Federation UK</p>
+                    </div>
+                </div>
+                <p class="auth-panel-title">The KBF<br><span>admin portal</span></p>
+                <ul class="auth-features">
+                    <li class="auth-feature">
+                        <span class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>
+                        <div>
+                            <p class="auth-feature-title">Approve new players</p>
+                            <p class="auth-feature-text">Review registrations and give out KBF IDs.</p>
+                        </div>
+                    </li>
+                    <li class="auth-feature">
+                        <span class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>
+                        <div>
+                            <p class="auth-feature-title">Run tournaments</p>
+                            <p class="auth-feature-text">Create events, add posters and enter results.</p>
+                        </div>
+                    </li>
+                    <li class="auth-feature">
+                        <span class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>
+                        <div>
+                            <p class="auth-feature-title">Share the news</p>
+                            <p class="auth-feature-text">Post updates, photos and promotions.</p>
+                        </div>
+                    </li>
+                </ul>
             </div>
+        </aside>
 
-            <p class="auth-step">2-step verification</p>
-            <h1 id="verifyHeading" class="auth-title">Enter your code</h1>
-            <p id="verifyIntro" class="auth-intro">Open your authenticator app and enter the 6-digit code for KBF-UK.</p>
-
-            <div id="message" class="hidden" role="alert"></div>
-
-            <form id="verifyForm" class="auth-form" novalidate>
-                <!-- Code from the app -->
-                <div id="appCodeArea" class="auth-field">
-                    <div id="codeInput"></div>
+        <main class="auth-wrap">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <div class="auth-logo-mark"><img src="/assets/images/logo/KBF-Logo.jpeg" alt="KBF-UK Logo" width="76" height="76"></div>
                 </div>
 
-                <!-- Backup code -->
-                <div id="backupCodeArea" class="auth-field hidden">
-                    <label for="backupCode" class="auth-label">Backup code</label>
-                    <input id="backupCode" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
-                           class="auth-input auth-input-code" placeholder="ABCDE-FGHJK" aria-describedby="backupHint">
-                    <p id="backupHint" class="auth-hint">Each backup code works once.</p>
+                <p class="auth-step">2-step verification</p>
+                <h1 id="verifyHeading" class="auth-title"><span class="auth-accent">Enter</span> your code</h1>
+                <p id="verifyIntro" class="auth-intro">Open your authenticator app and enter the 6-digit code for KBF-UK.</p>
+
+                <div id="message" class="hidden" role="alert"></div>
+
+                <form id="verifyForm" class="auth-form" novalidate>
+                    <!-- Code from the app -->
+                    <div id="appCodeArea" class="auth-field">
+                        <div id="codeInput"></div>
+                    </div>
+
+                    <!-- Backup code -->
+                    <div id="backupCodeArea" class="auth-field hidden">
+                        <label for="backupCode" class="auth-label">Backup code</label>
+                        <input id="backupCode" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                               class="auth-input auth-input-code" placeholder="ABCDE-FGHJK" aria-describedby="backupHint">
+                        <p id="backupHint" class="auth-hint">Each backup code works once.</p>
+                    </div>
+
+                    <button type="submit" id="verifyButton" class="auth-btn auth-btn-arrow">Verify</button>
+
+                    <div class="auth-link-row">
+                        <button type="button" id="switchMode" class="auth-link">Use a backup code instead</button>
+                    </div>
+                </form>
+
+                <div class="auth-footer">
+                    <p class="auth-small">Lost your phone? Ask a Super Admin to reset your 2-step verification.</p>
                 </div>
-
-                <button type="submit" id="verifyButton" class="auth-btn">Verify</button>
-
-                <div class="auth-link-row">
-                    <button type="button" id="switchMode" class="auth-link">Use a backup code instead</button>
-                </div>
-            </form>
-
-            <div class="auth-footer">
-                <p class="auth-small">Lost your phone? Ask a Super Admin to reset your 2-step verification.</p>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
-    <script src="/js/escape.js"></script>
-    <script src="/js/code-input.js"></script>
+    <script src="/js/escape.js?v=2611191347"></script>
+    <script src="/js/code-input.js?v=2611191347"></script>
     <script>
     (function () {
         'use strict';

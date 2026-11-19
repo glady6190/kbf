@@ -36,6 +36,33 @@ Upload `assets/css/site.css`. Do not upload `tools/`, `docs/`,
 `tailwind.config.js` or `assets/css/tailwind.input.css`; the site does not
 need them. `tools/` is also left out of git.
 
+## File versions (cache-safe links)
+
+Every link from a page to the site's own CSS and JS files ends in `?v=`
+and a short code, for example `/js/escape.js?v=2611191430`. A new code
+makes every browser fetch fresh copies straight after a deployment, so a
+page never runs with an old cached script (the cause of the dashboard's
+"KBF.formatDate is not a function" error). The `.htaccess` caching rules
+are unchanged.
+
+The code is kept in one place, `build/asset-version.txt`, and
+`build/asset-version.php` writes it into every page. Before the commit
+that is packaged, open a terminal in `C:\KBF` and run:
+
+```
+php build/asset-version.php
+```
+
+This makes a new code from the build date and time (YYMMDDHHMM), saves it
+in `build/asset-version.txt` and updates the `?v=` of every link (each
+page keeps its line endings). To use a code of your choice instead, add
+it: `php build/asset-version.php 2611191500`. To write the saved code
+again (for example into a new page), use `--keep`. Then commit and make
+the deployment zip from that commit. New pages should link files with
+`?v=` too; running the script adds it.
+
+The `build/` folder is not uploaded (the zip leaves it out).
+
 ## Getting the program again
 
 The version is pinned to Tailwind CSS v3.4.17 (do not use v4; it works
