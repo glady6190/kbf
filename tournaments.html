@@ -198,16 +198,10 @@
             padding-left: 0.26em;
             text-transform: uppercase;
         }
-        /* Outlined date numbers use Archivo Black (as the home page hero):
-           each letter is one clean shape, so Android draws no stray lines
-           inside the outline. Licence in assets/fonts/ArchivoBlack-OFL.txt. */
-        @font-face {
-            font-family: 'Archivo Black';
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-            src: url('/assets/fonts/archivo-black-v23-latin.woff2') format('woff2');
-        }
+        /* Outlined date numbers use Archivo Black (the @font-face and the
+           kbf-outline-font class are in site.css, on every page): each letter
+           is one clean shape, so Android draws no stray lines inside the
+           outline. */
         .t-dt-day {
             font-family: 'Archivo Black', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
             font-size: 76px;
@@ -727,9 +721,9 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611200942">
-    <link rel="stylesheet" href="/assets/css/public-ui.css?v=2611200942">
-    <script src="/js/public-ui.js?v=2611200942" defer></script>
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200952">
+    <link rel="stylesheet" href="/assets/css/public-ui.css?v=2611200952">
+    <script src="/js/public-ui.js?v=2611200952" defer></script>
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <nav class="bg-slate-900 border-b-4 theme-primary-border sticky top-0 z-50 shadow-2xl">
@@ -934,7 +928,7 @@
     </div>
 
     <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
-        <link rel="stylesheet" href="/assets/css/site-footer.css?v=2611200942">
+        <link rel="stylesheet" href="/assets/css/site-footer.css?v=2611200952">
         <div class="kf-wrap">
             <!-- Call to action -->
             <div class="kf-cta">
@@ -1038,7 +1032,7 @@
         </script>
     </footer>
 
-    <script src="/js/escape.js?v=2611200942"></script>
+    <script src="/js/escape.js?v=2611200952"></script>
     <script>
     let currentTab = 'upcoming';
     let allTournaments = { upcoming: [], past: [] };
@@ -1188,12 +1182,12 @@
     // Date tile shown in place of a poster
     function dateTileHtml(ymd, large) {
         if (!ymd) {
-            return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}"><span class="t-dt-weekday">Date</span><span class="t-dt-day">--</span><span class="t-dt-month">To be confirmed</span></div>`;
+            return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}"><span class="t-dt-weekday">Date</span><span class="t-dt-day kbf-outline-font">--</span><span class="t-dt-month">To be confirmed</span></div>`;
         }
         const d = parseYmd(ymd);
         return `<div class="t-datetile${large ? ' t-datetile-lg' : ''}">
                     <span class="t-dt-weekday">${WEEKDAYS_SHORT[d.getDay()]}</span>
-                    <span class="t-dt-day">${d.getDate()}</span>
+                    <span class="t-dt-day kbf-outline-font">${d.getDate()}</span>
                     <span class="t-dt-month">${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}</span>
                 </div>`;
     }
@@ -1567,6 +1561,6 @@
     }
     </script>
     <!-- Footer contact and social links from Site settings -->
-    <script src="/js/site-settings.js?v=2611200942"></script>
+    <script src="/js/site-settings.js?v=2611200952"></script>
 </body>
 </html>
