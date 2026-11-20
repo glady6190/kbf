@@ -116,6 +116,105 @@
         return lifted;
     }
 
+    // ---------- dialogs taller than the screen ----------
+    // A dialog card on a full-screen overlay is kept within the screen (the
+    // viewport minus the overlay's padding, at least 2rem): its body
+    // scrolls while the title row at the top and the button row at the
+    // bottom stay in view. Side panels, full-screen views, the lightbox,
+    // the cropper and anything marked data-kbf-no-fit are left alone.
+    var FIT_SKIP = '.kbf-lb, .kbf-crop, [data-kbf-no-fit]';
+    var FIELD = 'input:not([type="hidden"]), textarea, select, [contenteditable="true"]';
+
+    function px(value) {
+        var n = parseFloat(value);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function shownChildren(parent) {
+        return Array.prototype.filter.call(parent.children, function (c) {
+            var tag = c.tagName;
+            if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEMPLATE') return false;
+            return isShown(c) && c.getClientRects().length > 0;
+        });
+    }
+
+    function opaqueBackground(from, stop) {
+        var el = from;
+        while (el && el !== stop.parentElement) {
+            var bg = window.getComputedStyle(el).backgroundColor;
+            if (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(bg)) return bg;
+            el = el.parentElement;
+        }
+        return '#0f172a';
+    }
+
+    function fit(node) {
+        if (!node || node.__kbfFit || node.tagName === 'ASIDE' || node.matches(FIT_SKIP)) return;
+        var wrap, box;
+        if (window.getComputedStyle(node).position === 'fixed') {
+            wrap = node;
+            var cards = shownChildren(node).filter(function (c) {
+                var pos = window.getComputedStyle(c).position;
+                return pos !== 'fixed' && pos !== 'absolute';
+            });
+            if (cards.length !== 1) return;
+            box = cards[0];
+        } else {
+            wrap = node.parentElement;
+            if (!wrap || window.getComputedStyle(wrap).position !== 'fixed') return;
+            box = node;
+        }
+        if (box.matches(FIT_SKIP) || box.tagName === 'ASIDE') return;
+        var vw = document.documentElement.clientWidth || window.innerWidth;
+        var vh = window.innerHeight || document.documentElement.clientHeight;
+        var wr = wrap.getBoundingClientRect();
+        var br = box.getBoundingClientRect();
+        if (wr.width < vw - 2 || wr.height < vh - 2) return;   // not a full-screen overlay
+        if (br.width >= wr.width - 4) return;                  // a full-screen view, not a card
+        node.__kbfFit = true;
+
+        var ws = window.getComputedStyle(wrap);
+        var bs = window.getComputedStyle(box);
+        var gap = Math.max(32, Math.round(px(ws.paddingTop) + px(ws.paddingBottom) + px(bs.marginTop) + px(bs.marginBottom)));
+        box.style.maxHeight = 'calc(100vh - ' + gap + 'px)';
+        if (window.CSS && CSS.supports && CSS.supports('height', '100dvh')) box.style.maxHeight = 'calc(100dvh - ' + gap + 'px)';
+        box.style.overflowY = 'auto';
+        box.style.overscrollBehavior = 'contain';
+
+        // The rows to keep in view: the first and last of the content (inside
+        // a single form or wrapper when the card has one)
+        var holder = box;
+        var rows = shownChildren(holder);
+        for (var depth = 0; depth < 3 && rows.length === 1 && rows[0].children.length > 1 &&
+                (rows[0].tagName === 'FORM' || rows[0].tagName === 'DIV'); depth++) {
+            holder = rows[0];
+            rows = shownChildren(holder);
+        }
+        if (rows.length < 2) return;
+        var bg = opaqueBackground(holder, box);
+        var head = rows[0];
+        var foot = rows[rows.length - 1];
+        if (/^H[1-4]$/.test(head.tagName) || (head.querySelector('h1, h2, h3, h4') && !head.querySelector(FIELD))) {
+            // The card's top padding moves into the row, so it sticks flush
+            var pt = px(bs.paddingTop);
+            box.style.paddingTop = '0px';
+            head.style.paddingTop = (px(window.getComputedStyle(head).paddingTop) + pt) + 'px';
+            head.style.position = 'sticky';
+            head.style.top = '0px';
+            head.style.zIndex = '2';
+            head.style.backgroundColor = bg;
+        }
+        if (foot.querySelector('button') && !foot.querySelector(FIELD)) {
+            var pb = px(bs.paddingBottom);
+            box.style.paddingBottom = '0px';
+            foot.style.paddingBottom = (px(window.getComputedStyle(foot).paddingBottom) + pb) + 'px';
+            foot.style.position = 'sticky';
+            foot.style.bottom = '0px';
+            foot.style.zIndex = '2';
+            foot.style.backgroundColor = bg;
+        }
+    }
+
     function resolveEl(value, node) {
         if (!value) return null;
         if (typeof value === 'string') return node.querySelector(value);
@@ -168,6 +267,7 @@
         // Move focus in (after the page's own show code has run)
         window.setTimeout(function () {
             if (entryFor(node) === -1) return;
+            try { fit(node); } catch (e) { /* the dialog still works unfitted */ }
             if (node.contains(document.activeElement)) return;
             var target = resolveEl(opts.initialFocus, node) || node.querySelector('[autofocus]');
             if (!target) {

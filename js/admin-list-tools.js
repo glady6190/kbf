@@ -180,6 +180,13 @@
         band.parentNode.insertBefore(box, band);
         band.classList.add('kbf-ph-band');
 
+        // Desktop keeps the page's own header: the phone copy (and its
+        // buttons) is fully hidden there, so nothing in it can be reached
+        function showForScreen(phone) {
+            box.hidden = !phone;
+            if (!phone && pop && !pop.hidden) closeMenu(false);
+        }
+
         // ---- the "more" menu ----
         function menuItems() { return pop ? Array.prototype.slice.call(pop.querySelectorAll('.kbf-pop-item')) : []; }
         function closeMenu(focusBack) {
@@ -245,6 +252,8 @@
             targets.forEach(function (t) { mo.observe(t, { attributes: true, attributeFilter: ['class', 'hidden', 'disabled'] }); });
         }
         refresh();
+        showForScreen(isPhone());
+        onPhoneChange(showForScreen);
         return { refresh: refresh, element: box };
     }
 

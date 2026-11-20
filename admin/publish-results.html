@@ -50,7 +50,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -76,7 +76,7 @@
 
             <div>
                 <label class="tf-label" for="qName">Tournament name *</label>
-                <input type="text" id="qName" name="tournamentName" required minlength="3" maxlength="200" class="tf-input uppercase" placeholder="MANCHESTER WINTER CHAMPIONSHIP">
+                <input type="text" id="qName" name="tournamentName" required minlength="3" maxlength="200" class="tf-input" placeholder="MANCHESTER WINTER CHAMPIONSHIP">
             </div>
 
             <div>
@@ -87,23 +87,23 @@
 
             <div>
                 <label class="tf-label" for="qVenue">Venue name *</label>
-                <input type="text" id="qVenue" name="venue" required maxlength="200" class="tf-input uppercase" placeholder="MANCHESTER SPORTS CENTRE">
+                <input type="text" id="qVenue" name="venue" required maxlength="200" class="tf-input" placeholder="MANCHESTER SPORTS CENTRE">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                     <label class="tf-label" for="qLocation">Town or city *</label>
-                    <input type="text" id="qLocation" name="location" required maxlength="100" class="tf-input uppercase" placeholder="MANCHESTER">
+                    <input type="text" id="qLocation" name="location" required maxlength="100" class="tf-input" placeholder="MANCHESTER">
                 </div>
                 <div>
                     <label class="tf-label" for="qPostcode">Postcode <span class="tf-optional">(optional)</span></label>
-                    <input type="text" id="qPostcode" name="postCode" maxlength="10" class="tf-input uppercase" placeholder="M1 1AA">
+                    <input type="text" id="qPostcode" name="postCode" maxlength="10" class="tf-input" placeholder="M1 1AA">
                 </div>
             </div>
 
             <div>
                 <label class="tf-label" for="qCategories">Categories offered *</label>
-                <input type="text" id="qCategories" name="categoriesOffered" required maxlength="100" class="tf-input uppercase" placeholder="A&amp;B, C&amp;C, C&amp;D, B&amp;D, C&amp;E" aria-describedby="qCategoriesHint">
+                <input type="text" id="qCategories" name="categoriesOffered" required maxlength="100" class="tf-input" placeholder="A&amp;B, C&amp;C, C&amp;D, B&amp;D, C&amp;E" aria-describedby="qCategoriesHint">
                 <p class="tf-hint" id="qCategoriesHint">The categories or groups that competed, for example "A&amp;B, C&amp;C, C&amp;D". <span id="qCategoriesCount">0</span>/100 characters</p>
             </div>
 
@@ -124,11 +124,11 @@
         </form>
     </main>
 
-    <script src="/js/escape.js?v=2611191826"></script>
-    <script src="/js/kbf-toast.js?v=2611191826"></script>
-    <script src="/js/kbf-dialog.js?v=2611191826"></script>
-    <script src="/js/kbf-forms.js?v=2611191826"></script>
-    <script src="/js/admin-shell.js?v=2611191826"></script>
+    <script src="/js/escape.js?v=2611200932"></script>
+    <script src="/js/kbf-toast.js?v=2611200932"></script>
+    <script src="/js/kbf-dialog.js?v=2611200932"></script>
+    <script src="/js/kbf-forms.js?v=2611200932"></script>
+    <script src="/js/admin-shell.js?v=2611200932"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -395,6 +395,6 @@
     });
     document.getElementById('createAnyway').addEventListener('click', () => create(true));
     </script>
-    <script src="/js/session-manager.js?v=2611191826"></script>
+    <script src="/js/session-manager.js?v=2611200932"></script>
 </body>
 </html>

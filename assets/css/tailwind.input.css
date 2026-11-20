@@ -47,6 +47,8 @@
    text on theme-coloured backgrounds is #0F172A.
    ============================================ */
 .kbf-ph, .kbf-lt, .kbf-lt-tags, .kbf-lt-extra, .kbf-tabs-fade { display: none; }
+/* The phone page header is hidden on desktop by its script too (hidden attribute) */
+.kbf-ph[hidden] { display: none !important; }
 .kbf-sheet, .kbf-sheet-backdrop { display: none; }
 .kbf-pop[hidden] { display: none; }
 

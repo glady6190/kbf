@@ -57,6 +57,8 @@
         style.id = 'rf-styles';
         style.textContent =
             '.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-weight:900;text-transform:uppercase;font-size:.75rem;padding:.7rem 1.1rem;border:2px solid #374151;background:#1e293b;color:#e5e7eb;white-space:nowrap;}' +
+            // .hidden must still hide a button (this rule loads after site.css)
+            '.rf-btn.hidden{display:none;}' +
             '.rf-btn:hover:not(:disabled){border-color:#6b7280;color:#fff;}' +
             '.rf-btn:disabled{opacity:.4;cursor:not-allowed;}' +
             '.rf-btn-solid{background:var(--theme-primary);border-color:var(--theme-primary);color:#0F172A;box-shadow:5px 5px 0 #020617;transition:transform .15s,box-shadow .15s;}' +
@@ -79,6 +81,8 @@
             '.rf-chip-btn.is-active .rf-chip-state{color:#0F172A;}' +
             '.rf-field{width:100%;background:#1e293b;border:2px solid #374151;color:#fff;padding:.55rem .7rem;font-weight:700;font-size:.8125rem;}' +
             '@media (max-width:639.98px){.rf-field{font-size:16px;}}' +
+            // Room for the search icon (the padding above would otherwise cover pl-9)
+            '.rf-field.rf-field-search{padding-left:2.5rem;}' +
             '.rf-field:focus{outline:none;border-color:var(--theme-primary);}' +
             '.rf-round{background:#0f172a;border:2px solid #374151;padding:1rem;}' +
             '.rf-team{background:#111827;border:2px solid #374151;padding:.75rem;}' +
@@ -1119,7 +1123,7 @@
         function searchBox(round, i, s, label, ui) {
             var wrap = el('div', 'relative');
             var iconEl = icon('search', 'w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none');
-            var input = el('input', 'rf-field pl-9');
+            var input = el('input', 'rf-field rf-field-search');
             var listId = nextId('rfList');
             input.type = 'text';
             input.autocomplete = 'off';

@@ -125,7 +125,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611191826">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -686,15 +686,15 @@
         </form>
     </div>
 
-    <script src="/js/escape.js?v=2611191826"></script>
-    <script src="/js/kbf-toast.js?v=2611191826"></script>
-    <script src="/js/kbf-dialog.js?v=2611191826"></script>
-    <script src="/js/admin-list-tools.js?v=2611191826"></script>
-    <script src="/js/kbf-lightbox.js?v=2611191826"></script>
-    <script src="/js/kbf-cropper.js?v=2611191826"></script>
-    <script src="/js/kbf-forms.js?v=2611191826"></script>
-    <script src="/js/admin-shell.js?v=2611191826"></script>
-    <script src="/js/grade-change.js?v=2611191826"></script>
+    <script src="/js/escape.js?v=2611200932"></script>
+    <script src="/js/kbf-toast.js?v=2611200932"></script>
+    <script src="/js/kbf-dialog.js?v=2611200932"></script>
+    <script src="/js/admin-list-tools.js?v=2611200932"></script>
+    <script src="/js/kbf-lightbox.js?v=2611200932"></script>
+    <script src="/js/kbf-cropper.js?v=2611200932"></script>
+    <script src="/js/kbf-forms.js?v=2611200932"></script>
+    <script src="/js/admin-shell.js?v=2611200932"></script>
+    <script src="/js/grade-change.js?v=2611200932"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.view_export, players.edit_details
@@ -1741,8 +1741,10 @@
             pendingPhoto = undefined;
             await reloadPerson('details');
             showMsg('ppMessage', '');
-            if (data.changed === false) toast('Nothing has changed for ' + p.name + '.', 'info');
-            else toast(possessive(p.name) + ' details saved.');
+            // The name as saved (from the reloaded record), not as it was before
+            const savedName = (person && person.id === p.id && person.name) || p.name;
+            if (data.changed === false) toast('Nothing has changed for ' + savedName + '.', 'info');
+            else toast(possessive(savedName) + ' details saved.');
             loadList(true);
         } catch (e) {
             console.error('Save details error:', e);
@@ -1767,9 +1769,10 @@
         if (!person) return;
         const deactivate = person.active;
         if (deactivate) {
-            const text = 'This hides ' + person.name + ' from the website: the Grading pages, results lists and their profile.'
+            const text = 'This hides ' + person.name + ' from the website: the Grading pages and their profile.'
+                + ' Their name stays in past results, and their grade and points are kept.'
                 + (person.isStaff ? ' They will also not be able to sign in.' : '')
-                + ' Their grade and points are kept, and you can reactivate them at any time.';
+                + ' You can reactivate them at any time.';
             const ok = await askConfirm('Deactivate ' + person.name + '?', text, 'Deactivate', false);
             if (!ok) return;
         }
@@ -2872,6 +2875,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611191826"></script>
+    <script src="/js/session-manager.js?v=2611200932"></script>
 </body>
 </html>

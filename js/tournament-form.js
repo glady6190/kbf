@@ -10,9 +10,8 @@
  *                                 the changed name, tournamentDate, venue, location,
  *                                 postCode and categoriesOffered for PUT, or null
  *
- * The required "Organiser" field (free text) is pre-filled on a new form from
- * GET /api/tournaments.php?lastOrganiser=1 and suggests existing names (datalist)
- * from GET /api/tournaments.php?organiserNames=1. In edit mode it is locked unless
+ * The required "Organiser" field (free text) starts empty on a new form, like
+ * every other field, and suggests existing names (datalist) from GET /api/tournaments.php?organiserNames=1. In edit mode it is locked unless
  * canEditOrganiser is true (tournaments.manage_all); updateDetails never sends
  * it, so the caller saves a change with PUT /api/tournaments.php.
  *   tf.validate()                 returns an error message or null
@@ -59,6 +58,12 @@
         document.head.appendChild(style);
     }
 
+    // The required mark is decoration: the field is marked required itself,
+    // so its name for screen readers is just the label text
+    function required() {
+        return ' <span class="tf-required" aria-hidden="true">*</span>';
+    }
+
     function optional() {
         return ' <span class="tf-optional">(optional)</span>';
     }
@@ -89,7 +94,7 @@
 
         var organiserField =
             '<div>' +
-                '<label class="tf-label" for="tf-organiser">Organiser *</label>' +
+                '<label class="tf-label" for="tf-organiser">Organiser' + required() + '</label>' +
                 '<input type="text" id="tf-organiser" name="organiserName" required maxlength="' + ORGANISER_MAX + '" class="tf-input" autocomplete="off" list="tf-organiser-list" aria-describedby="tf-organiser-hint">' +
                 '<datalist id="tf-organiser-list"></datalist>' +
                 '<p class="tf-hint" id="tf-organiser-hint">The organiser running this tournament, as players should see it. Pick an existing name if your organiser has run tournaments before, so they are grouped together.</p>' +
@@ -108,12 +113,12 @@
                 '<div class="space-y-4">' +
                     organiserField +
                     '<div>' +
-                        '<label class="tf-label" for="tf-name">Tournament name *</label>' +
-                        '<input type="text" id="tf-name" name="name" required minlength="3" maxlength="200" class="tf-input tf-core uppercase" placeholder="MANCHESTER SPRING CHAMPIONSHIP">' +
+                        '<label class="tf-label" for="tf-name">Tournament name' + required() + '</label>' +
+                        '<input type="text" id="tf-name" name="name" required minlength="3" maxlength="200" class="tf-input tf-core" placeholder="MANCHESTER SPRING CHAMPIONSHIP">' +
                     '</div>' +
                     '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
                         '<div>' +
-                            '<label class="tf-label" for="tf-date">Date *</label>' +
+                            '<label class="tf-label" for="tf-date">Date' + required() + '</label>' +
                             '<input type="date" id="tf-date" name="tournamentDate" required class="tf-input tf-core">' +
                         '</div>' +
                         '<div>' +
@@ -122,8 +127,8 @@
                         '</div>' +
                     '</div>' +
                     '<div>' +
-                        '<label class="tf-label" for="tf-categories">Categories offered *</label>' +
-                        '<input type="text" id="tf-categories" name="categoriesOffered" required maxlength="' + CATEGORIES_MAX + '" class="tf-input tf-core uppercase" placeholder="A&amp;B, C&amp;C, C&amp;D, B&amp;D, C&amp;E">' +
+                        '<label class="tf-label" for="tf-categories">Categories offered' + required() + '</label>' +
+                        '<input type="text" id="tf-categories" name="categoriesOffered" required maxlength="' + CATEGORIES_MAX + '" class="tf-input tf-core" placeholder="A&amp;B, C&amp;C, C&amp;D, B&amp;D, C&amp;E">' +
                         '<p class="tf-hint">The categories or groups that will compete, for example "A&amp;B, C&amp;C, C&amp;D". <span id="tf-categories-count">0</span>/' + CATEGORIES_MAX + ' characters</p>' +
                     '</div>' +
                 '</div>' +
@@ -134,17 +139,17 @@
                 sectionHeader(2, 'Venue') +
                 '<div class="space-y-4">' +
                     '<div>' +
-                        '<label class="tf-label" for="tf-venue">Venue name *</label>' +
-                        '<input type="text" id="tf-venue" name="venue" required class="tf-input tf-core uppercase" placeholder="MANCHESTER SPORTS CENTRE">' +
+                        '<label class="tf-label" for="tf-venue">Venue name' + required() + '</label>' +
+                        '<input type="text" id="tf-venue" name="venue" required class="tf-input tf-core" placeholder="MANCHESTER SPORTS CENTRE">' +
                     '</div>' +
                     '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
                         '<div>' +
-                            '<label class="tf-label" for="tf-location">Town or city *</label>' +
-                            '<input type="text" id="tf-location" name="location" required class="tf-input tf-core uppercase" placeholder="MANCHESTER">' +
+                            '<label class="tf-label" for="tf-location">Town or city' + required() + '</label>' +
+                            '<input type="text" id="tf-location" name="location" required class="tf-input tf-core" placeholder="MANCHESTER">' +
                         '</div>' +
                         '<div>' +
                             '<label class="tf-label" for="tf-postcode">Postcode' + optional() + '</label>' +
-                            '<input type="text" id="tf-postcode" name="postCode" class="tf-input tf-core uppercase" placeholder="M1 1AA">' +
+                            '<input type="text" id="tf-postcode" name="postCode" class="tf-input tf-core" placeholder="M1 1AA">' +
                             '<p class="tf-hint">Used for the map link.</p>' +
                         '</div>' +
                     '</div>' +
@@ -395,22 +400,6 @@
             el.organiser.disabled = disabled && !opts.canEditOrganiser;
         }
 
-        // Pre-fill a new form with the organiser name this user used last
-        var lastOrganiserPromise = null;
-        function prefillOrganiser() {
-            if (!lastOrganiserPromise) {
-                lastOrganiserPromise = fetch('/api/tournaments.php?lastOrganiser=1', { credentials: 'include' })
-                    .then(function (res) { return res.json(); })
-                    .then(function (data) { return (data && data.success && data.lastOrganiserName) ? String(data.lastOrganiserName) : ''; })
-                    .catch(function () { return ''; });
-            }
-            lastOrganiserPromise.then(function (name) {
-                if (state.mode === 'create' && !el.organiser.value && name) {
-                    el.organiser.value = name;
-                }
-            });
-        }
-
         // Suggestions for the Organiser field (datalist), most used first
         var organiserNames = [];
         function organiserKey(value) {
@@ -455,7 +444,6 @@
             showPosterError('');
             updateCounters();
             renderPoster();
-            prefillOrganiser();
         }
 
         function loadForEdit(t) {

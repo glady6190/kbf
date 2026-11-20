@@ -16,7 +16,10 @@
  *   KBF.toast.fromReply(text, reply, type, who, link)   text + the email sentence
  *
  * Top right below the header on desktop; bottom centre on phones, above any
- * fixed bottom bar. At most three are shown, newest on top. Success and info
+ * fixed bottom bar. While a side panel is open on desktop (an <aside
+ * role="dialog"> or any element with data-kbf-panel, fixed to the right
+ * edge), toasts sit to the left of it so they never cover its tabs; when
+ * the panel fills the width, they move to the bottom. At most three are shown, newest on top. Success and info
  * close after 5 seconds, warnings after 8, errors stay. The timer pauses
  * while the pointer is over a toast or it has keyboard focus. Toasts never
  * take focus. Needs nothing else on the page; js/escape.js (KBF.storage)
@@ -54,7 +57,8 @@
         style.id = 'kbf-toast-styles';
         style.textContent =
             '.kbf-toasts{position:fixed;z-index:95;display:flex;flex-direction:column;gap:.625rem;pointer-events:none;' +
-                'top:var(--kbf-toast-top,1rem);right:1rem;width:24rem;max-width:calc(100vw - 2rem);}' +
+                'top:var(--kbf-toast-top,1rem);right:var(--kbf-toast-right,1rem);width:var(--kbf-toast-width,24rem);max-width:calc(100vw - 2rem);}' +
+            '.kbf-toasts.kbf-toasts-low{top:auto;bottom:1rem;flex-direction:column-reverse;}' +
             '@media (max-width:639.98px){.kbf-toasts{top:auto;right:auto;left:50%;transform:translateX(-50%);' +
                 'bottom:calc(var(--kbf-toast-bottom,0px) + 1rem + env(safe-area-inset-bottom,0px));width:calc(100vw - 2rem);' +
                 'flex-direction:column-reverse;}}' +
@@ -111,6 +115,7 @@
         // readers announce the change
         politeRegion = liveRegion('polite');
         assertiveRegion = liveRegion('assertive');
+        watchPanels();
         return host;
     }
 
@@ -120,6 +125,47 @@
 
     function isPhone() {
         try { return window.matchMedia('(max-width: 639.98px)').matches; } catch (e) { return window.innerWidth < 640; }
+    }
+
+    // An open side panel: fixed, at least most of the screen tall and on
+    // screen against its right edge. Its box, or null.
+    function openPanel(vw, vh) {
+        var nodes = document.querySelectorAll('aside[role="dialog"], [data-kbf-panel]');
+        for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            if (host && host.contains(n)) continue;
+            if (window.getComputedStyle(n).position !== 'fixed') continue;
+            var r = n.getBoundingClientRect();
+            if (r.width <= 0 || r.height < vh * 0.6) continue;
+            if (r.right < vw - 2 || r.left >= vw - 2) continue;
+            return r;
+        }
+        return null;
+    }
+
+    // Place again when a panel opens, closes or finishes sliding, while
+    // any toast is on screen
+    var placeQueued = false;
+    function queuePlace() {
+        if (placeQueued || !host || !host.firstChild) return;
+        placeQueued = true;
+        window.requestAnimationFrame(function () { placeQueued = false; place(); });
+    }
+
+    function watchPanels() {
+        if (watchPanels.done || !document.body) return;
+        watchPanels.done = true;
+        document.addEventListener('transitionend', queuePlace, true);
+        if (!window.MutationObserver) return;
+        new MutationObserver(function (records) {
+            for (var i = 0; i < records.length; i++) {
+                var t = records[i].target;
+                // Ignore the toasts' own changes
+                if (host && (t === host || host.contains(t))) continue;
+                queuePlace();
+                return;
+            }
+        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'style'] });
     }
 
     // Desktop: just below the header while it is on screen. Phones: above
@@ -137,6 +183,25 @@
             else if (r.height === 0 && header.id === 'kbf-admin-header') top = 88;
         }
         host.style.setProperty('--kbf-toast-top', top + 'px');
+
+        // Desktop: beside an open side panel, not over it
+        var right = 16, width = 384, low = false;
+        if (!isPhone()) {
+            var vw = document.documentElement.clientWidth || window.innerWidth;
+            var panel = openPanel(vw, vh);
+            if (panel) {
+                var room = Math.floor(panel.left) - 32;
+                if (room >= 256) {
+                    right = Math.round(vw - panel.left) + 16;
+                    width = Math.min(384, room);
+                } else {
+                    low = true;
+                }
+            }
+        }
+        host.style.setProperty('--kbf-toast-right', right + 'px');
+        host.style.setProperty('--kbf-toast-width', width + 'px');
+        host.classList.toggle('kbf-toasts-low', low);
 
         var bottom = 0;
         if (isPhone()) {
