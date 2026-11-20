@@ -47,6 +47,8 @@
             '.kgc-label{display:block;font-size:.7rem;font-weight:900;text-transform:uppercase;color:var(--theme-primary);margin-bottom:.4rem;}' +
             '.kgc-field{width:100%;background:#1e293b;border:2px solid #374151;color:#fff;padding:.6rem .75rem;font-weight:700;font-size:.8125rem;}' +
             '@media (max-width:639.98px){.kgc-field{font-size:16px;}}' +
+            // Room for the search icon (the padding above would otherwise cover pl-9)
+            '.kgc-field.kgc-field-search{padding-left:2.5rem;}' +
             '.kgc-field:focus{outline:none;border-color:var(--theme-primary);}' +
             '.kgc-field[aria-invalid="true"]{border-color:#ef4444;}' +
             '.kgc-results{border:2px solid #374151;border-top:0;max-height:16rem;overflow-y:auto;background:#0f172a;}' +
@@ -186,7 +188,7 @@
         searchWrap.id = 'kgcSearchWrap';
         var icon = svg('search', 'w-4 h-4 text-gray-500 absolute left-3 top-3');
         searchWrap.appendChild(icon);
-        var input = el('input', 'kgc-field pl-9');
+        var input = el('input', 'kgc-field kgc-field-search');
         input.id = 'kgcSearch';
         input.type = 'search';
         input.autocomplete = 'off';

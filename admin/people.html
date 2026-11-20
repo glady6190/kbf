@@ -125,7 +125,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200942">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -369,7 +369,7 @@
                         <label class="role-tile block p-3 bg-slate-800 cursor-pointer">
                             <span class="flex items-start gap-3">
                                 <input type="checkbox" class="perm-check mt-0.5" data-role="ZonalAdmin">
-                                <span><span class="block text-sm font-black uppercase text-white">Zonal Admin</span><span class="block text-xs text-gray-400 font-semibold mt-1">Approves and looks after players</span></span>
+                                <span><span class="block text-sm font-black uppercase text-white">Zonal Admin</span><span class="block text-xs text-gray-400 font-semibold mt-1">Approves and rejects new player registrations</span></span>
                             </span>
                         </label>
                         <label class="role-tile block p-3 bg-slate-800 cursor-pointer">
@@ -686,15 +686,15 @@
         </form>
     </div>
 
-    <script src="/js/escape.js?v=2611200932"></script>
-    <script src="/js/kbf-toast.js?v=2611200932"></script>
-    <script src="/js/kbf-dialog.js?v=2611200932"></script>
-    <script src="/js/admin-list-tools.js?v=2611200932"></script>
-    <script src="/js/kbf-lightbox.js?v=2611200932"></script>
-    <script src="/js/kbf-cropper.js?v=2611200932"></script>
-    <script src="/js/kbf-forms.js?v=2611200932"></script>
-    <script src="/js/admin-shell.js?v=2611200932"></script>
-    <script src="/js/grade-change.js?v=2611200932"></script>
+    <script src="/js/escape.js?v=2611200942"></script>
+    <script src="/js/kbf-toast.js?v=2611200942"></script>
+    <script src="/js/kbf-dialog.js?v=2611200942"></script>
+    <script src="/js/admin-list-tools.js?v=2611200942"></script>
+    <script src="/js/kbf-lightbox.js?v=2611200942"></script>
+    <script src="/js/kbf-cropper.js?v=2611200942"></script>
+    <script src="/js/kbf-forms.js?v=2611200942"></script>
+    <script src="/js/admin-shell.js?v=2611200942"></script>
+    <script src="/js/grade-change.js?v=2611200942"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.view_export, players.edit_details
@@ -746,7 +746,7 @@
     // Presets never tick the Control centre group: those are ticked one by one
     const ROLE_PRESETS = {
         MainAdmin: ALL_PERMISSION_KEYS.filter(k => k.indexOf('control.') !== 0),
-        ZonalAdmin: ['players.approve_registrations', 'players.view_export', 'players.edit_details'],
+        ZonalAdmin: ['players.approve_registrations'],
         Organiser: ['tournaments.organise_own', 'content.own_news_gallery']
     };
     const PERMS_SHOWN_FIRST = 6;
@@ -1113,6 +1113,7 @@
         listTools = KBFListTools.filters({
             anchor: document.getElementById('filterBlock'),
             search: document.getElementById('searchInput'),
+            shortPlaceholder: 'Search people',
             controls: [
                 { el: document.getElementById('gradeFilter'), label: 'Grade' },
                 { el: document.getElementById('sortSelect'), label: 'Sort', sort: true }
@@ -2875,6 +2876,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611200932"></script>
+    <script src="/js/session-manager.js?v=2611200942"></script>
 </body>
 </html>

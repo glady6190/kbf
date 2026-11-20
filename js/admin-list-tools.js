@@ -38,10 +38,14 @@
  *          extra: [element],         // shown under the toolbar (optional)
  *          count: function () { return total; },   // live result count
  *          noun: ['player', 'players'],
+ *          shortPlaceholder: 'Search players',   // search placeholder on
+ *                                      // phones; desktop keeps the field's own
  *          onClearAll: function () {}  // optional; default: every changed
  *                                      // select back to its default
  *      });
  *      tools.refresh();   // after the list has loaded (count and tags)
+ *      tools.setPlaceholder(long, short);   // when the page changes the
+ *                                      // search wording (for example per tab)
  *    The controls keep their ids and listeners; they are moved, not copied.
  * ============================================ */
 (function (window, document) {
@@ -317,7 +321,7 @@
 
     function filters(opts) {
         var anchor = opts.anchor;
-        if (!anchor) return { refresh: function () {} };
+        if (!anchor) return { refresh: function () {}, setPlaceholder: function () {} };
         var noun = opts.noun || ['result', 'results'];
         var controls = (opts.controls || []).filter(function (c) { return c && (c.el || c.block); });
         controls.forEach(function (c) {
@@ -395,6 +399,20 @@
             body.appendChild(slot);
         });
 
+        // ---- search wording: short on phones, the field's own on desktop ----
+        var longPlaceholder = opts.search ? opts.search.placeholder : '';
+        var shortPlaceholder = opts.shortPlaceholder || '';
+        function applyPlaceholder() {
+            if (!opts.search) return;
+            var text = mounted && shortPlaceholder ? shortPlaceholder : longPlaceholder;
+            if (text) opts.search.placeholder = text;
+        }
+        function setPlaceholder(longText, shortText) {
+            longPlaceholder = longText || '';
+            shortPlaceholder = shortText || '';
+            applyPlaceholder();
+        }
+
         // ---- moving the page's controls between desktop and phone ----
         var mounted = false;
         var homes = [];
@@ -413,6 +431,7 @@
                     opts.search.setAttribute('aria-label', (l && l.textContent.trim()) || opts.search.placeholder || 'Search');
                 }
                 moveTo(opts.search, searchBox);
+                applyPlaceholder();
             }
             controls.forEach(function (c) { moveTo(c.el || c.block, c.slot); });
             (opts.extra || []).forEach(function (x) { if (x) moveTo(x, extra); });
@@ -431,6 +450,7 @@
             });
             homes = [];
             anchor.classList.remove('kbf-lt-anchor');
+            applyPlaceholder();
         }
 
         // ---- active filters ----
@@ -578,7 +598,7 @@
         if (isPhone()) mount();
         onPhoneChange(function (phone) { if (phone) mount(); else unmount(); });
         refresh();
-        return { refresh: refresh, open: openSheet, close: closeSheet };
+        return { refresh: refresh, open: openSheet, close: closeSheet, setPlaceholder: setPlaceholder };
     }
 
     window.KBFListTools = {

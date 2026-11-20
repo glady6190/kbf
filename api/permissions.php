@@ -69,10 +69,9 @@ const KBF_ROLE_PRESETS = [
         'content.sponsors',
         'content.broadcasts',
     ],
+    // Approves and rejects new player registrations, nothing else
     'ZonalAdmin' => [
         'players.approve_registrations',
-        'players.view_export',
-        'players.edit_details',
     ],
     'Organiser' => [
         'tournaments.organise_own',

@@ -50,7 +50,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200942">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -124,11 +124,11 @@
         </form>
     </main>
 
-    <script src="/js/escape.js?v=2611200932"></script>
-    <script src="/js/kbf-toast.js?v=2611200932"></script>
-    <script src="/js/kbf-dialog.js?v=2611200932"></script>
-    <script src="/js/kbf-forms.js?v=2611200932"></script>
-    <script src="/js/admin-shell.js?v=2611200932"></script>
+    <script src="/js/escape.js?v=2611200942"></script>
+    <script src="/js/kbf-toast.js?v=2611200942"></script>
+    <script src="/js/kbf-dialog.js?v=2611200942"></script>
+    <script src="/js/kbf-forms.js?v=2611200942"></script>
+    <script src="/js/admin-shell.js?v=2611200942"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -204,7 +204,6 @@
 
         fields.organiser.addEventListener('change', normaliseOrganiser);
         loadOrganiserNames();
-        prefillOrganiser();
     }
 
     function updateCount() {
@@ -227,17 +226,6 @@
                 list.appendChild(option);
             });
         } catch (e) { /* suggestions are optional */ }
-    }
-
-    // Pre-fill with the organiser name this user used last
-    async function prefillOrganiser() {
-        try {
-            const res = await authenticatedFetch('/api/tournaments.php?lastOrganiser=1');
-            const data = await res.json();
-            if (data && data.success && data.lastOrganiserName && !fields.organiser.value) {
-                fields.organiser.value = String(data.lastOrganiserName);
-            }
-        } catch (e) { /* leave the field empty */ }
     }
 
     function organiserKey(value) {
@@ -395,6 +383,6 @@
     });
     document.getElementById('createAnyway').addEventListener('click', () => create(true));
     </script>
-    <script src="/js/session-manager.js?v=2611200932"></script>
+    <script src="/js/session-manager.js?v=2611200942"></script>
 </body>
 </html>

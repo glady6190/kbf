@@ -111,7 +111,7 @@
         .db-link-row:focus-visible, .db-action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .db-link-row:focus-visible, .db-action:focus-visible { border-color: var(--theme-primary); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200942">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -143,10 +143,10 @@
         </div>
     </main>
 
-    <script src="/js/escape.js?v=2611200932"></script>
-    <script src="/js/kbf-toast.js?v=2611200932"></script>
-    <script src="/js/kbf-dialog.js?v=2611200932"></script>
-    <script src="/js/admin-shell.js?v=2611200932"></script>
+    <script src="/js/escape.js?v=2611200942"></script>
+    <script src="/js/kbf-toast.js?v=2611200942"></script>
+    <script src="/js/kbf-dialog.js?v=2611200942"></script>
+    <script src="/js/admin-shell.js?v=2611200942"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): any signed-in staff
@@ -329,6 +329,7 @@
 
     function has(key) { return !!(currentUser && currentUser.has(key)); }
     function hasAny(keys) { return !!(currentUser && currentUser.hasAny(keys)); }
+    const TOURNAMENT_KEYS = ['tournaments.approve', 'tournaments.manage_all', 'tournaments.organise_own'];
 
     function render(data) {
         renderGreetingHeader(data);
@@ -454,10 +455,12 @@
                     has('players.change_grades') ? '/admin/rankings?tab=eligible' : null));
             }
         } else if (has('players.approve_registrations')) {
+            // Only what they can act on: the Players tile only when they
+            // can open People, upcoming events only with a tournament permission
             tiles.push(waitingTile(data));
             tiles.push(tile('checkCircle', data.mine ? num(data.mine.approved) : 0, 'You approved', 'In the last 30 days', '/admin/approvals?tab=history'));
-            tiles.push(playersTile(players, 'Across all grades'));
-            tiles.push(upcomingTile(data));
+            if (hasAny(['players.view_export', 'players.edit_details'])) tiles.push(playersTile(players, 'Across all grades'));
+            if (hasAny(TOURNAMENT_KEYS)) tiles.push(upcomingTile(data));
         } else if (data.myTournaments) {
             // Organisers: their tournaments are on admin/tournaments
             const mt = data.myTournaments;
@@ -706,7 +709,9 @@
     function renderRight(data) {
         const col = document.getElementById('rightCol');
         col.textContent = '';
-        col.appendChild(buildComingUp(data.upcoming || {}));
+        // Staff who approve registrations but have no tournament permission
+        // have nothing to do with the tournaments coming up
+        if (hasAny(TOURNAMENT_KEYS) || !has('players.approve_registrations')) col.appendChild(buildComingUp(data.upcoming || {}));
         if (data.team) col.appendChild(buildTeam(data.team));
         if (data.mine) col.appendChild(buildMine(data.mine));
         if (has('tournaments.organise_own') && !has('tournaments.manage_all')) col.appendChild(buildHowItWorks());
@@ -827,6 +832,6 @@
         return p.section;
     }
 </script>
-<script src="/js/session-manager.js?v=2611200932"></script>
+<script src="/js/session-manager.js?v=2611200942"></script>
 </body>
 </html>

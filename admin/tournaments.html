@@ -113,7 +113,7 @@
         .msg-ok { border-color: var(--theme-primary); color: #e5e7eb; background: #1e293b; }
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200942">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -124,7 +124,7 @@
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase mb-2 theme-primary-text">Tournaments</h1>
                 <div class="h-2 w-24 sm:w-32 theme-primary-bg mb-4"></div>
-                <p class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Every tournament, from approval to results</p>
+                <p id="headSubtitle" class="text-gray-400 font-bold uppercase text-xs sm:text-sm">Every tournament, from approval to results</p>
             </div>
             <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                 <a href="/admin/publish-results" id="quickResultsBtn" class="btn-outline hidden">Add results for a past tournament</a>
@@ -149,12 +149,12 @@
 
         <!-- Search, organiser and season -->
         <div id="filterBlock" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-            <div class="md:col-span-2 relative">
+            <div id="searchBlock" class="md:col-span-2 relative">
                 <label for="searchInput" class="sr-only">Search by tournament, organiser or town</label>
                 <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="search" id="searchInput" class="field pl-9" placeholder="Search by tournament, organiser or town" autocomplete="off" maxlength="100">
             </div>
-            <div>
+            <div id="organiserBlock">
                 <label for="organiserFilter" class="sr-only">Organiser</label>
                 <select id="organiserFilter" class="field"><option value="">All organisers</option></select>
             </div>
@@ -376,13 +376,13 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611200932"></script>
-    <script src="/js/kbf-toast.js?v=2611200932"></script>
-    <script src="/js/kbf-dialog.js?v=2611200932"></script>
-    <script src="/js/admin-list-tools.js?v=2611200932"></script>
-    <script src="/js/kbf-forms.js?v=2611200932"></script>
-    <script src="/js/tournament-form.js?v=2611200932"></script>
-    <script src="/js/admin-shell.js?v=2611200932"></script>
+    <script src="/js/escape.js?v=2611200942"></script>
+    <script src="/js/kbf-toast.js?v=2611200942"></script>
+    <script src="/js/kbf-dialog.js?v=2611200942"></script>
+    <script src="/js/admin-list-tools.js?v=2611200942"></script>
+    <script src="/js/kbf-forms.js?v=2611200942"></script>
+    <script src="/js/tournament-form.js?v=2611200942"></script>
+    <script src="/js/admin-shell.js?v=2611200942"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -739,13 +739,28 @@
     // ============================================
     // INITIALISE
     // ============================================
+    // Only tournaments.organise_own: they see their own tournaments only
+    function ownOnly() {
+        return can('tournaments.organise_own') && !can('tournaments.manage_all') && !can('tournaments.approve');
+    }
+
     function initPage() {
         const canCreate = can('tournaments.organise_own') || can('tournaments.manage_all');
         document.getElementById('createBtn').classList.toggle('hidden', !canCreate);
         document.getElementById('quickResultsBtn').classList.toggle('hidden', !can('tournaments.manage_all'));
+        // Organisers only (their own tournaments): their own subtitle, and no
+        // organiser filter (here or in the phone filters sheet)
+        if (ownOnly()) {
+            document.getElementById('headSubtitle').textContent = 'Your tournaments, from approval to results';
+            document.getElementById('organiserBlock').classList.add('hidden');
+            const searchBlock = document.getElementById('searchBlock');
+            searchBlock.classList.remove('md:col-span-2');
+            searchBlock.classList.add('md:col-span-3');
+        }
         setUpPhoneTools();
 
         const s = stateFromUrl();
+        if (ownOnly()) s.organiser = '';
         list.tab = s.tab; list.q = s.q; list.organiser = s.organiser; list.season = s.season;
         syncControls();
         loadList(true);
@@ -776,8 +791,9 @@
         listTools = KBFListTools.filters({
             anchor: document.getElementById('filterBlock'),
             search: document.getElementById('searchInput'),
+            shortPlaceholder: 'Search tournaments',
             controls: [
-                { el: document.getElementById('organiserFilter'), label: 'Organiser' },
+                ownOnly() ? null : { el: document.getElementById('organiserFilter'), label: 'Organiser' },
                 // "This season" shows as an active filter; clearing it shows all seasons
                 { el: document.getElementById('seasonFilter'), label: 'Season', defaultValue: 'all' }
             ],
@@ -2230,6 +2246,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611200932"></script>
+    <script src="/js/session-manager.js?v=2611200942"></script>
 </body>
 </html>

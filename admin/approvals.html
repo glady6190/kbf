@@ -121,7 +121,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611200932">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611200942">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -305,13 +305,13 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611200932"></script>
-    <script src="/js/kbf-toast.js?v=2611200932"></script>
-    <script src="/js/kbf-dialog.js?v=2611200932"></script>
-    <script src="/js/admin-list-tools.js?v=2611200932"></script>
-    <script src="/js/kbf-lightbox.js?v=2611200932"></script>
-    <script src="/js/kbf-forms.js?v=2611200932"></script>
-    <script src="/js/admin-shell.js?v=2611200932"></script>
+    <script src="/js/escape.js?v=2611200942"></script>
+    <script src="/js/kbf-toast.js?v=2611200942"></script>
+    <script src="/js/kbf-dialog.js?v=2611200942"></script>
+    <script src="/js/admin-list-tools.js?v=2611200942"></script>
+    <script src="/js/kbf-lightbox.js?v=2611200942"></script>
+    <script src="/js/kbf-forms.js?v=2611200942"></script>
+    <script src="/js/admin-shell.js?v=2611200942"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -368,6 +368,7 @@
         historyTools = KBFListTools.filters({
             anchor: document.getElementById('historyFilters'),
             search: document.getElementById('hSearch'),
+            shortPlaceholder: 'Search decisions',
             controls: [
                 { el: document.getElementById('hType'), label: 'Type' },
                 { el: document.getElementById('hDecision'), label: 'Decision' },
@@ -435,6 +436,8 @@
     }
 
     function can(key) { return !!(me && me.has(key)); }
+    // People opens for these permissions only (api/people.php)
+    function canOpenPeople() { return can('players.view_export') || can('players.edit_details'); }
 
     // Every value reaches the page with textContent (escaped by the browser)
     function el(tag, className, text) {
@@ -758,7 +761,11 @@
             return;
         }
         const search = document.getElementById('searchInput');
-        search.placeholder = state.tab === 'registrations' ? 'Search by name or city' : 'Search by tournament, organiser or town';
+        // Short wording on phones (toolbar), the full wording on desktop
+        const longText = state.tab === 'registrations' ? 'Search by name or city' : 'Search by tournament, organiser or town';
+        const shortText = state.tab === 'registrations' ? 'Search registrations' : (state.tab === 'results' ? 'Search results' : 'Search tournaments');
+        if (queueTools) queueTools.setPlaceholder(longText, shortText);
+        else search.placeholder = longText;
         search.value = state.q;
         document.getElementById('sortSelect').value = state.sort;
         document.getElementById('gradeWrap').classList.toggle('hidden', state.tab !== 'registrations');
@@ -1360,7 +1367,7 @@
             }
             // An approved registration is now a player: "Open profile" in People
             const newUser = type === 'registration' ? parseInt(result.userId, 10) : 0;
-            const link = newUser > 0 ? { label: 'Open profile', href: '/admin/people?person=' + newUser } : null;
+            const link = newUser > 0 && canOpenPeople() ? { label: 'Open profile', href: '/admin/people?person=' + newUser } : null;
             await afterDecision(doneText || (name + ' approved.'), id, result, type, link);
         } catch (e) {
             console.error('Approve error:', e);
@@ -1485,12 +1492,14 @@
             text.appendChild(el('p', 'font-bold', 'Existing member with ' + what + ': ' + m.name +
                 (m.kbfId ? ' (' + m.kbfId + ')' : '') + (m.city ? ', ' + m.city : '')));
             li.appendChild(text);
-            const open = el('a', 'text-xs font-black uppercase underline whitespace-nowrap', 'Open');
-            open.href = '/admin/people?person=' + encodeURIComponent(String(m.id));
-            open.target = '_blank';
-            open.rel = 'noopener';
-            open.setAttribute('aria-label', 'Open ' + m.name + ' in People (new tab)');
-            li.appendChild(open);
+            if (canOpenPeople()) {
+                const open = el('a', 'text-xs font-black uppercase underline whitespace-nowrap', 'Open');
+                open.href = '/admin/people?person=' + encodeURIComponent(String(m.id));
+                open.target = '_blank';
+                open.rel = 'noopener';
+                open.setAttribute('aria-label', 'Open ' + m.name + ' in People (new tab)');
+                li.appendChild(open);
+            }
             ul.appendChild(li);
         }
         if (byEmail.length) byEmail.forEach(m => warning(m, 'this email')); else tick('No existing member with this email');
@@ -1870,6 +1879,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611200932"></script>
+    <script src="/js/session-manager.js?v=2611200942"></script>
 </body>
 </html>

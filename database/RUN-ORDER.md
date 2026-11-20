@@ -47,6 +47,7 @@ is the record of where the migrations start from.
 | 19 | `request-ids.sql` | Script 18 has finished. | A `RequestIds` table exists (empty). Pages that create news posts, tournaments, players or results can no longer create a duplicate by sending the same form twice. |
 | 20 | `data-retention.sql` | Script 18 has finished (`Settings.SettingValue` is TEXT). | Settings retention_ip_days (90), retention_email_body_days (30), retention_rejected_registration_days (365) and file_cleanup_mode (`report`) exist. Nothing else changes: the nightly job applies them from its next run (see below). |
 | 21 | `news-editor.sql` | Nothing special. | `Announcements` has ContentFormat (`text` for every existing post), PostStatus (`published` for every existing post), ScheduledFor, UpdatedDate and ShareImagePath, and IsPinned is NOT NULL (0 where it was empty). An `AnnouncementPhotos` table exists (empty). `Tournaments` and `Users` have ShareImagePath (empty). Existing posts show exactly as before. |
+| 22 | `zonal-admin-preset.sql` | Script 3 has finished (UserPermissions, StaffRoles, AuditLog). | Zonal Admins who had exactly the old preset (approve registrations, view and export players, edit player details) now have only "Approve player registrations"; each has one `access_changed` row in AuditLog. Its last query lists any Zonal Admin whose permissions differ from the new preset: check each one by hand on People, Staff and access. A re-run changes nobody. |
 
 ### After `schema-fixes.sql`
 
@@ -111,6 +112,12 @@ is the record of where the migrations start from.
    the share pictures (link previews) of existing posts, tournaments and
    players, and the default share picture; until then shared links use the
    default picture.
+8. One-off, after the move: remove emoji and symbols (such as the trophy)
+   from the start of existing news post titles. On the server, run
+   `php jobs/clean-titles.php --dry-run` first to see the count and
+   examples, then `php jobs/clean-titles.php`. It reports how many titles
+   it changed. It is safe to run twice: a cleaned title is not changed
+   again. New promotion posts are already created without an emoji.
 
 Do not upload the `tools/` and `docs/` folders, or `tailwind.config.js`:
 they are only used to build the stylesheet (see `docs/BUILD.md`), and the

@@ -189,6 +189,7 @@ const KBF_ACTION_NAMES = [
     'staff_created' => 'Added a staff member',
     'access_updated' => 'Changed staff access',
     'access_converted' => 'Access converted (setup)',
+    'access_changed' => 'Changed staff access (setup)',
     'login_enabled' => 'Allowed sign-in',
     'login_disabled' => 'Stopped sign-in',
     'superadmin_granted' => 'Made a Super Admin',

@@ -160,7 +160,8 @@ WHERE u.Role = 'MainAdmin'
   )
   AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
--- ZonalAdmin: the three player permissions
+-- ZonalAdmin: approve registrations only (the preset in api/permissions.php;
+-- zonal-admin-preset.sql reduces accounts converted with the old three)
 INSERT IGNORE INTO UserPermissions (UserId, PermissionKey, GrantedByUserId, GrantedDate)
 SELECT u.UserId, p.PermissionKey, NULL, NOW()
 FROM Users u
@@ -168,7 +169,7 @@ CROSS JOIN Permissions p
 WHERE u.Role = 'ZonalAdmin'
   AND NOT (u.PlayerId <=> 'KBFUK001')
   AND p.PermissionKey IN (
-      'players.approve_registrations', 'players.view_export', 'players.edit_details'
+      'players.approve_registrations'
   )
   AND NOT EXISTS (SELECT 1 FROM AuditLog a WHERE a.Action = 'access_converted');
 
