@@ -6,8 +6,10 @@
 /* Outlined text (a text stroke with a transparent fill): Archivo Black (SIL
    Open Font License, licence in assets/fonts/ArchivoBlack-OFL.txt). Each
    letter is one clean shape, so Android draws no stray lines inside the
-   outline. Here, so the font is available on every page; every outlined
-   element has the class kbf-outline-font. */
+   outline. Here, so the font is available on every page. The rule names
+   each outlined element by its own class too (date numbers .t-dt-day on
+   tournaments and tournament-details, the home hero .hero-title-outline),
+   so it applies however the element is created. */
 @font-face {
     font-family: 'Archivo Black';
     font-style: normal;
@@ -15,7 +17,9 @@
     font-display: swap;
     src: url('/assets/fonts/archivo-black-v23-latin.woff2') format('woff2');
 }
-.kbf-outline-font {
+.kbf-outline-font,
+.t-dt-day,
+.hero-title-outline {
     font-family: 'Archivo Black', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
     font-weight: 400;
     font-synthesis: none;
