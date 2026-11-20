@@ -52,7 +52,12 @@ RewriteRule ^tailwind\.config\.js$ - [F,L]
 # COMPRESSION AND BROWSER CACHING (static files)
 # Works on Apache (mod_deflate, mod_headers) and LiteSpeed (which compresses
 # by itself and honours the same Header lines). PHP responses set their own
-# Cache-Control and are not touched here.
+# Cache-Control and are not touched here, except share-page.php below.
+#   - HTML pages (every .html file, also when reached by its clean URL) and
+#     share-page.php (the post, tournament-details and player-profile
+#     routes): "no-cache", so browsers check for a new copy every time and
+#     never show a stale page after a deployment (a 304 keeps it quick).
+#     The API (api/*.php) and unsubscribe.php keep their own headers.
 #   - CSS and JS keep the same file names after a change: short cache
 #     (1 hour), so a rebuilt stylesheet reaches visitors the same day
 #   - Images and fonts in assets/: 7 days
@@ -67,6 +72,9 @@ RewriteRule ^tailwind\.config\.js$ - [F,L]
     AddType font/woff2 .woff2
 </IfModule>
 <IfModule mod_headers.c>
+    <FilesMatch "\.html$|^share-page\.php$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
     <FilesMatch "\.(css|js)$">
         Header set Cache-Control "public, max-age=3600"
     </FilesMatch>
