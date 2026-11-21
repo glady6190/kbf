@@ -14,7 +14,8 @@
  *          band: element,              // the page's heading band
  *          title: 'People',            // default: the band's <h1>
  *          subtitle: '...',            // default: the band's first <p>
- *          primary: { label: 'Player', target: buttonOrLink },
+ *          primary: { label: 'Player', target: buttonOrLink },   // icon: 'edit'
+ *                                      // instead of the plus (optional)
  *          more: [{ label: 'Export', icon: 'download', target: el }, ...]
  *      });
  *    target: an existing button or link (clicked for you; hidden when it is
@@ -171,7 +172,7 @@
             var p = opts.primary;
             primaryBtn = el(p.href && !p.target ? 'a' : 'button', 'kbf-ph-primary');
             if (primaryBtn.tagName === 'A') primaryBtn.href = p.href; else primaryBtn.type = 'button';
-            primaryBtn.appendChild(svg('plus', 'w-5 h-5', 3));
+            primaryBtn.appendChild(svg(p.icon || 'plus', 'w-5 h-5', p.icon ? 2.5 : 3));
             primaryBtn.appendChild(document.createTextNode(p.label));
             if (p.ariaLabel) primaryBtn.setAttribute('aria-label', p.ariaLabel);
             if (primaryBtn.tagName !== 'A') primaryBtn.addEventListener('click', function () { run(p); });

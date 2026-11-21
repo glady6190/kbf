@@ -121,7 +121,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -168,6 +168,10 @@
                             <label for="gradeSelect" class="sr-only">Grade</label>
                             <select id="gradeSelect" class="field"><option value="">All grades</option></select>
                         </div>
+                        <div id="locationWrap" class="col-span-2">
+                            <label for="locationSelect" class="sr-only">Location</label>
+                            <select id="locationSelect" class="field"><option value="">All locations</option></select>
+                        </div>
                     </div>
                     <div id="waitingBox" class="hidden pt-1">
                         <div class="ap-bar" id="waitingBar" aria-hidden="true">
@@ -180,7 +184,7 @@
                 <p id="queueEmpty" class="hidden px-4 py-10 text-center text-gray-400 font-bold uppercase text-sm"></p>
                 <div id="selectionBar" class="hidden p-3 border-t-2 border-gray-700 flex flex-wrap items-center justify-between gap-2 bg-slate-800">
                     <span id="selectionCount" class="text-xs font-black uppercase text-white"></span>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <button type="button" id="selectionClear" class="btn-plain">Clear</button>
                         <button type="button" id="approveSelectedBtn" class="btn-solid">Approve selected</button>
                     </div>
@@ -245,7 +249,7 @@
                 </div>
             </div>
             <div class="bg-slate-900 border-2 sm:border-4 border-gray-700 overflow-x-auto">
-                <table class="w-full min-w-[48rem]">
+                <table class="kbf-stack w-full min-w-[48rem]">
                     <thead class="bg-slate-800 border-b-2 border-gray-700">
                         <tr>
                             <th scope="col" class="px-3 py-3 text-left text-xs font-black theme-primary-text uppercase">When</th>
@@ -263,7 +267,7 @@
             </div>
             <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <p id="hCount" class="text-xs text-gray-400 font-bold uppercase" aria-live="polite"></p>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <a id="hCsv" href="#" class="btn-plain">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Download CSV
@@ -305,13 +309,13 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-list-tools.js?v=2611201009"></script>
-    <script src="/js/kbf-lightbox.js?v=2611201009"></script>
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-list-tools.js?v=2611211324"></script>
+    <script src="/js/kbf-lightbox.js?v=2611211324"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -330,7 +334,7 @@
     const DECISION_TYPE = { registrations: 'registration', tournaments: 'tournament', results: 'results' };
     let me = null;
     let meta = null;
-    const state = { tab: 'registrations', q: '', sort: 'oldest', grade: '', openId: null };
+    const state = { tab: 'registrations', q: '', sort: 'oldest', grade: '', location: '', openId: null };
     const queue = { items: [], total: 0, seq: 0, waiting: null };
     let detail = null;            // the item open in the review panel
     const selected = new Set();   // registrations ticked for "Approve selected"
@@ -359,7 +363,8 @@
             search: document.getElementById('searchInput'),
             controls: [
                 { el: document.getElementById('sortSelect'), label: 'Sort', sort: true },
-                { el: document.getElementById('gradeSelect'), label: 'Grade' }
+                { el: document.getElementById('gradeSelect'), label: 'Grade' },
+                { el: document.getElementById('locationSelect'), label: 'Location' }
             ],
             extra: [document.getElementById('waitingBox')],
             count: () => queue.total,
@@ -387,8 +392,10 @@
         const nouns = QUEUE_NOUNS[state.tab];
         if (nouns) { queueNoun[0] = nouns[0]; queueNoun[1] = nouns[1]; }
         const grade = document.getElementById('gradeSelect');
-        const slot = grade.closest('.kbf-sheet-body > div');
-        if (slot) slot.classList.toggle('hidden', state.tab !== 'registrations');
+        [grade, document.getElementById('locationSelect')].forEach(sel => {
+            const slot = sel.closest('.kbf-sheet-body > div');
+            if (slot) slot.classList.toggle('hidden', state.tab !== 'registrations');
+        });
         if (queueTools) queueTools.refresh();
     }
 
@@ -669,7 +676,8 @@
             openId: id > 0 ? id : null,
             q: (p.get('q') || '').slice(0, 100),
             sort: ['oldest', 'newest', 'name'].includes(sort) ? sort : 'oldest',
-            grade: /^[1-9][0-9]*$/.test(p.get('grade') || '') ? p.get('grade') : ''
+            grade: /^[1-9][0-9]*$/.test(p.get('grade') || '') ? p.get('grade') : '',
+            location: (p.get('location') || '').slice(0, 100)
         };
     }
 
@@ -682,6 +690,7 @@
             if (state.q) p.set('q', state.q);
             if (state.sort !== 'oldest') p.set('sort', state.sort);
             if (state.tab === 'registrations' && state.grade) p.set('grade', state.grade);
+            if (state.tab === 'registrations' && state.location) p.set('location', state.location);
         }
         const s = p.toString();
         const url = window.location.pathname + (s ? '?' + s : '');
@@ -695,7 +704,7 @@
         if (!meta) return;
         const s = stateFromUrl();
         const tabChanged = s.tab !== state.tab;
-        const listChanged = tabChanged || s.q !== state.q || s.sort !== state.sort || s.grade !== state.grade;
+        const listChanged = tabChanged || s.q !== state.q || s.sort !== state.sort || s.grade !== state.grade || s.location !== state.location;
         Object.assign(state, s);
         showTab(listChanged, true);
     });
@@ -723,6 +732,7 @@
                 state.q = '';
                 state.sort = 'oldest';
                 state.grade = '';
+                state.location = '';
                 writeUrl(true);
                 showTab(true, false);
             });
@@ -769,8 +779,10 @@
         search.value = state.q;
         document.getElementById('sortSelect').value = state.sort;
         document.getElementById('gradeWrap').classList.toggle('hidden', state.tab !== 'registrations');
+        document.getElementById('locationWrap').classList.toggle('hidden', state.tab !== 'registrations');
         refreshQueueTools();
         document.getElementById('gradeSelect').value = state.grade;
+        setLocationValue();
         let loading = null;
         if (reloadList) {
             selected.clear();
@@ -818,7 +830,40 @@
         writeUrl(true);
         loadQueue(true);
     });
+    document.getElementById('locationSelect').addEventListener('change', function () {
+        state.location = this.value;
+        writeUrl(true);
+        loadQueue(true);
+    });
     document.getElementById('moreBtn').addEventListener('click', () => loadQueue(false));
+
+    // Location options: "All locations (n)", then each town A to Z with its
+    // count. A town in the address that is no longer waiting stays listed
+    // (with 0) so the choice is visible.
+    function renderLocations(list, total) {
+        const select = document.getElementById('locationSelect');
+        select.textContent = '';
+        const all = el('option', '', 'All locations (' + Number(total || 0).toLocaleString('en-GB') + ')');
+        all.value = '';
+        select.appendChild(all);
+        const items = (list || []).map(l => ({ key: l.key, label: KBF.titleCase(l.name), count: l.count }));
+        if (state.location && !items.some(l => l.key === state.location)) {
+            items.push({ key: state.location, label: KBF.titleCase(state.location), count: 0 });
+        }
+        items.sort((a, b) => a.label.localeCompare(b.label, 'en-GB', { sensitivity: 'base' }));
+        items.forEach(l => {
+            const o = el('option', '', l.label + ' (' + Number(l.count).toLocaleString('en-GB') + ')');
+            o.value = l.key;
+            select.appendChild(o);
+        });
+        setLocationValue();
+    }
+
+    function setLocationValue() {
+        const select = document.getElementById('locationSelect');
+        const has = Array.from(select.options).some(o => o.value === state.location);
+        select.value = has ? state.location : '';
+    }
 
     async function loadQueue(reset) {
         const seq = ++queue.seq;
@@ -826,6 +871,7 @@
         const p = new URLSearchParams({ action: 'queue', type: tab, sort: state.sort, offset: String(reset ? 0 : queue.items.length) });
         if (state.q) p.set('q', state.q);
         if (tab === 'registrations' && state.grade) p.set('grade', state.grade);
+        if (tab === 'registrations' && state.location) p.set('location', state.location);
         const data = await getJson(API + '?' + p.toString());
         if (seq !== queue.seq || tab !== state.tab) return queue.items;
         if (!data.success) {
@@ -843,6 +889,7 @@
         queue.total = Number(data.total) || 0;
         queue.waiting = tab === 'registrations' ? (data.waiting || null) : null;
         renderWaiting(queue.waiting);
+        if (tab === 'registrations' && data.locations) renderLocations(data.locations, data.waitingTotal);
         renderQueue();
         refreshQueueTools();
         document.getElementById('moreBtn').classList.toggle('hidden', queue.items.length >= queue.total);
@@ -875,7 +922,7 @@
         const empty = document.getElementById('queueEmpty');
         const tab = state.tab;
         if (!queue.items.length) {
-            empty.textContent = state.q || state.grade ? 'Nothing matches this search' : 'Nothing is waiting';
+            empty.textContent = state.q || state.grade || state.location ? 'Nothing matches this search' : 'Nothing is waiting';
             empty.classList.remove('hidden');
         } else {
             empty.classList.add('hidden');
@@ -1339,7 +1386,7 @@
         detail = null;
         markOpen();
         const what = { registrations: 'registrations', tournaments: 'tournaments', results: 'results' }[state.tab] || 'items';
-        const filtered = state.q || (state.tab === 'registrations' && state.grade);
+        const filtered = state.q || (state.tab === 'registrations' && (state.grade || state.location));
         const body = document.getElementById('reviewBody');
         body.textContent = '';
         panelTop(body);
@@ -1879,6 +1926,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611201009"></script>
+    <script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>

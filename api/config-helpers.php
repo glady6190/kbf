@@ -284,6 +284,52 @@ function kbfJobRunStart($pdo, $jobName) {
 }
 
 /**
+ * Plain text with web addresses taken out, for news excerpts (lists, link
+ * previews). Removes http(s):// and www. addresses and bare ones with a
+ * path (kbf-uk.org/news), then tidies the spaces and empty brackets left
+ * behind. The full post keeps its links. The same rule is in
+ * js/news-helpers.js (KBFNews.excerpt).
+ *
+ * @param string $text plain text
+ * @return string
+ */
+function kbfStripUrls($text) {
+    $text = (string) $text;
+    $text = preg_replace([
+        '~\b(?:https?://|www\.)[^\s<>"\']+~iu',
+        '~\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/[^\s<>"\']*~iu',
+    ], ' ', $text) ?? $text;
+    $text = preg_replace('/[(\[]\s*[)\]]/u', ' ', $text) ?? $text;
+    $text = preg_replace('/\s+([,.;:!?])/u', '$1', $text) ?? $text;
+    return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+}
+
+/**
+ * Every run of a scheduled job checks in: one UPDATE of its Settings value
+ * (job_checkin_broadcast_sender, job_checkin_ranking_calculator,
+ * job_checkin_term_reset; created by database/email-verification.sql), no
+ * new rows. The Overview's "Last ran" and overdue warnings use it. Before
+ * that script has run the UPDATE changes nothing and the Overview uses
+ * JobRuns as before. Never breaks the job.
+ *
+ * @param PDO    $pdo
+ * @param string $jobName  e.g. 'broadcast-sender'
+ */
+function kbfJobCheckIn($pdo, $jobName) {
+    try {
+        $stmt = $pdo->prepare("UPDATE Settings SET SettingValue = DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') WHERE SettingKey = ?");
+        $stmt->execute([kbfJobCheckInKey($jobName)]);
+    } catch (PDOException $e) {
+        error_log('Job check-in failed for ' . $jobName . ': ' . $e->getMessage());
+    }
+}
+
+// The Settings key of a job's check-in time
+function kbfJobCheckInKey($jobName) {
+    return 'job_checkin_' . str_replace('-', '_', (string) $jobName);
+}
+
+/**
  * Record how a job run ended: 'ok' or 'error' and a one-line summary.
  *
  * @param PDO    $pdo

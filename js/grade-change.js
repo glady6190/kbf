@@ -350,8 +350,8 @@
                 opt.setAttribute('role', 'option');
                 opt.appendChild(avatar(p));
                 var text = el('span', 'min-w-0');
-                text.appendChild(el('span', 'block text-sm font-black text-white truncate', p.name));
-                text.appendChild(el('span', 'block text-xs text-gray-400 font-semibold truncate', playerLine(p)));
+                text.appendChild(el('span', 'block text-sm font-black text-white break-words', p.name));
+                text.appendChild(el('span', 'block text-xs text-gray-400 font-semibold break-words', playerLine(p)));
                 opt.appendChild(text);
                 opt.addEventListener('click', function () { choosePlayer(p); });
                 results.appendChild(opt);
@@ -375,7 +375,7 @@
         chip.textContent = '';
         chip.appendChild(avatar(p));
         var text = el('span', 'min-w-0 flex-1');
-        text.appendChild(el('span', 'block text-sm font-black text-white truncate', p.name));
+        text.appendChild(el('span', 'block text-sm font-black text-white break-words', p.name));
         text.appendChild(el('span', 'block text-xs text-gray-400 font-semibold', playerLine(p)));
         chip.appendChild(text);
         var change = el('button', 'kgc-btn kgc-plain kgc-small', 'Change');

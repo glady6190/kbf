@@ -68,10 +68,23 @@
         return doc.body ? (doc.body.textContent || '') : '';
     }
 
+    // Web addresses out of an excerpt (http(s)://, www. and bare ones with a
+    // path such as kbf-uk.org/news); the full post keeps its links. Same
+    // rule as kbfStripUrls() in api/config-helpers.php.
+    function stripUrls(text) {
+        return String(text || '')
+            .replace(/\b(?:https?:\/\/|www\.)[^\s<>"']+/gi, ' ')
+            .replace(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/[^\s<>"']*/gi, ' ')
+            .replace(/[(\[]\s*[)\]]/g, ' ')
+            .replace(/\s+([,.;:!?])/g, '$1')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     // List responses carry a short excerpt in Content (and Excerpt); the
     // single post (?id=) carries the full text
     function excerpt(post) {
-        return plainText(post.Excerpt !== undefined ? post.Excerpt : post.Content).replace(/\s+/g, ' ').trim();
+        return stripUrls(plainText(post.Excerpt !== undefined ? post.Excerpt : post.Content));
     }
 
     // Local calendar date of a post (PublishedDate, then CreatedDate)

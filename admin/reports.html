@@ -40,6 +40,13 @@
         .month-bar { width: 100%; background: var(--theme-primary); min-height: 2px; }
         .month-count { font-size: .7rem; font-weight: 900; color: #fff; margin-bottom: .25rem; }
         .month-label { font-size: .65rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; margin-top: .375rem; white-space: nowrap; }
+        /* Phones: the months share the width, so the chart never scrolls sideways */
+        @media (max-width: 767.98px) {
+            .month-chart { min-width: 0; gap: .2rem; }
+            .month-col { flex: 1 1 0; width: auto; min-width: 0; }
+            .month-count { font-size: .6rem; }
+            .month-label { font-size: .55rem; white-space: normal; text-align: center; overflow-wrap: anywhere; line-height: 1.1; }
+        }
         /* Phones and tablets: the download is the header's Export button and
            the report's filters sit in the filters sheet (one column) */
         @media (max-width: 1023.98px) {
@@ -47,7 +54,7 @@
             .kbf-sheet-body #reportFilters { grid-template-columns: 1fr; gap: 16px; }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -89,7 +96,7 @@
                 <div id="reportChart"></div>
 
                 <div class="overflow-x-auto border-2 border-gray-700">
-                    <table class="w-full text-left text-xs sm:text-sm">
+                    <table class="kbf-stack w-full text-left text-xs sm:text-sm">
                         <thead id="reportHead" class="bg-slate-800 text-gray-400 uppercase text-xs font-black"></thead>
                         <tbody id="reportBody" class="divide-y-2 divide-gray-800"></tbody>
                     </table>
@@ -106,12 +113,12 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-list-tools.js?v=2611201009"></script>
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-list-tools.js?v=2611211324"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.reports
@@ -466,6 +473,6 @@
         }
     }
     </script>
-    <script src="/js/session-manager.js?v=2611201009"></script>
+    <script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>

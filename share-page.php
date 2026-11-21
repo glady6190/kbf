@@ -140,7 +140,8 @@ if ($pdo && $id) {
                 }
                 if (!$private) {
                     $title = kbfShareText($post['Title'], 150);
-                    $summary = kbfShareText($post['Content']);
+                    // Link previews are excerpts too: no web addresses
+                    $summary = kbfShareText(kbfStripUrls(kbfShareText($post['Content'], 100000)));
                     if ($summary !== '') {
                         $description = $summary;
                     }

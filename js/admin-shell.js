@@ -168,6 +168,12 @@
             '.kbf-nav-link{display:inline-flex;align-items:center;min-height:44px;padding:.5rem .75rem;color:#9ca3af;font-weight:700;text-transform:uppercase;font-size:.75rem;white-space:nowrap;transition:color .2s ease;}' +
             '.kbf-nav-link:hover{color:#fff;}' +
             '.kbf-nav-link.kbf-active{background:var(--theme-primary);color:#0F172A;font-weight:900;}' +
+            // Count badges beside Approvals and Tournaments (desktop menu)
+            '.kbf-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:1.25rem;height:1.25rem;margin-left:.375rem;padding:0 .3rem;font-size:.625rem;font-weight:900;line-height:1;cursor:help;}' +
+            '.kbf-nav-badge.hidden{display:none;}' +
+            '.kbf-nav-badge-red{background:#ef4444;color:#fff;}' +
+            '.kbf-nav-badge-amber{background:#f59e0b;color:#0F172A;}' +
+            '.kbf-drop .kbf-nav-badge{margin-left:auto;}' +
             '.kbf-drop{position:absolute;right:0;top:100%;margin-top:.5rem;min-width:13rem;background:#0f172a;border:2px solid #374151;z-index:60;box-shadow:6px 6px 0 var(--theme-primary);}' +
             '.kbf-drop a,.kbf-drop button{display:flex;align-items:center;gap:.5rem;width:100%;min-height:44px;text-align:left;padding:.625rem .875rem;color:#d1d5db;font-weight:700;text-transform:uppercase;font-size:.75rem;}' +
             '.kbf-drop a:hover,.kbf-drop button:hover{background:#1e293b;color:#fff;}' +
@@ -356,12 +362,19 @@
     // ---------- header ----------
     function renderHeader(user, active) {
         var items = visibleMenu(user);
+        // Desktop count badges (filled by showCounts): the number, with the
+        // words as a tooltip and in the link's accessible name
+        function navBadge(key) {
+            if (key === 'approvals') return '<span class="kbf-nav-badge kbf-nav-badge-red hidden" data-kbf-count="approvals" data-kbf-count-desktop aria-hidden="true"></span>';
+            if (key === 'tournaments') return '<span class="kbf-nav-badge kbf-nav-badge-amber hidden" data-kbf-count="resultsDue" data-kbf-count-desktop aria-hidden="true"></span>';
+            return '';
+        }
         // Every item is in the bar and in "More"; fitHeaderMenu() shows as
         // many as fit in the bar at the current width and the rest under
         // "More", so the logo, title, menu and account button never overlap
         var bar = items.map(function (i, n) {
             var cls = 'kbf-nav-link' + (i.key === active ? ' kbf-active' : '');
-            return '<a href="' + i.href + '" class="' + cls + '" data-kbf-bar-item="' + n + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
+            return '<a href="' + i.href + '" class="' + cls + '" data-kbf-bar-item="' + n + '" data-kbf-label-text="' + escapeHtml(i.label) + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + navBadge(i.key) + '</a>';
         }).join('');
 
         var more = items.length ?
@@ -370,7 +383,7 @@
                 '<div class="kbf-drop hidden" data-kbf-menu>' +
                     items.map(function (i, n) {
                         var cls = i.key === active ? ' class="kbf-active"' : '';
-                        return '<a href="' + i.href + '"' + cls + ' data-kbf-more-item="' + n + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + '</a>';
+                        return '<a href="' + i.href + '"' + cls + ' data-kbf-more-item="' + n + '" data-kbf-label-text="' + escapeHtml(i.label) + '"' + (i.key === active ? ' aria-current="page"' : '') + '>' + escapeHtml(i.label) + navBadge(i.key) + '</a>';
                     }).join('') +
                 '</div>' +
             '</div>' : '';
@@ -703,17 +716,32 @@
             .catch(function () { /* the badges simply stay hidden */ });
     }
 
+    // The words for a count: "47 waiting", "3 results due"
+    function countWords(key, n) {
+        return n.toLocaleString('en-GB') + (key === 'resultsDue' ? ' results due' : ' waiting');
+    }
+
     function showCounts(host, counts) {
         host.querySelectorAll('[data-kbf-count]').forEach(function (el) {
             var key = el.getAttribute('data-kbf-count');
             var n = parseInt(counts[key], 10) || 0;
-            el.textContent = n > 99 ? '99+' : String(n);
-            // Menu links read "Approvals 47 waiting" to screen readers
+            var words = countWords(key, n);
             if (el.closest('.kbf-pm-link')) {
-                var extra = document.createElement('span');
-                extra.className = 'sr-only';
-                extra.textContent = key === 'resultsDue' ? ' with results due' : ' waiting';
-                el.appendChild(extra);
+                // Phone menu: short text badges ("47 waiting", "3 results due")
+                el.textContent = words;
+            } else if (el.hasAttribute('data-kbf-count-desktop')) {
+                // Desktop menu: the number, with the words as a tooltip and
+                // in the link's accessible name ("Approvals, 47 waiting")
+                el.textContent = n > 99 ? '99+' : String(n);
+                el.title = words;
+                var link = el.closest('a');
+                if (link) {
+                    var label = link.getAttribute('data-kbf-label-text') || '';
+                    if (n > 0) link.setAttribute('aria-label', label + ', ' + words);
+                    else link.removeAttribute('aria-label');
+                }
+            } else {
+                el.textContent = n > 99 ? '99+' : String(n);
             }
             el.classList.toggle('hidden', n < 1);
         });
@@ -721,8 +749,11 @@
         var btn = host.querySelector('[data-kbf-approvals-btn]');
         if (btn) {
             btn.classList.toggle('hidden', n < 1);
-            btn.setAttribute('aria-label', 'Approvals, ' + n + ' waiting');
+            btn.setAttribute('aria-label', 'Approvals, ' + countWords('approvals', n));
+            btn.title = 'Approvals, ' + countWords('approvals', n);
         }
+        // The badges change the bar's width
+        fitHeaderMenu(host);
     }
 
     // ---------- footer ----------
@@ -1187,6 +1218,48 @@
         guard.controlSection = key;
         return start(guard);
     }
+
+    // ---------- tables as cards on phones ----------
+    // A table with class kbf-stack shows each row as a card below 768px
+    // (styles in assets/css/tailwind.input.css, "TABLES ON PHONES"). Each
+    // cell is labelled with its column's header text (data-label), unless
+    // the page set one itself or the cell spans several columns. Rows added
+    // later are labelled as they appear.
+    function labelStackTables() {
+        document.querySelectorAll('table.kbf-stack').forEach(function (table) {
+            var heads = [];
+            var headRow = table.tHead && table.tHead.rows.length ? table.tHead.rows[table.tHead.rows.length - 1] : null;
+            if (headRow) {
+                Array.prototype.forEach.call(headRow.cells, function (th) {
+                    var text = (th.getAttribute('data-label') || th.textContent || '').replace(/\s+/g, ' ').trim();
+                    for (var s = 0; s < (th.colSpan || 1); s++) heads.push(text);
+                });
+            }
+            Array.prototype.forEach.call(table.tBodies, function (body) {
+                Array.prototype.forEach.call(body.rows, function (tr) {
+                    var col = 0;
+                    Array.prototype.forEach.call(tr.cells, function (cell) {
+                        var span = cell.colSpan || 1;
+                        if (span === 1 && !cell.hasAttribute('data-label') && heads[col]) {
+                            cell.setAttribute('data-label', heads[col]);
+                        }
+                        col += span;
+                    });
+                });
+            });
+        });
+    }
+    var stackTimer = null;
+    function watchStackTables() {
+        labelStackTables();
+        if (!window.MutationObserver || !document.body) return;
+        new MutationObserver(function () {
+            if (stackTimer) return;
+            stackTimer = setTimeout(function () { stackTimer = null; labelStackTables(); }, 30);
+        }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchStackTables);
+    else watchStackTables();
 
     window.KBFShell = {
         start: start,

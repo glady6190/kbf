@@ -19,6 +19,8 @@ echo "Time: " . date('Y-m-d H:i:s') . "\n\n";
 
 // Record this run in JobRuns (this job has no dry run)
 $runId = kbfJobRunStart($pdo, 'ranking-calculator');
+// Last check-in time for the Overview (one Settings value, no new rows)
+kbfJobCheckIn($pdo, 'ranking-calculator');
 
 try {
     // Every active player with a grade, with a few set-based queries for
@@ -113,6 +115,8 @@ try {
         ", []],
         // Request counts (password reset limits) after a day
         'request limits' => ["DELETE FROM RequestLimits WHERE CreatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY)", []],
+        // Registration email codes after a day (database/email-verification.sql)
+        'registration email codes' => ["DELETE FROM EmailVerificationCodes WHERE CreatedDate < DATE_SUB(NOW(), INTERVAL 1 DAY)", []],
         // Password reset links used or expired more than 7 days ago
         'password reset links' => ["
             DELETE FROM PasswordResets

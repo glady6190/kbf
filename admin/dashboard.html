@@ -111,7 +111,7 @@
         .db-link-row:focus-visible, .db-action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
         .db-link-row:focus-visible, .db-action:focus-visible { border-color: var(--theme-primary); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -143,10 +143,10 @@
         </div>
     </main>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): any signed-in staff
@@ -611,9 +611,9 @@
             row.appendChild(avatar);
 
             const info = el('div', 'flex-1 min-w-0');
-            info.appendChild(el('p', 'text-sm sm:text-base font-black text-white uppercase truncate', r.name));
+            info.appendChild(el('p', 'text-sm sm:text-base font-black text-white uppercase break-words', r.name));
             const meta = [r.city, r.grade ? 'Chose grade ' + r.grade : ''].filter(Boolean).join(', ');
-            info.appendChild(el('p', 'text-xs font-semibold text-gray-400 truncate', meta));
+            info.appendChild(el('p', 'text-xs font-semibold text-gray-400 break-words', meta));
             row.appendChild(info);
 
             row.appendChild(el('span', 'text-xs sm:text-sm font-black text-gray-300 whitespace-nowrap', plural(num(r.days), 'day')));
@@ -770,7 +770,7 @@
         people.forEach(function (person) {
             const item = el('div');
             const line = el('div', 'flex justify-between gap-2 text-xs font-bold mb-1');
-            line.appendChild(el('span', 'text-gray-200 truncate', person.name));
+            line.appendChild(el('span', 'text-gray-200 min-w-0 break-words', person.name));
             line.appendChild(el('span', 'theme-primary-text', num(person.count)));
             item.appendChild(line);
             const meter = el('div', 'db-meter');
@@ -832,6 +832,6 @@
         return p.section;
     }
 </script>
-<script src="/js/session-manager.js?v=2611201009"></script>
+<script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>

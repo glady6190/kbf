@@ -87,6 +87,7 @@ const KBF_MAIL_EVENTS = [
     'results_rejected'         => 'Results rejected',
     'results_overdue'          => 'Results not yet submitted',
     'registration_duplicate'   => 'Already registered or waiting',
+    'registration_code'        => 'Registration email code',
     'password_reset_requested' => 'Password reset requested',
     'password_reset_completed' => 'Password reset completed',
     'staff_access_changed'     => 'Staff access changed',

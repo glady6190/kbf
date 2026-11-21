@@ -66,6 +66,14 @@ const KBF_NOTIFY_EVENTS = [
         'audiences' => ['person' => 'To the person who filled in the form'],
         'placeholders' => ['first_name', 'full_name', 'reason', 'contact_email', 'site_link'],
     ],
+    'registration_code' => [
+        'group' => 'Players', 'label' => 'Registration email code', 'sort' => 5, 'priority' => 'important',
+        'description' => 'Sent when someone asks for a 6-digit code to confirm their email address on the registration form. The code is never stored in the email log.',
+        'person' => [1, 1], 'organiser' => [0, 0], 'admins' => [0, 0], 'news' => [0, 0],
+        'adminPermission' => null, 'locked' => 1,
+        'audiences' => ['person' => 'To the person who filled in the form'],
+        'placeholders' => ['code', 'site_link'],
+    ],
     'registration_approved' => [
         'group' => 'Players', 'label' => 'Registration approved', 'sort' => 20, 'priority' => 'important',
         'description' => 'Sent when an admin approves a registration. Includes the KBF ID.',
@@ -262,6 +270,7 @@ const KBF_PLACEHOLDERS = [
     'organiser_name' => ['Organiser of the tournament', 'Leeds Badminton Club'],
     'submit_link' => ['Page where the organiser submits results for this tournament', 'https://kbf-uk.org/admin/submit-tournament-results?id=123'],
     'reset_link' => ['Password reset link (never stored)', 'https://kbf-uk.org/reset-password.html?token=sample'],
+    'code' => ['6-digit registration code (never stored)', '482913'],
     'access_list' => ['What the person can now do in the admin area', 'Approve player registrations, Change player grades'],
     'login_link' => ['Admin sign-in page', 'https://kbf-uk.org/login'],
     'review_link' => ['Admin page where this can be dealt with', 'https://kbf-uk.org/admin/approvals'],
@@ -301,6 +310,15 @@ const KBF_EMAIL_DEFAULTS = [
             . '<p><strong>{reason}</strong></p>'
             . '<p>If you are already a member, you do not need to register again. If you think this is a mistake, or you need help with your membership, please email us at {contact_email}.</p>'
             . '<p>If you did not fill in the form, you can ignore this email.</p>'
+            . '<p>Best regards,<br><strong>KBF-UK Admin Team</strong></p>',
+    ],
+    'registration_code.person' => [
+        'subject' => 'Your KBF-UK registration code',
+        'body' => '<h2>Your registration code</h2>'
+            . '<p>Use this code to confirm your email address on the KBF-UK registration form:</p>'
+            . '<h2>{code}</h2>'
+            . '<p>The code is valid for 10 minutes.</p>'
+            . '<p>If you did not ask for this code, you can ignore this email. Nobody can register with your address without it.</p>'
             . '<p>Best regards,<br><strong>KBF-UK Admin Team</strong></p>',
     ],
     'registration_approved.person' => [

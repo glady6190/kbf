@@ -66,8 +66,15 @@
         .nw-menu-item { display: flex; width: 100%; align-items: center; gap: .6rem; padding: .6rem .9rem; color: #e5e7eb; font-weight: 800; font-size: .78rem; text-align: left; }
         .nw-menu-item:hover, .nw-menu-item:focus { background: #1e293b; color: #fff; outline: none; }
         .nw-menu-item.is-danger { color: #fca5a5; }
+
+        /* Phone rows: 56px thumbnail, two-line title, "⋯" menu */
+        .nw-thumb56 { width: 56px; height: 56px; flex-shrink: 0; border: 2px solid #374151; background: #0f172a; display: flex; align-items: center; justify-content: center; color: #4b5563; overflow: hidden; }
+        .nw-thumb56 img { width: 100%; height: 100%; object-fit: cover; }
+        .nw-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
+        .nw-row.is-link { cursor: pointer; }
+        .nw-row.is-link:hover { background: #1e293b; }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -151,12 +158,12 @@
     <!-- Row menu (one, shared by every row) -->
     <div id="rowMenu" class="nw-menu hidden" role="menu" aria-label="Post actions"></div>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-list-tools.js?v=2611201009"></script>
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-list-tools.js?v=2611211324"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
   <script>
     // News list (staff). Data: GET /api/announcements.php?staff=1 with tab,
     // q, tournament, author and page; 50 posts a page. The API decides what
@@ -460,23 +467,53 @@
         return tr;
     }
 
-    // Phones: one card per post
+    // Phones: one compact row per post. A 56px thumbnail (or a small icon),
+    // the title (two lines at most), a line with the type, date and status,
+    // and a "⋯" menu at the top right (Edit, View, Hide or Show, Delete).
+    // Tapping the row opens the editor.
+    function postType(p) {
+        if (p.isPromotion) return 'Promotion';
+        return p.tournamentId ? 'Tournament' : 'News';
+    }
+
     function cardRow(p) {
-        const li = el('li', 'px-4 py-4');
-        const top = el('div', 'flex items-start gap-3');
-        top.appendChild(thumb(p));
+        const li = el('li', 'nw-row px-4 py-3 flex items-start gap-3' + (p.canEdit ? ' is-link' : ''));
+        const box = el('div', 'nw-thumb56');
+        const url = p.image ? KBF.safeUrl(p.image) : '';
+        if (url) {
+            const img = document.createElement('img');
+            img.alt = '';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 56;
+            img.height = 56;
+            KBF.setImageVariant(img, url, 'thumb');
+            box.appendChild(img);
+        } else {
+            box.appendChild(icon('image', 'w-5 h-5'));
+        }
+        li.appendChild(box);
+
         const mid = el('div', 'min-w-0 flex-1');
-        mid.appendChild(titleBlock(p));
-        const meta = [p.tournamentName, p.authorName, dateText(p)].filter(Boolean).join(' · ');
-        if (meta) mid.appendChild(el('p', 'text-xs font-bold text-gray-400 mt-1 break-words', meta));
-        const tagLine = el('div', 'mt-2');
-        tagLine.appendChild(statusTag(p.status));
-        mid.appendChild(tagLine);
-        top.appendChild(mid);
-        li.appendChild(top);
-        const act = actions(p);
-        act.classList.add('mt-3');
-        li.appendChild(act);
+        const title = p.canEdit ? el('a', 'nw-title nw-clamp2') : el('span', 'nw-title nw-clamp2');
+        title.textContent = p.title || '(No title)';
+        if (p.canEdit) title.href = editUrl(p);
+        mid.appendChild(title);
+        const meta = el('div', 'mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1');
+        meta.appendChild(el('span', 'nw-chip', postType(p)));
+        if (p.isPinned) meta.appendChild(el('span', 'nw-chip', 'Pinned'));
+        meta.appendChild(el('span', 'text-xs font-bold text-gray-400', dateText(p)));
+        meta.appendChild(statusTag(p.status));
+        mid.appendChild(meta);
+        li.appendChild(mid);
+
+        li.appendChild(menuButton(p, true));
+        if (p.canEdit) {
+            li.addEventListener('click', e => {
+                if (e.target.closest('a, button')) return;
+                window.location.href = editUrl(p);
+            });
+        }
         return li;
     }
 
@@ -550,8 +587,10 @@
     const menu = { open: false, button: null };
     const menuEl = document.getElementById('rowMenu');
 
-    function menuItems(p) {
-        const items = [['View', 'external', null, '/post?id=' + idParam(p.id)]];
+    function menuItems(p, withEdit) {
+        const items = [];
+        if (withEdit && p.canEdit) items.push(['Edit', 'edit', () => { window.location.href = editUrl(p); }]);
+        items.push(['View', 'external', null, '/post?id=' + idParam(p.id)]);
         if (p.canEdit) {
             if (p.status === 'hidden') items.push(['Show', 'eye', () => setVisible(p, true)]);
             else if (p.status === 'published' || p.status === 'scheduled') items.push(['Hide', 'eyeOff', () => setVisible(p, false)]);
@@ -560,7 +599,8 @@
         return items;
     }
 
-    function menuButton(p) {
+    // withEdit: the phone row's menu also holds Edit (no separate button)
+    function menuButton(p, withEdit) {
         const b = el('button', 'nw-menu-btn');
         b.type = 'button';
         b.setAttribute('aria-haspopup', 'menu');
@@ -571,21 +611,21 @@
         b.addEventListener('click', e => {
             e.stopPropagation();
             if (menu.open && menu.button === b) closeMenu(true);
-            else openMenu(b, p, 0);
+            else openMenu(b, p, 0, withEdit);
         });
         b.addEventListener('keydown', e => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                 e.preventDefault();
-                openMenu(b, p, e.key === 'ArrowUp' ? -1 : 0);
+                openMenu(b, p, e.key === 'ArrowUp' ? -1 : 0, withEdit);
             }
         });
         return b;
     }
 
-    function openMenu(btn, p, focusIndex) {
+    function openMenu(btn, p, focusIndex, withEdit) {
         closeMenu(false);
         menuEl.textContent = '';
-        menuItems(p).forEach(item => {
+        menuItems(p, withEdit).forEach(item => {
             let node;
             if (item[3]) {
                 node = el('a', 'nw-menu-item');
@@ -716,6 +756,6 @@
         }
     }
 </script>
-<script src="/js/session-manager.js?v=2611201009"></script>
+<script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>

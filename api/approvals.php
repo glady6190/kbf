@@ -265,6 +265,35 @@ function apCounts(PDO $pdo) {
     return $counts;
 }
 
+// A town's grouping key: lower case, single spaces, no trailing full stop
+// or apostrophe ("Birmingham.", " birmingham " and "BIRMINGHAM'" match)
+function apLocationKey($value) {
+    $s = mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $value)), 'UTF-8');
+    $s = preg_replace("/[\\.'\x{2019}\\s]+$/u", '', $s);
+    return mb_substr(trim($s), 0, 100, 'UTF-8');
+}
+
+// Towns of the waiting registrations, A to Z: key => [key, name, count, raw]
+// (raw = the stored spellings, used to filter; name = one spelling, shown
+// in the shared title-case style by the page)
+function apWaitingLocations(PDO $pdo) {
+    $rows = $pdo->query("SELECT Location, COUNT(*) AS n FROM PlayerRegistrations
+                         WHERE Status = 'Pending' AND Location IS NOT NULL AND TRIM(Location) <> ''
+                         GROUP BY Location")->fetchAll();
+    $groups = [];
+    foreach ($rows as $r) {
+        $key = apLocationKey(apText($r['Location']));
+        if ($key === '') continue;
+        if (!isset($groups[$key])) {
+            $groups[$key] = ['key' => $key, 'name' => apText(preg_replace("/[\\.'\x{2019}\\s]+$/u", '', trim(preg_replace('/\s+/u', ' ', (string) $r['Location'])))), 'count' => 0, 'raw' => []];
+        }
+        $groups[$key]['count'] += (int) $r['n'];
+        $groups[$key]['raw'][] = $r['Location'];
+    }
+    uksort($groups, 'strcmp');
+    return $groups;
+}
+
 function apReasonsFor($type) {
     $key = $type === 'registration' ? 'registration' : 'tournament';
     $out = [];
@@ -1155,6 +1184,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
                     $where[] = 'pr.CategoryId = ?';
                     $params[] = (int) $grade;
                 }
+                // Location filter: towns are grouped ignoring case, extra
+                // spaces and a trailing full stop or apostrophe
+                $locations = apWaitingLocations($pdo);
+                $location = is_string($_GET['location'] ?? null) ? apLocationKey($_GET['location']) : '';
+                if ($location !== '') {
+                    $raw = isset($locations[$location]) ? $locations[$location]['raw'] : [];
+                    if ($raw) {
+                        $where[] = 'pr.Location IN (' . implode(',', array_fill(0, count($raw), '?')) . ')';
+                        $params = array_merge($params, $raw);
+                    } else {
+                        $where[] = '1 = 0';
+                    }
+                }
                 $order = $sort === 'newest' ? 'pr.SubmittedDate DESC, pr.RegistrationId DESC'
                     : ($sort === 'name' ? 'pr.FirstName ASC, pr.LastName ASC, pr.RegistrationId ASC' : 'pr.SubmittedDate ASC, pr.RegistrationId ASC');
                 $whereSql = implode(' AND ', $where);
@@ -1205,6 +1247,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
                         'over30' => (int) ($w['over30'] ?? 0),
                     ],
                     'counts' => apCounts($pdo),
+                    'locations' => array_values(array_map(function ($l) {
+                        return ['key' => $l['key'], 'name' => $l['name'], 'count' => $l['count']];
+                    }, $locations)),
+                    'waitingTotal' => (int) ($w['under7'] ?? 0) + (int) ($w['mid'] ?? 0) + (int) ($w['over30'] ?? 0),
                 ]);
             }
 

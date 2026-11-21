@@ -54,6 +54,10 @@ echo "Time: " . date('Y-m-d H:i:s') . "\n\n";
 
 // Record this run in JobRuns (dry runs write nothing)
 $runId = $dryRun ? 0 : kbfJobRunStart($pdo, 'term-reset');
+// Last check-in time for the Overview (one Settings value, no new rows)
+if (!$dryRun) {
+    kbfJobCheckIn($pdo, 'term-reset');
+}
 
 try {
     // ============================================

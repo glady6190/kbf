@@ -46,7 +46,7 @@
             .brutal-shadow:hover { box-shadow: 4px 4px 0px var(--theme-primary); }
         }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -83,7 +83,7 @@
                 </div>
 
                 <div class="overflow-x-auto border-2 border-gray-700">
-                    <table class="w-full text-left text-xs sm:text-sm min-w-[44rem]">
+                    <table class="kbf-stack kbf-stack-form w-full text-left text-xs sm:text-sm min-w-[44rem]">
                         <thead class="bg-slate-800 text-gray-400 uppercase text-xs font-black">
                             <tr>
                                 <th scope="col" class="px-3 py-3 w-14">Rank</th>
@@ -195,11 +195,11 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell, control centre): control.grading
@@ -367,10 +367,14 @@
         grades.forEach((g, i) => {
             const tr = el('tr', 'bg-slate-900 align-middle');
 
+            // Phones show each grade as a card: the labels below sit above
+            // each field (kbf-stack-form)
             const rank = el('td', 'px-3 py-2 font-black text-white', String(i + 1));
+            rank.setAttribute('data-label', 'Rank');
             tr.appendChild(rank);
 
             const shortCell = el('td', 'px-3 py-2');
+            shortCell.setAttribute('data-label', 'Short name');
             const shortInput = el('input', 'field');
             shortInput.type = 'text';
             shortInput.maxLength = 3;
@@ -383,6 +387,7 @@
             tr.appendChild(shortCell);
 
             const nameCell = el('td', 'px-3 py-2');
+            nameCell.setAttribute('data-label', 'Full name');
             const nameInput = el('input', 'field');
             nameInput.type = 'text';
             nameInput.maxLength = 60;
@@ -395,6 +400,7 @@
             tr.appendChild(nameCell);
 
             const thrCell = el('td', 'px-3 py-2');
+            thrCell.setAttribute('data-label', 'Promotion threshold');
             if (i === 0) {
                 thrCell.appendChild(el('span', 'text-xs font-black uppercase theme-primary-text', 'Top grade'));
             } else {
@@ -415,9 +421,12 @@
             }
             tr.appendChild(thrCell);
 
-            tr.appendChild(el('td', 'px-3 py-2 text-right font-bold text-gray-200', formatNumber(g.players)));
+            const playersCell = el('td', 'px-3 py-2 text-right font-bold text-gray-200', formatNumber(g.players));
+            playersCell.setAttribute('data-label', 'Players');
+            tr.appendChild(playersCell);
 
             const orderCell = el('td', 'px-3 py-2 text-center whitespace-nowrap');
+            orderCell.setAttribute('data-label', 'Order');
             const up = el('button', 'icon-btn');
             up.type = 'button';
             up.setAttribute('aria-label', 'Move ' + g.shortName + ' up');
@@ -435,6 +444,7 @@
             tr.appendChild(orderCell);
 
             const menuCell = el('td', 'px-3 py-2 text-right');
+            menuCell.setAttribute('data-label', 'Actions');
             menuCell.appendChild(rowMenu(g));
             tr.appendChild(menuCell);
 
@@ -646,7 +656,7 @@
         const body = el('div', 'space-y-3');
         const intro = el('p', 'text-xs text-gray-400 font-semibold', 'Under the settings shown on the page, saved or not.');
         const tableWrap = el('div', 'overflow-x-auto border-2 border-gray-700 max-h-[55vh] overflow-y-auto');
-        const table = el('table', 'w-full text-left text-xs min-w-[32rem]');
+        const table = el('table', 'kbf-stack w-full text-left text-xs min-w-[32rem]');
         table.innerHTML = '<thead class="bg-slate-800 text-gray-400 uppercase font-black sticky top-0"><tr>' +
             '<th scope="col" class="px-2 py-2">Name</th><th scope="col" class="px-2 py-2">KBF ID</th><th scope="col" class="px-2 py-2">Grade</th>' +
             '<th scope="col" class="px-2 py-2 text-right">Now</th><th scope="col" class="px-2 py-2 text-right">After</th></tr></thead>';
@@ -976,6 +986,6 @@
         }).then(yes => { if (yes) load(); });
     });
     </script>
-    <script src="/js/session-manager.js?v=2611201009"></script>
+    <script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>

@@ -900,6 +900,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             foreach ($announcements as &$post) {
                 $stripped = (string) preg_replace(['/<[^>]*>/', '/<[^>]*$/'], [' ', ''], (string) $post['Content']);
                 $plain = trim(preg_replace('/\s+/u', ' ', $stripped) ?? preg_replace('/[ \t\r\n]+/', ' ', $stripped));
+                // Excerpts never show web addresses (the full post keeps its links)
+                $plain = kbfStripUrls($plain);
                 if ((function_exists('mb_strlen') ? mb_strlen($plain, 'UTF-8') : strlen($plain)) > 400) {
                     $plain = function_exists('mb_substr') ? mb_substr($plain, 0, 400, 'UTF-8') : substr($plain, 0, 400);
                     // No half entity at the end

@@ -125,7 +125,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -686,15 +686,15 @@
         </form>
     </div>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-list-tools.js?v=2611201009"></script>
-    <script src="/js/kbf-lightbox.js?v=2611201009"></script>
-    <script src="/js/kbf-cropper.js?v=2611201009"></script>
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
-    <script src="/js/grade-change.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-list-tools.js?v=2611211324"></script>
+    <script src="/js/kbf-lightbox.js?v=2611211324"></script>
+    <script src="/js/kbf-cropper.js?v=2611211324"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
+    <script src="/js/grade-change.js?v=2611211324"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.view_export, players.edit_details
@@ -2525,7 +2525,7 @@
             const row = el('div', 'result-row flex items-center gap-3 p-3 bg-slate-800 border-2 border-gray-700' + (selected ? ' selected' : ''));
             row.appendChild(avatar(m.profilePhoto, name, 'w-10 h-10 text-xs'));
             const mid = el('div', 'min-w-0 flex-1');
-            mid.appendChild(el('div', 'text-sm text-white font-black truncate', name));
+            mid.appendChild(el('div', 'text-sm text-white font-black break-words', name));
             mid.appendChild(cityLine(m.location));
             mid.appendChild(el('div', 'text-xs text-gray-400 font-bold uppercase', m.grade ? 'Grade ' + m.grade : 'No grade'));
             row.appendChild(mid);
@@ -2876,6 +2876,6 @@
         }
     });
     </script>
-    <script src="/js/session-manager.js?v=2611201009"></script>
+    <script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>

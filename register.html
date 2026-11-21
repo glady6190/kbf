@@ -288,10 +288,10 @@
 
 
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
-    <link rel="stylesheet" href="/assets/css/public-ui.css?v=2611201009">
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/public-ui.js?v=2611201009" defer></script>
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
+    <link rel="stylesheet" href="/assets/css/public-ui.css?v=2611211324">
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/public-ui.js?v=2611211324" defer></script>
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <!-- Navigation -->
@@ -438,9 +438,36 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
                             <label for="email" class="block text-xs font-black theme-primary-text uppercase mb-2">Email Address *</label>
-                            <input type="email" name="email" id="email" required autocomplete="email"
-                                   class="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
-                                   placeholder="your.email@example.com">
+                            <div class="flex gap-2 items-stretch">
+                                <input type="email" name="email" id="email" required autocomplete="email"
+                                       class="flex-1 min-w-0 w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 border-2 sm:border-4 border-gray-700 text-white placeholder-gray-500 font-bold text-base sm:text-sm focus:outline-none focus:border-[var(--theme-primary)] transition"
+                                       placeholder="your.email@example.com">
+                                <!-- Email code (shown once database/email-verification.sql has run) -->
+                                <button type="button" id="sendCodeBtn" class="hidden flex-shrink-0 px-3 sm:px-4 theme-primary-bg text-slate-900 font-black uppercase text-xs sm:text-sm whitespace-nowrap" style="min-height:44px">Send code</button>
+                            </div>
+                            <p id="emailVerifiedRow" class="hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-black text-green-400" role="status">
+                                <span class="inline-flex items-center gap-1.5"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>Email verified</span>
+                                <button type="button" id="changeVerifiedEmailBtn" class="text-gray-300 underline font-bold text-xs uppercase hover:text-white" style="min-height:44px">Change</button>
+                            </p>
+                            <div id="codeBox" class="hidden mt-3 border-2 border-gray-700 bg-slate-800 p-3 sm:p-4">
+                                <p id="codeSentText" class="text-sm font-semibold text-gray-200 break-words" aria-live="polite"></p>
+                                <label for="emailCode" class="block text-xs font-black theme-primary-text uppercase mt-3 mb-2">6-digit code</label>
+                                <div class="flex gap-2 items-stretch">
+                                    <input type="text" id="emailCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
+                                           aria-describedby="emailCodeError"
+                                           class="flex-1 min-w-0 w-full px-3 py-2 bg-slate-900 border-2 border-gray-700 text-white placeholder-gray-500 font-black tracking-[0.3em] focus:outline-none focus:border-[var(--theme-primary)] transition"
+                                           style="font-size:18px" placeholder="000000">
+                                    <button type="button" id="verifyCodeBtn" class="flex-shrink-0 px-3 sm:px-4 theme-primary-bg text-slate-900 font-black uppercase text-xs sm:text-sm" style="min-height:44px">Verify</button>
+                                </div>
+                                <p id="emailCodeError" class="hidden mt-2 text-sm font-bold text-red-400" role="alert"></p>
+                                <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold">
+                                    <button type="button" id="resendCodeBtn" class="underline text-gray-300 hover:text-white disabled:no-underline disabled:text-gray-500 disabled:cursor-not-allowed" style="min-height:44px" disabled>Resend code</button>
+                                    <span id="resendTimer" class="text-gray-500"></span>
+                                    <button type="button" id="changeEmailBtn" class="underline text-gray-300 hover:text-white" style="min-height:44px">Wrong address? Change it</button>
+                                </p>
+                            </div>
+                            <p id="emailSendError" class="hidden mt-2 text-sm font-bold text-red-400" role="alert"></p>
+                            <input type="hidden" name="emailToken" id="emailToken" value="">
                         </div>
                         <div>
     <label for="phoneNumber" class="block text-xs font-black theme-primary-text uppercase mb-2">Mobile Number *</label>
@@ -540,8 +567,9 @@
                     <div id="messageBox" role="alert" aria-live="assertive" class="hidden p-3 sm:p-4 border-2 sm:border-4 font-bold text-xs sm:text-sm"></div>
 
                     <!-- Submit Button -->
-                    <div class="flex justify-center pt-4">
-                        <button type="submit" id="submitBtn" 
+                    <div class="flex flex-col items-center gap-3 pt-4">
+                        <p id="verifyFirstNote" class="hidden text-center text-xs sm:text-sm font-bold text-amber-400">Please verify your email address with the 6-digit code before you register.</p>
+                        <button type="submit" id="submitBtn" aria-describedby="verifyFirstNote"
                                 class="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 theme-primary-bg text-slate-900 font-black uppercase text-sm sm:text-base lg:text-lg brutal-shadow transition-all hover:scale-105">
                             Submit registration
                         </button>
@@ -557,7 +585,7 @@
 
     <!-- Footer (same as the other public pages) -->
     <footer class="bg-slate-900 border-t-8 theme-primary-border text-gray-300 pt-16 pb-8 mt-20">
-        <link rel="stylesheet" href="/assets/css/site-footer.css?v=2611201009">
+        <link rel="stylesheet" href="/assets/css/site-footer.css?v=2611211324">
         <div class="kf-wrap">
             <!-- Columns -->
             <div class="kf-cols">
@@ -694,9 +722,9 @@
     </div>
 </div>
 
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/kbf-cropper.js?v=2611201009"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/kbf-cropper.js?v=2611211324"></script>
     <script>
     // ============================================
     // GLOBAL VARIABLES
@@ -942,6 +970,202 @@
     }
 
     // ============================================
+    // EMAIL CODE (api/email-code.php)
+    // Only once the server says codes are in use (database/
+    // email-verification.sql has run); until then the form works as before.
+    // ============================================
+    const emailCode = {
+        required: false,
+        token: '',
+        sentTo: '',        // the address the open code box is for
+        timer: null,
+        busy: false
+    };
+
+    function ecEl(id) { return document.getElementById(id); }
+
+    function ecShowError(id, text) {
+        const box = ecEl(id);
+        box.textContent = text || '';
+        box.classList.toggle('hidden', !text);
+        if (id === 'emailCodeError') ecEl('emailCode').setAttribute('aria-invalid', text ? 'true' : 'false');
+    }
+
+    function ecUpdateSubmit() {
+        const waiting = emailCode.required && !emailCode.token;
+        ecEl('verifyFirstNote').classList.toggle('hidden', !waiting);
+        const btn = ecEl('submitBtn');
+        btn.setAttribute('aria-disabled', waiting ? 'true' : 'false');
+        btn.classList.toggle('opacity-50', waiting);
+        btn.classList.toggle('cursor-not-allowed', waiting);
+    }
+
+    function ecStartResendTimer(seconds) {
+        clearInterval(emailCode.timer);
+        let left = Math.max(0, Number(seconds) || 0);
+        const btn = ecEl('resendCodeBtn');
+        const label = ecEl('resendTimer');
+        const tick = () => {
+            if (left <= 0) {
+                clearInterval(emailCode.timer);
+                btn.disabled = false;
+                label.textContent = '';
+                return;
+            }
+            btn.disabled = true;
+            label.textContent = 'Available in ' + left + 's';
+            left--;
+        };
+        tick();
+        emailCode.timer = setInterval(tick, 1000);
+    }
+
+    // Back to the start: email editable, no code box, no token
+    function ecReset(focusEmail) {
+        clearInterval(emailCode.timer);
+        emailCode.token = '';
+        emailCode.sentTo = '';
+        ecEl('emailToken').value = '';
+        const email = ecEl('email');
+        email.readOnly = false;
+        email.classList.remove('opacity-70');
+        ecEl('codeBox').classList.add('hidden');
+        ecEl('emailVerifiedRow').classList.add('hidden');
+        ecEl('emailCode').value = '';
+        ecShowError('emailCodeError', '');
+        ecShowError('emailSendError', '');
+        ecEl('sendCodeBtn').classList.toggle('hidden', !emailCode.required);
+        ecUpdateSubmit();
+        if (focusEmail) email.focus();
+    }
+
+    function ecEnable() {
+        if (emailCode.required) return;
+        emailCode.required = true;
+        ecReset(false);
+    }
+
+    async function ecPost(body) {
+        const response = await fetch('/api/email-code.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        let data = null;
+        try { data = await response.json(); } catch (e) { data = null; }
+        return data || { success: false, message: 'Something went wrong. Please try again.' };
+    }
+
+    async function ecSend(isResend) {
+        if (emailCode.busy) return;
+        const emailInput = ecEl('email');
+        const address = emailInput.value.trim();
+        ecShowError('emailSendError', '');
+        ecShowError('emailCodeError', '');
+        if (!address || !emailInput.checkValidity()) {
+            ecShowError(isResend ? 'emailCodeError' : 'emailSendError', 'Please enter a valid email address first.');
+            emailInput.focus();
+            return;
+        }
+        emailCode.busy = true;
+        const btn = isResend ? ecEl('resendCodeBtn') : ecEl('sendCodeBtn');
+        const oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        try {
+            const data = await ecPost({ action: 'send', email: address });
+            if (data.success) {
+                emailCode.sentTo = address;
+                ecEl('codeSentText').textContent = 'We have sent a 6-digit code to ' + address + '. It is valid for 10 minutes.';
+                ecEl('codeBox').classList.remove('hidden');
+                ecEl('sendCodeBtn').classList.add('hidden');
+                ecEl('emailCode').value = '';
+                ecEl('emailCode').focus();
+                ecStartResendTimer(data.resendAfter || 60);
+            } else {
+                if (data.retryAfter && !ecEl('codeBox').classList.contains('hidden')) ecStartResendTimer(data.retryAfter);
+                ecShowError(isResend ? 'emailCodeError' : 'emailSendError', data.message || 'The code could not be sent. Please try again.');
+            }
+        } catch (e) {
+            ecShowError(isResend ? 'emailCodeError' : 'emailSendError', 'The code could not be sent. Please check your connection and try again.');
+        } finally {
+            emailCode.busy = false;
+            btn.textContent = oldText;
+            if (!isResend) btn.disabled = false;
+            else if (!emailCode.timer || ecEl('resendTimer').textContent === '') btn.disabled = false;
+        }
+    }
+
+    async function ecVerify() {
+        if (emailCode.busy) return;
+        const codeInput = ecEl('emailCode');
+        const code = codeInput.value.replace(/\s+/g, '');
+        if (!/^\d{6}$/.test(code)) {
+            ecShowError('emailCodeError', 'Please enter the 6-digit code from the email.');
+            codeInput.focus();
+            return;
+        }
+        emailCode.busy = true;
+        const btn = ecEl('verifyCodeBtn');
+        btn.disabled = true;
+        ecShowError('emailCodeError', '');
+        try {
+            const data = await ecPost({ action: 'verify', email: emailCode.sentTo, code: code });
+            if (data.success && data.token) {
+                clearInterval(emailCode.timer);
+                emailCode.token = data.token;
+                ecEl('emailToken').value = data.token;
+                const email = ecEl('email');
+                email.value = emailCode.sentTo;
+                email.readOnly = true;
+                email.classList.add('opacity-70');
+                ecEl('codeBox').classList.add('hidden');
+                ecEl('emailVerifiedRow').classList.remove('hidden');
+                ecUpdateSubmit();
+            } else {
+                ecShowError('emailCodeError', data.message || 'That code is not right. Please try again.');
+                codeInput.focus();
+                codeInput.select();
+            }
+        } catch (e) {
+            ecShowError('emailCodeError', 'The code could not be checked. Please check your connection and try again.');
+        } finally {
+            emailCode.busy = false;
+            btn.disabled = false;
+        }
+    }
+
+    ecEl('sendCodeBtn').addEventListener('click', () => ecSend(false));
+    ecEl('resendCodeBtn').addEventListener('click', () => ecSend(true));
+    ecEl('verifyCodeBtn').addEventListener('click', ecVerify);
+    ecEl('changeEmailBtn').addEventListener('click', () => ecReset(true));
+    ecEl('changeVerifiedEmailBtn').addEventListener('click', () => ecReset(true));
+    ecEl('emailCode').addEventListener('input', function () {
+        const digits = this.value.replace(/\D/g, '').slice(0, 6);
+        if (digits !== this.value) this.value = digits;
+        if (digits.length === 6) ecVerify();
+    });
+    ecEl('emailCode').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); ecVerify(); }
+    });
+    ecEl('email').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && emailCode.required && !emailCode.token) { e.preventDefault(); ecSend(false); }
+    });
+    // A code is for one address: typing a different one starts again
+    ecEl('email').addEventListener('input', function () {
+        if (emailCode.sentTo && this.value.trim() !== emailCode.sentTo) ecReset(false);
+    });
+
+    (async function ecCheckStatus() {
+        try {
+            const response = await fetch('/api/email-code.php?action=status', { credentials: 'include' });
+            const data = await response.json();
+            if (data && data.success && data.required) ecEnable();
+        } catch (e) { /* no code step: the form works as before */ }
+    })();
+
+    // ============================================
     // FORM SUBMISSION
     // ============================================
     document.getElementById('registrationForm').addEventListener('submit', async function(e) {
@@ -1016,6 +1240,18 @@
 
         if (phoneCheck !== null) updateFullPhoneNumber();
 
+        // The email must be verified with the code first (when codes are in use)
+        if (emailCode.required && !emailCode.token) {
+            if (ecEl('codeBox').classList.contains('hidden')) {
+                ecShowError('emailSendError', 'Please verify your email address: choose "Send code" and enter the 6-digit code from the email.');
+                ecEl('sendCodeBtn').focus();
+            } else {
+                ecShowError('emailCodeError', 'Please enter the 6-digit code from the email to verify your address.');
+                ecEl('emailCode').focus();
+            }
+            return;
+        }
+
         if (!window.grecaptcha || typeof grecaptcha.getResponse !== 'function') {
             showError('The "verify you are human" check could not load. Please check your connection, turn off any content blocker for this site and reload the page.');
             return;
@@ -1055,10 +1291,20 @@
                 document.body.style.overflow = 'hidden';
 
                 form.reset();
+                ecReset(false);
                 resetRecaptcha();
                 if (phoneInput) phoneInput.setNumber('');
                 document.getElementById('photoPreview').classList.remove('show');
                 clearCroppedPhoto();
+            } else if (result.field === 'email' && result.message) {
+                // The email code step (switched on after this page loaded, or
+                // the confirmation expired): start the code step again
+                const wasRequired = emailCode.required;
+                ecEnable();
+                if (wasRequired) ecReset(false);
+                ecShowError('emailSendError', result.message);
+                ecEl('sendCodeBtn').focus();
+                resetRecaptcha();
             } else {
                 showError(result.message || 'Registration failed. Please try again.');
                 resetRecaptcha();
@@ -1152,6 +1398,6 @@
     }
 </script>
     <!-- Contact email in the terms pop-up from Site settings -->
-    <script src="/js/site-settings.js?v=2611201009"></script>
+    <script src="/js/site-settings.js?v=2611211324"></script>
 </body>
 </html>

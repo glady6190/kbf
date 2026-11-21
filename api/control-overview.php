@@ -44,8 +44,9 @@ $can = [
 ];
 
 // Scheduled jobs: name => [label, description, overdue after (seconds)]
-// The email sender runs every 5 minutes: overdue after three missed runs
-// plus some slack (20 minutes), so one slow or skipped run is not flagged.
+// Measured from the job's last check-in (every run, see kbfJobCheckIn) or
+// its last JobRuns row, whichever is later. The email sender is overdue
+// after 20 minutes, the nightly jobs after 26 hours.
 const OVERVIEW_JOBS = [
     'broadcast-sender' => ['Email sender', 'Sends waiting emails and broadcasts, every 5 minutes.', 20 * 60],
     'ranking-calculator' => ['Nightly recalculation', 'Recalculates player stats, sends daily summaries and tidies the logs.', 26 * 3600],
@@ -268,10 +269,30 @@ try {
             $lastRuns = [];
         }
 
+        // Every run of each job writes its check-in time (Settings
+        // job_checkin_*), also when it had nothing to do; JobRuns only holds
+        // the runs that did something. "Last ran" is the later of the two.
+        $checkIns = [];
+        try {
+            $keys = array_map('kbfJobCheckInKey', array_keys(OVERVIEW_JOBS));
+            $stmt = $pdo->prepare("SELECT SettingKey, SettingValue FROM Settings WHERE SettingKey IN ("
+                . implode(',', array_fill(0, count($keys), '?')) . ")");
+            $stmt->execute($keys);
+            foreach ($stmt->fetchAll() as $r) {
+                $checkIns[$r['SettingKey']] = trim((string) $r['SettingValue']);
+            }
+        } catch (PDOException $e) {
+            $checkIns = [];
+        }
+
         foreach (OVERVIEW_JOBS as $name => $info) {
             $run = $lastRuns[$name] ?? null;
-            $startedTs = $run ? strtotime($run['StartedDate']) : false;
-            $overdue = !$run || $startedTs === false || (time() - $startedTs) > $info[2];
+            $runTs = $run ? strtotime($run['StartedDate']) : false;
+            $checkIn = $checkIns[kbfJobCheckInKey($name)] ?? '';
+            $checkInTs = $checkIn !== '' ? strtotime($checkIn) : false;
+            $startedTs = max((int) $runTs, (int) $checkInTs) ?: false;
+            $lastRan = $startedTs ? date('Y-m-d H:i:s', $startedTs) : null;
+            $overdue = $startedTs === false || (time() - $startedTs) > $info[2];
             $error = $run && $run['Status'] === 'error';
             if ($name === 'broadcast-sender') {
                 $nextRun = $startedTs ? date('c', $startedTs + 300) : null;
@@ -282,7 +303,7 @@ try {
                 'name' => $name,
                 'label' => $info[0],
                 'description' => $info[1],
-                'lastRun' => $run ? isoTime($run['StartedDate']) : null,
+                'lastRun' => $lastRan ? isoTime($lastRan) : null,
                 'status' => $error ? 'error' : ($overdue ? 'overdue' : 'ok'),
                 'summary' => $run ? (string) $run['Summary'] : '',
                 'nextRun' => $nextRun,
@@ -291,7 +312,7 @@ try {
             if ($error) {
                 $problems[] = $info[0] . ' ended in an error';
             } elseif ($overdue) {
-                $problems[] = $info[0] . ($run ? ' has not run when expected' : ' has never run');
+                $problems[] = $info[0] . ($startedTs ? ' has not run when expected' : ' has never run');
             }
         }
         $response['jobs'] = $jobs;

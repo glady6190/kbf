@@ -24,7 +24,9 @@
  *
  * A real run writes a JobRuns row only when it did something (sent, failed,
  * started or finished a broadcast, cleaned up) or failed, plus at most one
- * "nothing to do" row per hour. Dry runs write nothing.
+ * "nothing to do" row per hour. Every real run also updates its check-in
+ * time (Settings job_checkin_broadcast_sender), which the Overview uses for
+ * "Last ran". Dry runs write nothing.
  *
  * One run at a time: a database lock (GET_LOCK) is held for the whole run
  * and released by the database if the process dies. Each run stops starting
@@ -84,6 +86,9 @@ if (!$dryRun) {
             // the connection closing releases it anyway
         }
     });
+    // Every real run checks in (one Settings value, no new rows), so a quiet
+    // period with nothing to send never looks like a failure on the Overview
+    kbfJobCheckIn($pdo, 'broadcast-sender');
 }
 
 // Time left in this run's budget

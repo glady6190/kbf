@@ -5,6 +5,7 @@ require_once 'config.php';
 require_once __DIR__ . '/config-helpers.php';
 require_once __DIR__ . '/grading.php';
 require_once __DIR__ . '/notify.php';
+require_once __DIR__ . '/email-verification.php';
 
 
 
@@ -135,7 +136,21 @@ if ($result['count'] >= $perIpLimit) {
     if (!$email) {
         sendJSON(['success' => false, 'message' => 'Invalid email format'], 400);
     }
-    
+
+    // Email code (api/email-code.php): once database/email-verification.sql
+    // has run, the form must carry the token given for the right code, for
+    // this same address, unused and within 30 minutes. It is used up when the
+    // application (or the duplicate reply) is accepted. Before the script has
+    // run there is no code step, as before.
+    $emailTokenId = null;
+    if (kbfEmailCodeReady($pdo)) {
+        $tokenCheck = kbfRegistrationTokenCheck($pdo, $_POST['emailToken'] ?? '', $email);
+        if (!$tokenCheck['ok']) {
+            sendJSON(['success' => false, 'field' => 'email', 'message' => $tokenCheck['message']], 400);
+        }
+        $emailTokenId = $tokenCheck['id'];
+    }
+
     // Names, city and postcode are stored as typed (trimmed, no tags) and
     // escaped when shown; they are checked below on this plain text
     $firstName = kbfCleanText($_POST['firstName']);
@@ -271,6 +286,9 @@ $phoneNumber = $cleanPhoneNumber;
     }
 
     if ($duplicateReason !== null) {
+        if ($emailTokenId !== null && !kbfRegistrationTokenUse($pdo, $emailTokenId)) {
+            sendJSON(['success' => false, 'field' => 'email', 'message' => 'This email confirmation has already been used. Please change the email and send a new code.'], 400);
+        }
         try {
             require_once __DIR__ . '/notify.php';
             notify('registration_duplicate', [
@@ -356,6 +374,15 @@ $phoneNumber = $cleanPhoneNumber;
 $pdo->beginTransaction();
 
 try {
+    // The email token is used up with the application (rolled back with it)
+    if ($emailTokenId !== null && !kbfRegistrationTokenUse($pdo, $emailTokenId)) {
+        $pdo->rollBack();
+        if ($profilePhotoPath && file_exists(__DIR__ . '/..' . $profilePhotoPath)) {
+            unlink(__DIR__ . '/..' . $profilePhotoPath);
+        }
+        sendJSON(['success' => false, 'field' => 'email', 'message' => 'This email confirmation has already been used. Please change the email and send a new code.'], 400);
+    }
+
     // New KBF ID: the highest number is kept in Settings (locked row), so
     // no table is scanned; kbfNextKbfId also locks Users then
     // PlayerRegistrations, the same order as every other caller

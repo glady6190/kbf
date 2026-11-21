@@ -56,6 +56,8 @@
         .gr-fill { background: var(--theme-primary); height: 100%; }
         .gr-stat { min-width: 3.5rem; text-align: center; }
         .gr-link { color: var(--theme-primary); text-decoration: underline; font-weight: 900; }
+        /* Phone player card: three rows with the same spacing, edge to edge */
+        .gr-card { display: flex; flex-direction: column; gap: .75rem; }
 
         /* Tags */
         .gr-tag { display: inline-block; padding: .15rem .45rem; border: 2px solid; font-size: .65rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
@@ -71,7 +73,7 @@
         .msg-error { border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, .2); }
         .msg-warn { border-color: #F59E0B; color: #fde68a; background: rgba(245, 158, 11, .2); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611201009">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -101,7 +103,7 @@
                 <button type="button" class="gr-tab" role="tab" id="tab-history" aria-controls="panel-history" data-tab="history">Recent grade changes <span class="gr-count" data-count="history">0</span></button>
             </div>
             <button type="button" id="changeGradeBtn" class="btn-solid btn-shadow self-start lg:self-auto">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Change a grade
             </button>
         </div>
@@ -149,7 +151,7 @@
                 </div>
             </form>
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="kbf-stack w-full">
                     <thead class="bg-slate-800 border-b-2 border-gray-700">
                         <tr>
                             <th scope="col" class="px-3 sm:px-4 py-2 text-left text-xs font-black theme-primary-text uppercase">Date</th>
@@ -190,13 +192,13 @@
         </section>
     </main>
 
-    <script src="/js/escape.js?v=2611201009"></script>
-    <script src="/js/kbf-toast.js?v=2611201009"></script>
-    <script src="/js/kbf-forms.js?v=2611201009"></script>
-    <script src="/js/kbf-dialog.js?v=2611201009"></script>
-    <script src="/js/admin-list-tools.js?v=2611201009"></script>
-    <script src="/js/admin-shell.js?v=2611201009"></script>
-    <script src="/js/grade-change.js?v=2611201009"></script>
+    <script src="/js/escape.js?v=2611211324"></script>
+    <script src="/js/kbf-toast.js?v=2611211324"></script>
+    <script src="/js/kbf-forms.js?v=2611211324"></script>
+    <script src="/js/kbf-dialog.js?v=2611211324"></script>
+    <script src="/js/admin-list-tools.js?v=2611211324"></script>
+    <script src="/js/admin-shell.js?v=2611211324"></script>
+    <script src="/js/grade-change.js?v=2611211324"></script>
     <script>
     // ============================================
     // PAGE GUARD (shared shell): players.change_grades
@@ -346,7 +348,31 @@
             : (p.nextGradeId
                 ? '<button type="button" class="btn-solid btn-sm" data-promote="' + esc(p.userId) + '" aria-label="' + esc('Promote ' + p.name + ' to ' + p.nextGrade) + '">Promote</button>'
                 : '<span class="text-xs font-bold uppercase text-gray-500">Top grade</span>');
-        return '<li class="px-4 sm:px-6 py-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-5">'
+        // Phones (below 768px): a card in three rows, aligned to its edges.
+        // 1: photo or initials, name, KBF ID and city; 2: the grade move and
+        // the progress bar ("points / threshold", "n to go"); 3: finals and
+        // events on the left, the action on the right
+        const toGo = Math.max(0, Number(p.toGo !== undefined ? p.toGo : (p.threshold || 0) - (p.points || 0)));
+        const phoneCard = '<div class="gr-card md:hidden">'
+            + '<div class="flex items-center gap-3 min-w-0">'
+            + avatarHtml(p)
+            + '<div class="min-w-0 flex-1"><p class="text-sm font-black text-white break-words">' + esc(p.name) + '</p>'
+            + '<p class="text-xs text-gray-400 font-semibold break-words">' + esc(p.kbfId) + (p.city ? ', ' + esc(p.city) : '') + '</p></div>'
+            + '</div>'
+            + '<div class="flex items-center gap-3 min-w-0">'
+            + '<div class="flex-shrink-0">' + moveHtml(p) + '</div>'
+            + '<div class="flex-1 min-w-0"><div class="flex items-baseline justify-between gap-2">'
+            + '<span class="text-sm font-black text-white">' + fmt(p.points) + ' / ' + fmt(p.threshold) + '</span>'
+            + '<span class="text-xs font-bold theme-primary-text">' + (toGo > 0 ? fmt(toGo) + ' to go' : 'Reached') + '</span>'
+            + '</div>' + barHtml(p.points, p.threshold) + '</div>'
+            + '</div>'
+            + '<div class="flex items-center justify-between gap-3">'
+            + '<p class="text-xs font-bold uppercase text-gray-400">Finals <span class="text-white font-black">' + fmt(p.finals) + '</span> • Events <span class="text-white font-black">' + fmt(p.events) + '</span></p>'
+            + '<div class="flex-shrink-0">' + button + '</div>'
+            + '</div>'
+            + '</div>';
+        return '<li class="px-4 sm:px-6 py-4">' + phoneCard
+            + '<div class="hidden md:flex md:flex-row md:items-center gap-3 md:gap-5">'
             + '<div class="flex items-center gap-3 min-w-0 md:flex-1">'
             + avatarHtml(p)
             + '<div class="min-w-0"><p class="text-sm font-black text-white truncate">' + esc(p.name) + '</p>'
@@ -358,6 +384,7 @@
             + '<div class="gr-stat"><p class="text-sm font-black text-white">' + fmt(p.finals) + '</p><p class="text-[10px] font-bold uppercase text-gray-400">Finals</p></div>'
             + '<div class="gr-stat"><p class="text-sm font-black text-white">' + fmt(p.events) + '</p><p class="text-[10px] font-bold uppercase text-gray-400">Events</p></div>'
             + '<div class="ml-auto md:ml-0">' + button + '</div>'
+            + '</div>'
             + '</div>'
             + '</li>';
     }
@@ -496,7 +523,7 @@
     if (window.KBFListTools) {
         KBFListTools.header({
             band: document.getElementById('pageBand'),
-            primary: { label: 'Change', ariaLabel: 'Change a grade', target: document.getElementById('changeGradeBtn') }
+            primary: { label: 'Change a grade', icon: 'edit', target: document.getElementById('changeGradeBtn') }
         });
         KBFListTools.tabs(document.getElementById('tabs'));
         historyTools = KBFListTools.filters({
@@ -523,6 +550,6 @@
     document.getElementById('prevPage').addEventListener('click', () => loadHistory(Math.max(1, historyPage - 1)));
     document.getElementById('nextPage').addEventListener('click', () => loadHistory(historyPage + 1));
     </script>
-    <script src="/js/session-manager.js?v=2611201009"></script>
+    <script src="/js/session-manager.js?v=2611211324"></script>
 </body>
 </html>
