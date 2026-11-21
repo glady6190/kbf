@@ -1387,6 +1387,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
                     'submitted' => $r['SubmittedDate'],
                     'days' => max(0, (int) $r['Days']),
                     'termsVersion' => isset($r['TermsVersion']) ? (string) $r['TermsVersion'] : '',
+                    // false before terms-acceptance.sql (nothing recorded), true after
+                    // (an empty version then means an earlier application)
+                    'termsRecorded' => array_key_exists('TermsVersion', $r),
                     'termsDate' => $r['TermsAcceptedDate'] ?? null,
                     'email' => $showContact ? (string) $r['Email'] : null,
                     'phone' => $showContact ? apText($r['PhoneNumber']) : null,

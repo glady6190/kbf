@@ -102,6 +102,37 @@
         .ap-tag.is-grey { border-color: #4b5563; color: #d1d5db; background: #1e293b; }
         .ap-grade { width: 2.1rem; height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--theme-primary); color: var(--theme-primary); font-weight: 900; font-size: .78rem; flex-shrink: 0; }
 
+        /* Registration review on phones (below 1024px; built only there) */
+        .ap-ptop { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .5rem; padding: calc(.5rem + env(safe-area-inset-top, 0px)) 1rem .5rem; background: #020617; border-bottom: 2px solid #1e293b; }
+        .ap-ptop-back { display: inline-flex; align-items: center; gap: .2rem; min-height: 44px; padding: 0 .25rem 0 0; color: #e5e7eb; font-weight: 900; text-transform: uppercase; font-size: .8rem; }
+        .ap-ptop-title { text-align: center; font-size: .75rem; font-weight: 900; text-transform: uppercase; color: #e5e7eb; overflow-wrap: anywhere; }
+        .ap-ptop-title .ap-num { color: var(--theme-primary); }
+        .ap-ptop-nav { display: flex; gap: .4rem; }
+        .ap-sq40 { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #374151; background: #0f172a; color: #e5e7eb; flex-shrink: 0; }
+        .ap-sq40:disabled { opacity: .35; cursor: not-allowed; }
+        .ap-sq40:not(:disabled):hover { border-color: var(--theme-primary); color: #fff; }
+        .ap-ptop-back:focus-visible, .ap-sq40:focus-visible, .ap-gbtn:focus-visible, .ap-plink:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .ap-phead { background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%); border-bottom: 3px solid var(--theme-primary); padding: 1.25rem 1rem 1rem; }
+        .ap-pphoto-wrap { position: relative; width: 84px; height: 84px; flex-shrink: 0; }
+        .ap-pphoto { width: 84px; height: 84px; border-radius: 9999px; border: 3px solid var(--theme-primary); box-shadow: 0 0 16px var(--theme-primary); overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; color: #e5e7eb; font-weight: 900; font-size: 1.6rem; }
+        .ap-pphoto img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+        .ap-pphoto-wrap .kbf-photo-btn { display: block; width: 84px; height: 84px; padding: 0; border-radius: 9999px; }
+        .ap-pphoto-badge { position: absolute; right: -2px; bottom: -2px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; background: var(--theme-primary); color: #0F172A; border: 2px solid #020617; pointer-events: none; }
+        .ap-pname { font-size: 24px; line-height: 1.15; font-weight: 900; text-transform: uppercase; color: #fff; overflow-wrap: anywhere; }
+        .ap-wait { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .5rem; font-size: .68rem; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+        .ap-wait.is-red { background: #ef4444; color: #fff; }
+        .ap-wait.is-amber { background: #f59e0b; color: #0F172A; }
+        .ap-wait.is-grey { background: #374151; color: #e5e7eb; }
+        .ap-plabel { font-size: .68rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: #9ca3af; margin-bottom: .4rem; }
+        .ap-pcard { background: #0f172a; border: 2px solid #1f2937; padding: .9rem; }
+        .ap-pcard.is-ok { border-color: #374151; border-color: color-mix(in srgb, var(--theme-primary) 45%, transparent); background: color-mix(in srgb, var(--theme-primary) 8%, #0f172a); }
+        .ap-pcard.is-warn { border-color: #f59e0b; background: rgba(245, 158, 11, .1); }
+        .ap-tile { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #1e293b; color: var(--theme-primary); }
+        .ap-tick { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--theme-primary); color: #0F172A; }
+        .ap-gbtn { min-height: 44px; min-width: 0; border: 2px solid #374151; background: #1e293b; color: #e5e7eb; font-weight: 900; font-size: .85rem; }
+        .ap-gbtn[aria-pressed="true"] { background: var(--theme-primary); border-color: var(--theme-primary); color: #0F172A; }
+        .ap-plink { font-size: .75rem; font-weight: 900; text-transform: uppercase; text-decoration: underline; color: #fbbf24; white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; }
+
         /* Waiting-time bar */
         .ap-bar { display: flex; height: .6rem; background: #1e293b; overflow: hidden; }
         .ap-bar span { display: block; height: 100%; }
@@ -121,7 +152,7 @@
         .msg-error { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, .12); }
         .msg-warn { border-color: #f59e0b; color: #fde68a; background: rgba(245, 158, 11, .1); }
     </style>
-    <link rel="stylesheet" href="/assets/css/site.css?v=2611211324">
+    <link rel="stylesheet" href="/assets/css/site.css?v=2611211341">
 </head>
 <body class="bg-slate-950 text-gray-100" data-theme="emerald">
     <div id="kbf-admin-header"></div>
@@ -309,13 +340,13 @@
         </div>
     </div>
 
-    <script src="/js/escape.js?v=2611211324"></script>
-    <script src="/js/kbf-toast.js?v=2611211324"></script>
-    <script src="/js/kbf-dialog.js?v=2611211324"></script>
-    <script src="/js/admin-list-tools.js?v=2611211324"></script>
-    <script src="/js/kbf-lightbox.js?v=2611211324"></script>
-    <script src="/js/kbf-forms.js?v=2611211324"></script>
-    <script src="/js/admin-shell.js?v=2611211324"></script>
+    <script src="/js/escape.js?v=2611211341"></script>
+    <script src="/js/kbf-toast.js?v=2611211341"></script>
+    <script src="/js/kbf-dialog.js?v=2611211341"></script>
+    <script src="/js/admin-list-tools.js?v=2611211341"></script>
+    <script src="/js/kbf-lightbox.js?v=2611211341"></script>
+    <script src="/js/kbf-forms.js?v=2611211341"></script>
+    <script src="/js/admin-shell.js?v=2611211341"></script>
     <script>
     // ============================================
     // PAGE GUARD + SHARED HEADER
@@ -463,7 +494,16 @@
         phone: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>',
         external: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>',
         image: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
-        pin: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>'
+        pin: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>',
+        forward: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>',
+        expand: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>',
+        clock: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+        calendar: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+        hash: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>',
+        doc: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>',
+        copy: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>',
+        chat: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>',
+        shield: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>'
     };
 
     function icon(name, className) {
@@ -1188,6 +1228,10 @@
     try {
         window.matchMedia('(max-width: 1023px)').addEventListener('change', e => {
             if (!e.matches && reviewEl.classList.contains('is-open')) closeReviewMobile();
+            // A registration has a phone layout and a desktop layout
+            if (state.tab === 'registrations' && detail && detail.registration && state.openId === detail.registration.id) {
+                renderRegistration(detail);
+            }
         });
     } catch (e) { /* older browsers: nothing to do */ }
 
@@ -1282,8 +1326,10 @@
         return queue.items[i + 1] || null;
     }
 
-    // Top bar (phones): "Back to list" and the item's place in the queue
+    // Top bar (phones): "Back to list" and the item's place in the queue.
+    // Registrations on phones have their own bar (phoneRegistrationTop).
     function panelTop(container) {
+        if (state.tab === 'registrations' && isPhone()) { phoneRegistrationTop(container); return; }
         const top = el('div', 'ap-topbar flex items-center justify-between gap-2 px-4 sm:px-5 pt-4');
         const back = button('btn-plain lg:hidden', 'Back to list', 'back');
         back.addEventListener('click', backToList);
@@ -1294,6 +1340,85 @@
                 (i + 1).toLocaleString('en-GB') + ' of ' + queue.total.toLocaleString('en-GB')));
         }
         container.appendChild(top);
+    }
+
+    // Registrations on phones: "List" on the left, "Registration n of total"
+    // in the middle, previous and next on the right (the neighbouring
+    // registrations in the current filtered and sorted queue)
+    function phoneRegistrationTop(container) {
+        const bar = el('div', 'ap-ptop');
+        const back = el('button', 'ap-ptop-back');
+        back.type = 'button';
+        back.appendChild(icon('back', 'w-5 h-5 flex-shrink-0'));
+        back.appendChild(document.createTextNode('List'));
+        back.setAttribute('aria-label', 'Back to the list');
+        back.addEventListener('click', backToList);
+        bar.appendChild(back);
+
+        const i = state.openId === null ? -1 : queue.items.findIndex(x => x.id === state.openId);
+        const title = el('p', 'ap-ptop-title');
+        title.appendChild(document.createTextNode('Registration'));
+        if (i !== -1 && queue.total) {
+            title.appendChild(document.createTextNode(' '));
+            title.appendChild(el('span', 'ap-num', (i + 1).toLocaleString('en-GB')));
+            title.appendChild(document.createTextNode(' of ' + queue.total.toLocaleString('en-GB')));
+        }
+        bar.appendChild(title);
+
+        const nav = el('div', 'ap-ptop-nav');
+        const prev = el('button', 'ap-sq40');
+        prev.type = 'button';
+        prev.setAttribute('aria-label', 'Previous registration');
+        prev.appendChild(icon('back', 'w-5 h-5'));
+        prev.disabled = i <= 0;
+        prev.addEventListener('click', () => openNeighbour(-1));
+        const next = el('button', 'ap-sq40');
+        next.type = 'button';
+        next.setAttribute('aria-label', 'Next registration');
+        next.appendChild(icon('forward', 'w-5 h-5'));
+        next.disabled = i === -1 || (i >= queue.items.length - 1 && queue.items.length >= queue.total);
+        next.addEventListener('click', () => openNeighbour(1));
+        nav.appendChild(prev);
+        nav.appendChild(next);
+        bar.appendChild(nav);
+        container.appendChild(bar);
+    }
+
+    // Open the registration before (-1) or after (1) the one open now; at the
+    // end of the loaded part of the queue the next page is loaded first
+    async function openNeighbour(step) {
+        const tab = state.tab;
+        const i = queue.items.findIndex(x => x.id === state.openId);
+        if (i === -1) return;
+        let target = queue.items[i + step] || null;
+        if (!target && step > 0 && queue.items.length < queue.total) {
+            await loadQueue(false);
+            if (tab !== state.tab) return;
+            target = queue.items[i + 1] || null;
+        }
+        if (!target) return;
+        await openItem(target.id, {});
+        writeUrl(false);
+    }
+
+    // Copy text to the clipboard (true when it worked)
+    async function copyText(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (e) {
+            const area = el('textarea');
+            area.value = text;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            reviewEl.appendChild(area);
+            area.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+            area.remove();
+            return ok;
+        }
     }
 
     function infoList(rows) {
@@ -1424,8 +1549,275 @@
         }
     }
 
+    // ---------- Registration on phones (below 1024px) ----------
+    // Profile header, then Details, Contact, Grade on approval and Checks
+    // cards with the same edges; the bottom bar is the shared footer().
+    function phoneSection(label, card) {
+        const s = el('section');
+        s.appendChild(el('h3', 'ap-plabel', label));
+        s.appendChild(card);
+        return s;
+    }
+
+    function renderRegistrationPhone(data) {
+        const r = data.registration;
+        const matches = data.matches || [];
+        const body = document.getElementById('reviewBody');
+        body.textContent = '';
+        panelTop(body);
+
+        // ---- profile header ----
+        const band = el('div', 'ap-phead');
+        const row = el('div', 'flex items-center gap-4');
+        const photoWrap = el('div', 'ap-pphoto-wrap');
+        const circle = el('div', 'ap-pphoto');
+        const src = safePhoto(r.photo);
+        if (src) {
+            const img = el('img');
+            img.alt = '';
+            img.width = 84;
+            img.height = 84;
+            img.decoding = 'async';
+            setImageVariant(img, src, 'thumb');
+            circle.appendChild(img);
+        } else {
+            circle.textContent = initialsOf(r.name);
+            circle.setAttribute('aria-hidden', 'true');
+        }
+        photoWrap.appendChild(circle);
+        if (src) {
+            // Tapping the photo opens the shared viewer (js/kbf-lightbox.js)
+            KBFLightbox.attach(circle, src, r.name, { round: true });
+            const badge = el('span', 'ap-pphoto-badge');
+            badge.setAttribute('aria-hidden', 'true');
+            badge.appendChild(icon('expand', 'w-3.5 h-3.5'));
+            photoWrap.appendChild(badge);
+        }
+        row.appendChild(photoWrap);
+        const who = el('div', 'min-w-0 flex-1');
+        who.appendChild(el('h2', 'ap-pname', r.name));
+        if (r.kbfId) who.appendChild(el('p', 'text-sm font-black theme-primary-text mt-1 break-words', r.kbfId));
+        if (r.status === 'Pending') {
+            const days = Number(r.days) || 0;
+            const wait = el('span', 'ap-wait mt-2 ' + (days > 30 ? 'is-red' : (days > 7 ? 'is-amber' : 'is-grey')));
+            wait.appendChild(icon('clock', 'w-3.5 h-3.5 flex-shrink-0'));
+            wait.appendChild(document.createTextNode(daysText(days) + ' waiting'));
+            who.appendChild(wait);
+        }
+        row.appendChild(who);
+        band.appendChild(row);
+        const submitted = el('p', 'mt-3 flex items-center gap-2 text-xs font-bold text-gray-300');
+        submitted.appendChild(icon('calendar', 'w-4 h-4 flex-shrink-0 theme-primary-text'));
+        submitted.appendChild(document.createTextNode('Submitted ' + KBF.formatDate(parseDate(r.submitted), { weekday: 'short', fallback: '-' })));
+        band.appendChild(submitted);
+        body.appendChild(band);
+
+        const main = el('div', 'px-4 pt-5 pb-6 space-y-5');
+        if (r.status !== 'Pending') {
+            body.appendChild(main);
+            decidedNote(body, r.status);
+            return;
+        }
+
+        // ---- details: 2 by 2 ----
+        const notGiven = v => (v === null || v === undefined || String(v).trim() === '') ? null : String(v);
+        const terms = r.termsVersion ? 'Version ' + r.termsVersion : (r.termsRecorded ? 'Earlier version' : 'Not recorded');
+        const grid = el('dl', 'ap-pcard grid grid-cols-2 gap-x-4 gap-y-4');
+        [['City', 'pin', notGiven(r.city)], ['Post code', 'hash', notGiven(r.postCode)],
+         ['Born', 'calendar', notGiven(r.yearOfBirth)], ['Terms', 'doc', terms]].forEach(d => {
+            const cell = el('div', 'min-w-0');
+            const dt = el('dt', 'flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-gray-400');
+            dt.appendChild(icon(d[1], 'w-4 h-4 flex-shrink-0 theme-primary-text'));
+            dt.appendChild(document.createTextNode(d[0]));
+            cell.appendChild(dt);
+            cell.appendChild(el('dd', 'mt-1 text-sm font-bold break-words ' + (d[2] ? 'text-white' : 'text-gray-500'), d[2] || 'Not given'));
+            grid.appendChild(cell);
+        });
+        main.appendChild(phoneSection('Details', grid));
+
+        // ---- contact (shown while waiting, by the API's rule) ----
+        if (r.email || r.phone) {
+            const card = el('div', 'ap-pcard space-y-3');
+            function contactRow(iconName, label, value) {
+                const line = el('div', 'flex items-center gap-3');
+                const tile = el('span', 'ap-tile');
+                tile.appendChild(icon(iconName, 'w-5 h-5'));
+                line.appendChild(tile);
+                const text = el('div', 'min-w-0 flex-1');
+                text.appendChild(el('p', 'text-[11px] font-black uppercase tracking-wider text-gray-400', label));
+                text.appendChild(el('p', 'text-sm font-bold text-white break-all', value));
+                line.appendChild(text);
+                return line;
+            }
+            function squareButton(tag, iconName, label) {
+                const b = el(tag, 'ap-sq40');
+                if (tag === 'button') b.type = 'button';
+                b.setAttribute('aria-label', label);
+                b.appendChild(icon(iconName, 'w-5 h-5'));
+                return b;
+            }
+            if (r.email) {
+                const line = contactRow('mail', 'Email', r.email);
+                const copy = squareButton('button', 'copy', 'Copy email address');
+                copy.addEventListener('click', async () => {
+                    if (await copyText(r.email)) KBF.toast('Email copied', 'success');
+                    else showMsg('The email could not be copied.', 'error');
+                });
+                line.appendChild(copy);
+                card.appendChild(line);
+            }
+            if (r.phone) {
+                const line = contactRow('phone', 'Mobile', r.phone);
+                const digits = String(r.phone).replace(/\D/g, '');
+                const msg = squareButton('a', 'chat', 'Message ' + r.name + ' on WhatsApp');
+                msg.href = 'https://wa.me/' + digits;
+                msg.target = '_blank';
+                msg.rel = 'noopener';
+                const call = squareButton('a', 'phone', 'Call ' + r.name);
+                call.href = 'tel:' + String(r.phone).replace(/[^0-9+]/g, '');
+                const btns = el('div', 'flex gap-2 flex-shrink-0');
+                btns.appendChild(msg);
+                btns.appendChild(call);
+                line.appendChild(btns);
+                card.appendChild(line);
+            }
+            const contact = phoneSection('Contact', card);
+            contact.appendChild(el('p', 'text-xs font-semibold text-gray-400 mt-2', 'Shown only while the registration is waiting.'));
+            main.appendChild(contact);
+        }
+
+        // ---- grade on approval ----
+        let chosenGradeId = r.gradeId || null;
+        const gradeCard = el('div', 'ap-pcard');
+        const chose = el('div', 'flex items-start justify-between gap-3');
+        const left = el('p', 'text-sm font-semibold text-gray-300');
+        left.appendChild(document.createTextNode('They chose '));
+        left.appendChild(el('strong', 'font-black text-white', r.grade || 'no grade'));
+        chose.appendChild(left);
+        if (r.gradeName) chose.appendChild(el('p', 'text-xs font-semibold text-gray-400 text-right min-w-0 break-words', r.gradeName));
+        gradeCard.appendChild(chose);
+        let setApproveLabel = null;
+        if (meta.can.changeGrades) {
+            const grades = (meta.grades || []).slice();
+            if (r.gradeId && !grades.some(g => g.id === r.gradeId)) grades.push({ id: r.gradeId, shortName: r.grade || '?', name: r.gradeName || '' });
+            const cols = Math.min(Math.max(grades.length, 1), 5);
+            const buttons = el('div', 'grid gap-2 mt-3');
+            buttons.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+            buttons.setAttribute('role', 'group');
+            buttons.setAttribute('aria-label', 'Grade on approval');
+            grades.forEach(g => {
+                const b = el('button', 'ap-gbtn', g.shortName || g.name);
+                b.type = 'button';
+                b.setAttribute('aria-pressed', g.id === chosenGradeId ? 'true' : 'false');
+                b.setAttribute('aria-label', 'Grade ' + gradeOptionLabel(g));
+                b.addEventListener('click', () => {
+                    chosenGradeId = g.id;
+                    buttons.querySelectorAll('.ap-gbtn').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+                    if (setApproveLabel) setApproveLabel();
+                });
+                buttons.appendChild(b);
+            });
+            gradeCard.appendChild(buttons);
+        }
+        main.appendChild(phoneSection('Grade on approval', gradeCard));
+
+        // ---- checks ----
+        let checksCard;
+        if (!matches.length) {
+            checksCard = el('div', 'ap-pcard is-ok');
+            const headRow = el('p', 'flex items-center gap-2 text-sm font-black uppercase text-white');
+            headRow.appendChild(icon('shield', 'w-5 h-5 flex-shrink-0 theme-primary-text'));
+            headRow.appendChild(document.createTextNode('All checks passed'));
+            checksCard.appendChild(headRow);
+            const ul = el('ul', 'mt-3 space-y-2');
+            ['No existing member with this email', 'No existing member with this name and city'].forEach(text => {
+                const li = el('li', 'flex items-center gap-2 text-sm font-bold text-gray-200');
+                const t = el('span', 'ap-tick');
+                t.appendChild(icon('check', 'w-3.5 h-3.5'));
+                li.appendChild(t);
+                li.appendChild(document.createTextNode(text));
+                ul.appendChild(li);
+            });
+            checksCard.appendChild(ul);
+        } else {
+            checksCard = el('div', 'ap-pcard is-warn');
+            const headRow = el('p', 'flex items-center gap-2 text-sm font-black uppercase text-amber-300');
+            headRow.appendChild(icon('warn', 'w-5 h-5 flex-shrink-0'));
+            headRow.appendChild(document.createTextNode('Possible existing member'));
+            checksCard.appendChild(headRow);
+            const ul = el('ul', 'mt-2 divide-y divide-amber-500/30');
+            matches.forEach(m => {
+                const li = el('li', 'flex items-center gap-3 py-2');
+                const text = el('div', 'min-w-0 flex-1');
+                text.appendChild(el('p', 'text-sm font-black text-white break-words', m.name));
+                text.appendChild(el('p', 'text-xs font-semibold text-amber-100 break-words',
+                    [m.kbfId, m.city].filter(Boolean).join(' · ') + (m.byEmail ? ' (same email)' : ' (same name and city)')));
+                li.appendChild(text);
+                if (canOpenPeople()) {
+                    const open = el('a', 'ap-plink', 'Open');
+                    open.href = '/admin/people?person=' + encodeURIComponent(String(m.id));
+                    open.target = '_blank';
+                    open.rel = 'noopener';
+                    open.setAttribute('aria-label', 'Open ' + m.name + ' in People (new tab)');
+                    li.appendChild(open);
+                }
+                ul.appendChild(li);
+            });
+            checksCard.appendChild(ul);
+        }
+        main.appendChild(phoneSection('Checks', checksCard));
+
+        // The email belongs to a deactivated member (as on wider screens)
+        const dm = data.deactivatedMember || null;
+        if (dm) {
+            const note = el('div', 'msg msg-warn');
+            note.setAttribute('role', 'status');
+            note.appendChild(el('p', 'font-bold', 'This email belongs to a deactivated member: ' + dm.name +
+                (dm.kbfId ? ' (' + dm.kbfId + ')' : '') + '.'));
+            note.appendChild(el('p', 'text-xs font-semibold mt-1',
+                'A new player cannot be created with the same email. Reactivate this member instead: their grade, points and history are kept, and this application is closed.' +
+                (dm.staff ? ' They have staff access, so only a Super Admin can reactivate them.' : '')));
+            main.appendChild(note);
+        }
+        body.appendChild(main);
+
+        if (dm) {
+            footer(body, 'Reactivate this member', btn => reactivateMember(btn, r, dm),
+                btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
+            return;
+        }
+        const chosenLabel = () => gradeLabel(chosenGradeId) || r.grade || '';
+        const f = footer(body, 'Approve as ' + (chosenLabel() || 'chosen grade'), btn => {
+            const extra = {};
+            if (meta.can.changeGrades && chosenGradeId) extra.categoryId = chosenGradeId;
+            const grade = chosenLabel();
+            approve('registration', r.id, extra, btn, r.name, r.name + (grade ? ' approved as grade ' + grade + '.' : ' approved.'));
+        }, btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
+        setApproveLabel = () => { f.approve.lastChild.textContent = 'Approve as ' + (chosenLabel() || 'chosen grade'); };
+    }
+
+    // Reactivate a deactivated member instead of approving (both layouts)
+    async function reactivateMember(btn, r, dm) {
+        btn.disabled = true;
+        try {
+            const result = await postJson({ type: 'registration', id: r.id, action: 'reactivate' });
+            if (!result.success) {
+                showMsg(result.message || 'The member could not be reactivated.', 'error');
+                return;
+            }
+            await afterDecision(dm.name + ' reactivated. Their grade, points and history are kept.', r.id, result, 'registration');
+        } catch (e) {
+            console.error('Reactivate error:', e);
+            showMsg('The member could not be reactivated.', 'error');
+        } finally {
+            if (document.contains(btn)) btn.disabled = false;
+        }
+    }
+
     // ---------- Registration ----------
     function renderRegistration(data) {
+        // Phones and tablets (below 1024px) have their own layout
+        if (isPhone()) { renderRegistrationPhone(data); return; }
         const r = data.registration;
         const matches = data.matches || [];
         const body = document.getElementById('reviewBody');
@@ -1570,22 +1962,8 @@
         body.appendChild(main);
 
         if (dm) {
-            footer(body, 'Reactivate this member', async btn => {
-                btn.disabled = true;
-                try {
-                    const result = await postJson({ type: 'registration', id: r.id, action: 'reactivate' });
-                    if (!result.success) {
-                        showMsg(result.message || 'The member could not be reactivated.', 'error');
-                        return;
-                    }
-                    await afterDecision(dm.name + ' reactivated. Their grade, points and history are kept.', r.id, result, 'registration');
-                } catch (e) {
-                    console.error('Reactivate error:', e);
-                    showMsg('The member could not be reactivated.', 'error');
-                } finally {
-                    if (document.contains(btn)) btn.disabled = false;
-                }
-            }, btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
+            footer(body, 'Reactivate this member', btn => reactivateMember(btn, r, dm),
+                btn => openReject('registration', r.id, r.name, btn), 'Then opens the next applicant');
             return;
         }
 
@@ -1926,6 +2304,6 @@
             : 'Showing 0';
     }
     </script>
-    <script src="/js/session-manager.js?v=2611211324"></script>
+    <script src="/js/session-manager.js?v=2611211341"></script>
 </body>
 </html>
